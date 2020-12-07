@@ -1,0 +1,16 @@
+node_modules
+
+#Buidler files
+cache
+artifacts
+
+# Misc
+.vscode
+Close
+.env
+*.DS_Store
+
+deployment
+
+# solidity files to ignore
+*.sol
