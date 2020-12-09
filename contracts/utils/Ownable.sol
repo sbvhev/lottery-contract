@@ -1,6 +1,9 @@
-// SPDX-License-Identifier: None
+// SPDX-License-Identifier: No License
 
-pragma solidity ^0.7.4;
+pragma solidity ^0.7.5;
+
+import "../interfaces/IOwnable.sol";
+import "./Initializable.sol";
 
 /**
  * @dev Contract module which provides a basic access control mechanism, where
@@ -15,17 +18,19 @@ pragma solidity ^0.7.4;
  * `onlyOwner`, which can be applied to your functions to restrict their use to
  * the owner.
  */
-contract Ownable {
+contract Ownable is Initializable {
     address private _owner;
+    address private _newOwner;
 
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferInitiated(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferCompleted(address indexed previousOwner, address indexed newOwner);
 
     /**
      * @dev COVER: Initializes the contract setting the deployer as the initial owner.
      */
-    constructor () {
+    function initializeOwner() internal initializer {
         _owner = msg.sender;
-        emit OwnershipTransferred(address(0), _owner);
+        emit OwnershipTransferCompleted(address(0), _owner);
     }
 
     /**
@@ -49,7 +54,17 @@ contract Ownable {
      */
     function transferOwnership(address newOwner) public virtual onlyOwner {
         require(newOwner != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
+        emit OwnershipTransferInitiated(_owner, newOwner);
+        _newOwner = newOwner;
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function claimOwnership() public virtual {
+        require(_newOwner == msg.sender, "Ownable: caller is not the owner");
+        emit OwnershipTransferCompleted(_owner, _newOwner);
+        _owner = _newOwner;
     }
 }

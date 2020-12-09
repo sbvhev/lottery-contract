@@ -23,6 +23,7 @@
     "@openzeppelin/test-helpers": "^0.5.9",
     "chai": "^4.2.0",
     "dotenv": "^8.2.0",
+    "ethereum-waffle": "^3.2.1",
     "ethers": "^5.0.23",
     "hardhat": "^2.0.4",
     "hardhat-contract-sizer": "^2.0.2"
