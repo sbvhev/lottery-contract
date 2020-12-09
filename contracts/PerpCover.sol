@@ -99,7 +99,7 @@
 //     require(coverPool.claimNonce() > claimNonce, "COVER: no claim accepted");
 
 //     (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
-//     require(_incidentTimestamp <= expirationTimestamp, "COVER: cover expired before incident");
+//     require(_incidentTimestamp <= expiry, "COVER: cover expired before incident");
 //     require(block.timestamp >= uint256(_claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
 
 //     _paySender(
@@ -121,10 +121,10 @@
 
 //       (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
 
-//       if (_incidentTimestamp > expirationTimestamp) {
+//       if (_incidentTimestamp > expiry) {
 //         // incident happened after expiration date, redeem back full collateral
 
-//         require(block.timestamp >= uint256(expirationTimestamp) + coverPool.noclaimRedeemDelay(), "COVER: not ready");
+//         require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "COVER: not ready");
 //         _paySender(noclaimCovToken, 1, 1);
 //       } else {
 //         // incident happened before expiration date, pay 1 - payout%
@@ -142,7 +142,7 @@
 //     } else {
 //       // coverPool has no accepted claim
 
-//       require(block.timestamp >= uint256(expirationTimestamp) + coverPool.noclaimRedeemDelay(), "COVER: not ready");
+//       require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "COVER: not ready");
 //       _paySender(noclaimCovToken, 1, 1);
 //     }
 //   }

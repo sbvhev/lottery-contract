@@ -12,8 +12,8 @@ interface ICover {
   event NewCoverERC20(address);
 
   function getCoverDetails()
-    external view returns (string memory _name, uint48 _expirationTimestamp, address _collateral, uint256 _claimNonce, ICoverERC20 _claimCovToken, ICoverERC20 _noclaimCovToken);
-  function expirationTimestamp() external view returns (uint48);
+    external view returns (string memory _name, uint48 _expiry, address _collateral, uint256 _claimNonce, ICoverERC20 _claimCovToken, ICoverERC20 _noclaimCovToken);
+  function expiry() external view returns (uint48);
   function collateral() external view returns (address);
   function claimCovToken() external view returns (ICoverERC20);
   function noclaimCovToken() external view returns (ICoverERC20);

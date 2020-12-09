@@ -31,7 +31,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint48 claimEnactedTimestamp;
   }
 
-  struct ExpirationTimestampInfo {
+  struct ExpiryInfo {
     bytes32 name;
     uint8 status; // 0 never set; 1 active, 2 inactive
   }
@@ -58,8 +58,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   address[] public override activeCovers;
   address[] private allCovers;
 
-  /// @notice list of every supported expirationTimestamp, all may not be active.
-  uint48[] public override expirationTimestamps;
+  /// @notice list of every supported expiry, all may not be active.
+  uint48[] public override expiries;
 
   /// @notice list of asset in pool
   bytes32[] public override assetList;
@@ -73,7 +73,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   // @notice collateral => status. 0 never set; 1 active, 2 inactive
   mapping(address => uint8) public override collateralStatusMap;
 
-  mapping(uint48 => ExpirationTimestampInfo) public override expirationTimestampMap;
+  mapping(uint48 => ExpiryInfo) public override expiryMap;
 
   // collateral => timestamp => coverAddress, most recent cover created for the collateral and timestamp combination
   mapping(address => mapping(uint48 => address)) public override coverMap;
@@ -100,8 +100,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     bytes32 _coverPoolName,
     bytes32[] calldata _assetList,
     address _collateral,
-    uint48[] calldata _expirationTimestamps,
-    bytes32[] calldata _expirationTimestampNames
+    uint48[] calldata _expiries,
+    bytes32[] calldata _expiryNames
   )
     external initializer
   {
@@ -109,14 +109,14 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     assetList = _assetList;
     collaterals.push(_collateral);
     active = true;
-    expirationTimestamps = _expirationTimestamps;
+    expiries = _expiries;
 
     collateralStatusMap[_collateral] = 1;
 
-    for (uint i = 0; i < _expirationTimestamps.length; i++) {
-      if (block.timestamp < _expirationTimestamps[i]) {
-        expirationTimestampMap[_expirationTimestamps[i]] = ExpirationTimestampInfo(
-          _expirationTimestampNames[i],
+    for (uint i = 0; i < _expiries.length; i++) {
+      if (block.timestamp < _expiries[i]) {
+        expiryMap[_expiries[i]] = ExpiryInfo(
+          _expiryNames[i],
           1
         );
       }
@@ -144,7 +144,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       uint256 _claimRedeemDelay,
       uint256 _noclaimRedeemDelay,
       address[] memory _collaterals,
-      uint48[] memory _expirationTimestamps,
+      uint48[] memory _expiries,
       address[] memory _allCovers,
       address[] memory _allActiveCovers
     )
@@ -157,7 +157,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       claimRedeemDelay,
       noclaimRedeemDelay,
       getCollaterals(),
-      getExpirationTimestamps(),
+      getExpiries(),
       getAllCovers(),
       getAllActiveCovers()
     );
@@ -167,8 +167,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return collaterals.length;
   }
 
-  function expirationTimestampsLength() external view override returns (uint256) {
-    return expirationTimestamps.length;
+  function expiriesLength() external view override returns (uint256) {
+    return expiries.length;
   }
 
   function activeCoversLength() external view override returns (uint256) {
@@ -232,7 +232,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   {
     require(_amount > 0, "CoverPool: amount <= 0");
     require(collateralStatusMap[_collateral] == 1, "CoverPool: invalid collateral");
-    require(block.timestamp < _timestamp && expirationTimestampMap[_timestamp].status == 1, "CoverPool: invalid expiration date");
+    require(block.timestamp < _timestamp && expiryMap[_timestamp].status == 1, "CoverPool: invalid expiry");
 
     // Validate sender collateral balance is > amount
     IERC20 collateral = IERC20(_collateral);
@@ -270,16 +270,16 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return true;
   }
 
-  /// @notice update status or add new expiration timestamp
-  function updateExpirationTimestamp(uint48 _expirationTimestamp, bytes32 _expirationTimestampName, uint8 _status) external override onlyDev returns (bool) {
-    require(block.timestamp < _expirationTimestamp, "CoverPool: invalid expiration date");
+  /// @notice update status or add new expiry
+  function updateExpiry(uint48 _expiry, bytes32 _expiryName, uint8 _status) external override onlyDev returns (bool) {
+    require(block.timestamp < _expiry, "CoverPool: invalid expiry");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
 
-    if (expirationTimestampMap[_expirationTimestamp].status == 0) {
-      expirationTimestamps.push(_expirationTimestamp);
+    if (expiryMap[_expiry].status == 0) {
+      expiries.push(_expiry);
     }
-    expirationTimestampMap[_expirationTimestamp] = ExpirationTimestampInfo(
-      _expirationTimestampName,
+    expiryMap[_expiry] = ExpiryInfo(
+      _expiryName,
       _status
     );
     return true;
@@ -373,8 +373,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return collaterals;
   }
 
-  function getExpirationTimestamps() private view returns (uint48[] memory) {
-    return expirationTimestamps;
+  function getExpiries() private view returns (uint48[] memory) {
+    return expiries;
   }
 
   /// @dev the owner of this contract is CoverPoolFactory contract. The owner of CoverPoolFactory is dev
@@ -383,13 +383,13 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @dev generate the cover name. Example: 3POOL_0_DAI_2020_12_31
-  function _getCoverNameWithTimestamp(uint48 _expirationTimestamp, string memory _collateralSymbol)
+  function _getCoverNameWithTimestamp(uint48 _expiry, string memory _collateralSymbol)
    internal view returns (string memory) 
   {
     return string(abi.encodePacked(
       _getCoverName(_collateralSymbol),
       "_",
-      StringHelper.bytes32ToString(expirationTimestampMap[_expirationTimestamp].name)
+      StringHelper.bytes32ToString(expiryMap[_expiry].name)
     ));
   }
 

@@ -78,8 +78,8 @@ describe('CoverPool', function() {
     expect(await coverPool.claimNonce()).to.equal(0);
     expect(await coverPool.claimRedeemDelay()).to.equal(2 * 24 * 60 * 60);
     expect(await coverPool.noclaimRedeemDelay()).to.equal(10 * 24 * 60 * 60);
-    expect(await coverPool.expirationTimestampsLength()).to.equal(TIMESTAMPS.length);
-    expect(await coverPool.expirationTimestamps(0)).to.equal(TIMESTAMPS[0]);
+    expect(await coverPool.expiriesLength()).to.equal(TIMESTAMPS.length);
+    expect(await coverPool.expiries(0)).to.equal(TIMESTAMPS[0]);
     expect(await coverPool.collateralsLength()).to.equal(1);
     expect(await coverPool.collaterals(0)).to.equal(COLLATERAL);
   });
@@ -90,10 +90,10 @@ describe('CoverPool', function() {
     expect(await coverPool.collaterals(1)).to.equal(NEW_COLLATERAL);
     expect(await coverPool.collateralStatusMap(NEW_COLLATERAL)).to.equal(2);
     
-    await coverPool.connect(ownerAccount).updateExpirationTimestamp(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1);
-    expect(await coverPool.expirationTimestampsLength()).to.equal(TIMESTAMPS.length + 1);
-    expect(await coverPool.expirationTimestamps(TIMESTAMPS.length)).to.equal(NEW_TIMESTAMP);
-    expect((await coverPool.expirationTimestampMap(NEW_TIMESTAMP)).status).to.equal(1);
+    await coverPool.connect(ownerAccount).updateExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1);
+    expect(await coverPool.expiriesLength()).to.equal(TIMESTAMPS.length + 1);
+    expect(await coverPool.expiries(TIMESTAMPS.length)).to.equal(NEW_TIMESTAMP);
+    expect((await coverPool.expiryMap(NEW_TIMESTAMP)).status).to.equal(1);
 
     await coverPool.connect(ownerAccount).setActive(false);
     expect(await coverPool.active()).to.equal(false);
@@ -112,7 +112,7 @@ describe('CoverPool', function() {
 
   it('Should NOT update state variables by the wrong authority', async function() {
     await expect(coverPool.connect(userAAccount).updateCollateral(NEW_COLLATERAL, 1)).to.be.reverted;
-    await expect(coverPool.connect(userAAccount).updateExpirationTimestamp(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).updateExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1)).to.be.reverted;
     await expect(coverPool.connect(userAAccount).setActive(false)).to.be.reverted;
     await expect(coverPool.connect(ownerAccount).updateClaimRedeemDelay(10 * 24 * 60 * 60)).to.be.reverted;
   });
@@ -135,7 +135,7 @@ describe('CoverPool', function() {
     expect(computedAddress).to.equal(coverAddress);
   });
 
-  it('Should create new cover contract for diffrent expiration timestamps', async function() {
+  it('Should create new cover contract for diffrent expiries', async function() {
     const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, TIMESTAMPS[1], 10);
     await txA.wait();
     const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMPS[2], 10);

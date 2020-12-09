@@ -30,7 +30,7 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   using SafeERC20 for IERC20;
 
   bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string)"));
-  uint48 public override expirationTimestamp;
+  uint48 public override expiry;
   address public override collateral;
   ICoverERC20 public override claimCovToken;
   ICoverERC20 public override noclaimCovToken;
@@ -38,7 +38,7 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   uint256 public override claimNonce;
 
   modifier onlyNotExpired() {
-    require(block.timestamp < expirationTimestamp, "COVER: cover expired");
+    require(block.timestamp < expiry, "COVER: cover expired");
     _;
   }
 
@@ -50,7 +50,7 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
     uint256 _claimNonce
   ) public initializer {
     name = _name;
-    expirationTimestamp = _timestamp;
+    expiry = _timestamp;
     collateral = _collateral;
     claimNonce = _claimNonce;
 
@@ -61,9 +61,9 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   }
 
   function getCoverDetails()
-    external view override returns (string memory _name, uint48 _expirationTimestamp, address _collateral, uint256 _claimNonce, ICoverERC20 _claimCovToken, ICoverERC20 _noclaimCovToken)
+    external view override returns (string memory _name, uint48 _expiry, address _collateral, uint256 _claimNonce, ICoverERC20 _claimCovToken, ICoverERC20 _noclaimCovToken)
   {
-    return (name, expirationTimestamp, collateral, claimNonce, claimCovToken, noclaimCovToken);
+    return (name, expiry, collateral, claimNonce, claimCovToken, noclaimCovToken);
   }
 
   /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
@@ -80,7 +80,7 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
     require(coverPool.claimNonce() > claimNonce, "COVER: no claim accepted");
 
     (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
-    require(_incidentTimestamp <= expirationTimestamp, "COVER: cover expired before incident");
+    require(_incidentTimestamp <= expiry, "COVER: cover expired before incident");
     require(block.timestamp >= uint256(_claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
 
     _paySender(
@@ -102,13 +102,13 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
 
       (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
 
-      if (_incidentTimestamp > expirationTimestamp) {
-        // incident happened after expiration date, redeem back full collateral
+      if (_incidentTimestamp > expiry) {
+        // incident happened after expiry, redeem back full collateral
 
-        require(block.timestamp >= uint256(expirationTimestamp) + coverPool.noclaimRedeemDelay(), "COVER: not ready");
+        require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "COVER: not ready");
         _paySender(noclaimCovToken, 1, 1);
       } else {
-        // incident happened before expiration date, pay 1 - payout%
+        // incident happened before expiry, pay 1 - payout%
 
         // If claim payout is 100%, nothing is left for NOCLAIM covToken holders
         require(_payoutNumerator < _payoutDenominator, "COVER: claim payout 100%");
@@ -123,7 +123,7 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
     } else {
       // coverPool has no accepted claim
 
-      require(block.timestamp >= uint256(expirationTimestamp) + coverPool.noclaimRedeemDelay(), "COVER: not ready");
+      require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "COVER: not ready");
       _paySender(noclaimCovToken, 1, 1);
     }
   }
@@ -209,7 +209,7 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   /// @dev Emits NewCoverERC20
   function _createCovToken(string memory _prefix) private returns (ICoverERC20) {
     bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
-    bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), expirationTimestamp, collateral, claimNonce, _prefix));
+    bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), expiry, collateral, claimNonce, _prefix));
     address payable proxyAddr = Create2.deploy(0, salt, bytecode);
 
     bytes memory initData = abi.encodeWithSelector(COVERERC20_INIT_SIGNITURE, string(abi.encodePacked(_prefix, "_", name)));

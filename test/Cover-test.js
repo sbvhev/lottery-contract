@@ -86,7 +86,7 @@ describe('Cover', function() {
   });
 
   it('Should initialize correct state variables', async function() {
-    expect(await cover.expirationTimestamp()).to.equal(TIMESTAMP);
+    expect(await cover.expiry()).to.equal(TIMESTAMP);
     expect(await cover.collateral()).to.equal(COLLATERAL);
     expect(await cover.claimNonce()).to.equal(0);
     expect(await cover.name()).to.equal(NAME);
@@ -170,7 +170,7 @@ describe('Cover', function() {
   });
 
   it('Should NOT redeem collateral after cover expired', async function() {
-    const timestamp = await cover.expirationTimestamp();
+    const timestamp = await cover.expiry();
     await time.increaseTo(ethers.BigNumber.from(timestamp).toNumber());
     await time.advanceBlock();
 
@@ -182,7 +182,7 @@ describe('Cover', function() {
   });
 
   it('Should NOT redeemNoclaim after expire before wait period ends', async function() {
-    const timestamp = await cover.expirationTimestamp();
+    const timestamp = await cover.expiry();
     const delay = await coverPool.noclaimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(timestamp).toNumber() + delay.toNumber() - ethers.BigNumber.from(10).toNumber());
     await time.advanceBlock();
@@ -191,7 +191,7 @@ describe('Cover', function() {
   });
 
   it('Should redeemNoclaim after expire and after wait period ends', async function() {
-    const timestamp = await cover.expirationTimestamp();
+    const timestamp = await cover.expiry();
     const delay = await coverPool.noclaimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(timestamp).toNumber() + delay.toNumber());
     await time.advanceBlock();
@@ -205,7 +205,7 @@ describe('Cover', function() {
   });
 
   it('Should NOT redeemNoclaim after expire if does not hold noclaim covToken', async function() {
-    const timestamp = await cover.expirationTimestamp();
+    const timestamp = await cover.expiry();
     await time.increaseTo(ethers.BigNumber.from(timestamp).toNumber());
     await time.advanceBlock();
 
@@ -214,7 +214,7 @@ describe('Cover', function() {
   });
 
   it('Should NOT redeemClaim before accepted claim', async function() {
-    const timestamp = await cover.expirationTimestamp();
+    const timestamp = await cover.expiry();
     await time.increaseTo(ethers.BigNumber.from(timestamp).toNumber());
     await time.advanceBlock();
 
@@ -264,8 +264,8 @@ describe('Cover', function() {
     expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance2.add(ETHER_UINT_6).sub(ethers.utils.parseEther("0.006")));
   });
 
-  it('Should allow redeem noclaim ONLY after enact and noclaimRedeemDelay if incident after expiration', async function() {
-    const incidentTimestamp = await cover.expirationTimestamp();
+  it('Should allow redeem noclaim ONLY after enact and noclaimRedeemDelay if incident after expiry', async function() {
+    const incidentTimestamp = await cover.expiry();
     // const delay = await coverPool.noclaimRedeemDelay();
     // await time.increaseTo(ethers.BigNumber.from(timestamp).toNumber() + delay.toNumber());
 
@@ -277,7 +277,7 @@ describe('Cover', function() {
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber() * 24 * 60 * 60);
     await time.advanceBlock();
 
-    // since incident happened after expiration, CLAIM token redeems fails
+    // since incident happened after expiry, CLAIM token redeems fails
     await expect(cover.connect(userBAccount).redeemClaim()).to.be.reverted;
 
     const aDaiBalance = await dai.balanceOf(userAAddress);
