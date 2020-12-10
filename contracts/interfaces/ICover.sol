@@ -12,10 +12,17 @@ interface ICover {
   event NewCoverERC20(address);
 
   function getCoverDetails()
-    external view returns (string memory _name, uint48 _expiry, address _collateral, uint256 _claimNonce, ICoverERC20 _claimCovToken, ICoverERC20 _noclaimCovToken);
+    external view returns (
+      string memory _name,
+      uint48 _expiry,
+      address _collateral,
+      uint256 _claimNonce,
+      ICoverERC20[] memory _claimCovTokens,
+      ICoverERC20 _noclaimCovToken
+    );
   function expiry() external view returns (uint48);
   function collateral() external view returns (address);
-  function claimCovToken() external view returns (ICoverERC20);
+  function claimCovTokens(uint256 _index) external view returns (ICoverERC20);
   function noclaimCovToken() external view returns (ICoverERC20);
   function name() external view returns (string memory);
   function claimNonce() external view returns (uint256);
@@ -26,7 +33,4 @@ interface ICover {
 
   /// @notice access restriction - owner (CoverPool)
   function mint(uint256 _amount, address _receiver) external;
-
-  /// @notice access restriction - dev
-  function setCovTokenSymbol(string calldata _name) external;
 }

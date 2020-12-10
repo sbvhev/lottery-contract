@@ -90,7 +90,7 @@ describe('Cover', function() {
     expect(await cover.collateral()).to.equal(COLLATERAL);
     expect(await cover.claimNonce()).to.equal(0);
     expect(await cover.name()).to.equal(NAME);
-    const claimCovTokenAddress = await cover.claimCovToken();
+    const claimCovTokenAddress = await cover.claimCovTokens(0);
     const noclaimCovTokenAddress = await cover.noclaimCovToken();
     expect(await CoverERC20.attach(claimCovTokenAddress).symbol()).to.equal("CLAIM_" + NAME);
     expect(await CoverERC20.attach(noclaimCovTokenAddress).symbol()).to.equal("NOCLAIM_" + NAME);
@@ -105,10 +105,7 @@ describe('Cover', function() {
 
   // owner access tests
   it('Should match computed covToken addresses', async function() {
-    // const newName = 'COVER_YFI_2020_12_31_DAI_0';
-    // await cover.connect(ownerAccount).setCovTokenSymbol(newName);
-
-    const claimCovTokenAddress = await cover.claimCovToken();
+    const claimCovTokenAddress = await cover.claimCovTokens(0);
     const noclaimCovTokenAddress = await cover.noclaimCovToken();
     const claimNonce = await coverPool.claimNonce();
     
@@ -118,32 +115,18 @@ describe('Cover', function() {
     expect(noclaimCovTokenAddress).to.equal(computedNoclaimCovTokenAddress);
   });
 
-  it('Should set CovTokenSymbol by dev', async function() {
-    const newName = 'COVER_YFI_2020_12_31_DAI_0';
-    await cover.connect(ownerAccount).setCovTokenSymbol(newName);
-
-    const claimCovTokenAddress = await cover.claimCovToken();
-    const noclaimCovTokenAddress = await cover.noclaimCovToken();
-    expect(claimCovTokenAddress).to.not.equal(ADDRESS_ZERO);
-    expect(noclaimCovTokenAddress).to.not.equal(ADDRESS_ZERO);
-    expect(await CoverERC20.attach(claimCovTokenAddress).symbol()).to.equal(newName + "_CLAIM");
-  });
-
-  it('Should NOT set CovTokenSymbol by non-dev', async function() {
-    await expect(cover.connect(userAAccount).setCovTokenSymbol('COVER_YFI_2020_12_31_DAI_0')).to.be.reverted;
-  });
-
   it('Should redeem collateral without accepted claim', async function() {
     await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
 
-    const claimCovTokenAddress = await cover.claimCovToken();
+    const claimCovTokenAddress = await cover.claimCovTokens(0);
     const noclaimCovTokenAddress = await cover.noclaimCovToken();
     expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(0);
     expect(await CoverERC20.attach(noclaimCovTokenAddress).totalSupply()).to.equal(0);
     expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
     expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
     expect(await dai.balanceOf(cover.address)).to.equal(0);
-    expect(await dai.balanceOf(treasuryAddress)).to.deep.equal(ethers.utils.parseEther("0.01"));
+    const [num, den] = await coverPool.getRedeemFees();
+    expect(await dai.balanceOf(treasuryAddress)).to.deep.equal(ETHER_UINT_10.mul(num).div(den));
   });
 
   it('Should redeem collateral(0 fee) without accepted claim', async function() {
@@ -152,7 +135,7 @@ describe('Cover', function() {
     const collateralTreasuryBefore = await dai.balanceOf(treasuryAddress);
     await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
 
-    const claimCovTokenAddress = await cover.claimCovToken();
+    const claimCovTokenAddress = await cover.claimCovTokens(0);
     const noclaimCovTokenAddress = await cover.noclaimCovToken();
     expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(0);
     expect(await CoverERC20.attach(noclaimCovTokenAddress).totalSupply()).to.equal(0);
@@ -230,7 +213,7 @@ describe('Cover', function() {
 
     expect(await dai.balanceOf(cover.address)).to.equal(ETHER_UINT_10);
 
-    const claimCovTokenAddress = await cover.claimCovToken();
+    const claimCovTokenAddress = await cover.claimCovTokens(0);
     expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(ETHER_UINT_10);
     expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
   });
@@ -247,7 +230,7 @@ describe('Cover', function() {
     const aDaiBalance = await dai.balanceOf(userAAddress);
     await cover.connect(userAAccount).redeemClaim();
 
-    const claimCovTokenAddress = await cover.claimCovToken();
+    const claimCovTokenAddress = await cover.claimCovTokens(0);
     expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(0);
     expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
 

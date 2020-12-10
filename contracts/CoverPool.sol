@@ -36,7 +36,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint8 status; // 0 never set; 1 active, 2 inactive
   }
 
-  bytes4 private constant COVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint48,address,uint256)"));
+  bytes4 private constant COVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],uint48,address,uint256)"));
 
   uint16 private redeemFeeNumerator;
   uint16 private redeemFeeDenominator;
@@ -125,7 +125,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     // set default delay for redeem
     claimRedeemDelay = 2 days;
     noclaimRedeemDelay = 10 days;
-    redeemFeeNumerator = 10; // 0 to 65,535
+    redeemFeeNumerator = 20; // 0 to 65,535
     redeemFeeDenominator = 10000; // 0 to 65,535
 
     initializeOwner();
@@ -245,7 +245,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       bytes32 salt = keccak256(abi.encodePacked(name, _timestamp, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);
 
-      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _timestamp, _collateral, claimNonce);
+      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, assetList, _timestamp, _collateral, claimNonce);
       address coverImplementation = ICoverPoolFactory(owner()).coverImplementation();
       InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
         coverImplementation,

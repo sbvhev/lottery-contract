@@ -9,6 +9,7 @@ import "./utils/Ownable.sol";
 import "./utils/ReentrancyGuard.sol";
 import "./utils/SafeMath.sol";
 import "./utils/SafeERC20.sol";
+import "./utils/StringHelper.sol";
 import "./interfaces/ICover.sol";
 import "./interfaces/ICoverERC20.sol";
 import "./interfaces/IERC20.sol";
@@ -32,7 +33,9 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string)"));
   uint48 public override expiry;
   address public override collateral;
-  ICoverERC20 public override claimCovToken;
+  // ICoverERC20 public override claimCovToken;
+  ICoverERC20[] public override claimCovTokens;
+  mapping(bytes32 => ICoverERC20) public claimCovTokenMap;
   ICoverERC20 public override noclaimCovToken;
   string public override name;
   uint256 public override claimNonce;
@@ -45,6 +48,7 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   /// @dev Initialize, called once
   function initialize (
     string calldata _name,
+    bytes32[] calldata _assetList,
     uint48 _timestamp,
     address _collateral,
     uint256 _claimNonce
@@ -56,25 +60,41 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
 
     initializeOwner();
 
-    claimCovToken = _createCovToken("CLAIM");
+    for (uint i = 0; i < _assetList.length; i++) {
+      ICoverERC20 claimToken;
+      if (_assetList.length > 1) {
+        string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
+        claimToken = _createCovToken(string(abi.encodePacked("CLAIM_", assetName)));
+      } else {
+        claimToken = _createCovToken("CLAIM");
+      }
+      claimCovTokens.push(claimToken);
+      claimCovTokenMap[_assetList[i]] = claimToken;
+    }
+
     noclaimCovToken = _createCovToken("NOCLAIM");
   }
 
   function getCoverDetails()
-    external view override returns (string memory _name, uint48 _expiry, address _collateral, uint256 _claimNonce, ICoverERC20 _claimCovToken, ICoverERC20 _noclaimCovToken)
+    external view override returns (string memory _name, uint48 _expiry, address _collateral, uint256 _claimNonce, ICoverERC20[] memory _claimCovTokens, ICoverERC20 _noclaimCovToken)
   {
-    return (name, expiry, collateral, claimNonce, claimCovToken, noclaimCovToken);
+    return (name, expiry, collateral, claimNonce, claimCovTokens, noclaimCovToken);
   }
 
   /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
   function mint(uint256 _amount, address _receiver) external override onlyOwner {
     _noClaimAcceptedCheck(); // save gas than modifier
+    ICoverERC20[] memory claimCovTokensCopy = claimCovTokens;
 
-    claimCovToken.mint(_receiver, _amount);
+    for (uint i = 0; i < claimCovTokensCopy.length; i++) {
+      claimCovTokensCopy[i].mint(_receiver, _amount);
+    }
+
     noclaimCovToken.mint(_receiver, _amount);
   }
 
   /// @notice redeem CLAIM covToken, only if there is a claim accepted and delayWithClaim period passed
+  // TODO update redeem Claim with claim asset
   function redeemClaim() external override {
     ICoverPool coverPool = ICoverPool(owner());
     require(coverPool.claimNonce() > claimNonce, "COVER: no claim accepted");
@@ -84,7 +104,7 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
     require(block.timestamp >= uint256(_claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
 
     _paySender(
-      claimCovToken,
+      claimCovTokens[0],
       uint256(_payoutNumerator),
       uint256(_payoutDenominator)
     );
@@ -133,27 +153,17 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
     require(_amount > 0, "COVER: amount is 0");
     _noClaimAcceptedCheck(); // save gas than modifier
 
-    ICoverERC20 _claimCovToken = claimCovToken; // save gas
     ICoverERC20 _noclaimCovToken = noclaimCovToken; // save gas
-
-    require(_amount <= _claimCovToken.balanceOf(msg.sender), "COVER: low CLAIM balance");
     require(_amount <= _noclaimCovToken.balanceOf(msg.sender), "COVER: low NOCLAIM balance");
-
-    _claimCovToken.burnByCover(msg.sender, _amount);
     _noclaimCovToken.burnByCover(msg.sender, _amount);
+
+    ICoverERC20[] memory claimCovTokensCopy = claimCovTokens; // save gas
+    for (uint i = 0; i < claimCovTokensCopy.length; i++) {
+      require(_amount <= claimCovTokensCopy[i].balanceOf(msg.sender), "COVER: low CLAIM balance");
+      claimCovTokensCopy[i].burnByCover(msg.sender, _amount);
+    }
+
     _payCollateral(msg.sender, _amount);
-  }
-
-  /**
-   * @notice set CovTokenSymbol, will update symbols for both covTokens, only dev account (factory owner)
-   * For example:
-   *  - COVER_CURVE_2020_12_31_DAI_0
-   */
-  function setCovTokenSymbol(string calldata _name) external override {
-    require(_dev() == msg.sender, "COVER: not dev");
-
-    claimCovToken.setSymbol(string(abi.encodePacked(_name, "_CLAIM")));
-    noclaimCovToken.setSymbol(string(abi.encodePacked(_name, "_NOCLAIM")));
   }
 
   /// @notice the owner of this contract is CoverPool contract, the owner of CoverPool is CoverPoolFactory contract
@@ -164,11 +174,6 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   // get the claim details for the corresponding nonce from coverPool contract
   function _claimDetails() private view returns (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) {
     return ICoverPool(owner()).claimDetails(claimNonce);
-  }
-
-  /// @notice the owner of CoverPoolFactory contract is dev, also see {_factory}
-  function _dev() private view returns (address) {
-    return IOwnable(_factory()).owner();
   }
 
   /// @notice make sure no claim is accepted
