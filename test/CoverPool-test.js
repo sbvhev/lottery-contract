@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { expectRevert, time, BN } = require("@openzeppelin/test-helpers");
 const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
-describe('CoverPool', function() {
+describe('CoverPool', () => {
   const NEW_TIMESTAMP = 2556057500000;
   const NEW_TIMESTAMP_NAME = ethers.utils.formatBytes32String('2040_12_31');
   const INCIDENT_TIMESTAMP = 1580515200000;
@@ -42,7 +42,7 @@ describe('CoverPool', function() {
     await dai.connect(userBAccount).approve(coverPool.address, 1000);
   });
 
-  it('Should initialize correct state variables', async function() {
+  it('Should initialize correct state variables', async () => {
     expect(await coverPool.name()).to.equal(consts.PROTOCOL_NAME);
     expect(await coverPool.active()).to.equal(true);
     expect(await coverPool.claimNonce()).to.equal(0);
@@ -54,7 +54,7 @@ describe('CoverPool', function() {
     expect(await coverPool.collaterals(0)).to.equal(COLLATERAL);
   });
 
-  it('Should update state variables by the correct authority', async function() {
+  it('Should update state variables by the correct authority', async () => {
     await coverPool.connect(ownerAccount).updateCollateral(NEW_COLLATERAL, 2);
     expect(await coverPool.collateralsLength()).to.equal(2);
     expect(await coverPool.collaterals(1)).to.equal(NEW_COLLATERAL);
@@ -80,14 +80,14 @@ describe('CoverPool', function() {
     expect(redeemFeeDenominator).to.equal(1);
   });
 
-  it('Should NOT update state variables by the wrong authority', async function() {
+  it('Should NOT update state variables by the wrong authority', async () => {
     await expect(coverPool.connect(userAAccount).updateCollateral(NEW_COLLATERAL, 1)).to.be.reverted;
     await expect(coverPool.connect(userAAccount).updateExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1)).to.be.reverted;
     await expect(coverPool.connect(userAAccount).setActive(false)).to.be.reverted;
     await expect(coverPool.connect(ownerAccount).updateClaimRedeemDelay(10 * 24 * 60 * 60)).to.be.reverted;
   });
 
-  it('Should add cover for userA', async function() {
+  it('Should add cover for userA', async () => {
     const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txA.wait();
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
@@ -95,7 +95,7 @@ describe('CoverPool', function() {
     expect(await dai.balanceOf(coverAddress)).to.equal(10);
   });
 
-  it('Should match cover with computed cover address', async function() {
+  it('Should match cover with computed cover address', async () => {
     const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txA.wait();
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
@@ -105,7 +105,7 @@ describe('CoverPool', function() {
     expect(computedAddress).to.equal(coverAddress);
   });
 
-  it('Should create new cover contract for diffrent expiries', async function() {
+  it('Should create new cover contract for diffrent expiries', async () => {
     const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txA.wait();
     const txB = await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[2], 10);
@@ -115,7 +115,7 @@ describe('CoverPool', function() {
     expect(activeCoversLength).to.equal(2);
   });
 
-  it('Should add cover for userB on existing contract', async function() {
+  it('Should add cover for userB on existing contract', async () => {
     const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txA.wait();
 
@@ -132,7 +132,7 @@ describe('CoverPool', function() {
     expect(await dai.balanceOf(coverAddress)).to.equal(10);
   });
 
-  it('Should create new cover for userB on existing contract when accepted claim', async function() {
+  it('Should create new cover for userB on existing contract when accepted claim', async () => {
     const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txA.wait();
 
@@ -149,7 +149,7 @@ describe('CoverPool', function() {
     expect(await dai.balanceOf(coverAddress)).to.equal(10);
   });
 
-  it('Should emit event and enactClaim if called by claimManager', async function() {
+  it('Should emit event and enactClaim if called by claimManager', async () => {
     const oldClaimNonce = await coverPool.claimNonce();
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
@@ -158,7 +158,7 @@ describe('CoverPool', function() {
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce + 1);
   });
 
-  it('Should NOT enactClaim if coverPool nonce not match', async function() {
+  it('Should NOT enactClaim if coverPool nonce not match', async () => {
     const oldClaimNonce = await coverPool.claimNonce();
     await coverPool.connect(ownerAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0);
     expect(await coverPool.name()).to.equal(consts.PROTOCOL_NAME);
@@ -168,14 +168,14 @@ describe('CoverPool', function() {
     await expect(coverPool.connect(userAAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
   });
   
-  it('Should NOT enactClaim if called by non-claimManager', async function() {
+  it('Should NOT enactClaim if called by non-claimManager', async () => {
     const oldClaimNonce = await coverPool.claimNonce();
     await expect(coverPool.connect(userAAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce);
   });
 
 
-  it('Should NOT add cover for userA for expired timestamp', async function() {
+  it('Should NOT add cover for userA for expired timestamp', async () => {
     await time.increaseTo(consts.ALLOWED_EXPIRYS[1]);
     await time.advanceBlock();
 

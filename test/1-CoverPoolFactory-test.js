@@ -22,7 +22,7 @@ describe('CoverPoolFactory', () => {
     await coverPoolFactory.deployed();
   });
 
-  it('Should deploy with correct state variable values', async function() {
+  it('Should deploy with correct state variable values', async () => {
     expect(await coverPoolFactory.coverPoolImplementation()).to.equal(coverPoolImpl.address);
     expect(await coverPoolFactory.coverImplementation()).to.equal(coverImpl.address);
     expect(await coverPoolFactory.coverERC20Implementation()).to.equal(coverERC20Impl.address);
@@ -30,32 +30,32 @@ describe('CoverPoolFactory', () => {
     expect(await coverPoolFactory.treasury()).to.equal(treasuryAddress);
   });
 
-  it('Should emit CoverPoolCreation event', async function() {
+  it('Should emit CoverPoolCreation event', async () => {
     await expect(coverPoolFactory.connect(ownerAccount)
       .createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES)
       ).to.emit(coverPoolFactory, 'CoverPoolCreation');
   });
 
   // test functions with governance access restriction
-  it('Should NOT update governance to address(0) by governance', async function() {
+  it('Should NOT update governance to address(0) by governance', async () => {
     await expectRevert(coverPoolFactory.connect(governanceAccount).updateGovernance(consts.ADDRESS_ZERO), 'CoverPoolFactory: address cannot be 0');
   });
 
-  it('Should NOT update governance to owner by governance', async function() {
+  it('Should NOT update governance to owner by governance', async () => {
     await expectRevert(coverPoolFactory.connect(governanceAccount).updateGovernance(ownerAddress), 'CoverPoolFactory: governance cannot be owner');
   });
 
   // test functions with owner access restriction
-  it('Should update claimManager by owner', async function() {
+  it('Should update claimManager by owner', async () => {
     await coverPoolFactory.connect(ownerAccount).updateClaimManager(userAAddress);
     expect(await coverPoolFactory.claimManager()).to.equal(userAAddress);
   });
 
-  it('Should NOT update claimManager by non-owner', async function() {
+  it('Should NOT update claimManager by non-owner', async () => {
     await expect(coverPoolFactory.connect(userAAccount).updateClaimManager(userAAddress)).to.be.reverted;
   });
 
-  it('Should add 2 new coverPools by owner', async function() {
+  it('Should add 2 new coverPools by owner', async () => {
     expect(await coverPoolFactory
       .createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES)
       ).to.not.equal(consts.ADDRESS_ZERO);  
@@ -73,7 +73,7 @@ describe('CoverPoolFactory', () => {
     expect(await CoverPool.attach(coverPoolAddr2).assetList(1)).to.deep.equal(consts.PROTOCOL_NAME_2);
   });
 
-  it('Should compute the same coverPool addresses', async function() {
+  it('Should compute the same coverPool addresses', async () => {
     expect(await coverPoolFactory
       .createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES)
       ).to.not.equal(consts.ADDRESS_ZERO);  
@@ -85,7 +85,7 @@ describe('CoverPoolFactory', () => {
     expect(computedAddr1).to.equal(coverPoolAddr1);
   });
 
-  it('Should NOT add new coverPool by userA', async function() {
+  it('Should NOT add new coverPool by userA', async () => {
     await expect(coverPoolFactory
       .connect(userAAccount)
       .createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES)
