@@ -99,10 +99,11 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
     require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
 
     uint256 totalAmount;
-    for (uint256 i = 0; i < claimCovTokens.length; i++) {
-      uint256 amount = claimCovTokens[i].balanceOf(msg.sender);
+    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
+      ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
+      uint256 amount = covToken.balanceOf(msg.sender);
       totalAmount = totalAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
-      claimCovTokens[i].burnByCover(msg.sender, amount);
+      covToken.burnByCover(msg.sender, amount);
     }
     require(totalAmount > 0, "COVER: low covToken balance");
     _payCollateral(msg.sender, totalAmount);

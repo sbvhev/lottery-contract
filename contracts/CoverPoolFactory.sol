@@ -90,7 +90,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     uint48 _timestamp,
     address _collateral,
     uint256 _claimNonce,
-    bool _isClaimCovToken
+    string memory _prefix // "CLAIM_POOL2_CURVE" or "NOCLAIM_POOL2"
   )
    external view override returns (address) 
   {
@@ -100,7 +100,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
         _timestamp,
         _collateral,
         _claimNonce,
-        _isClaimCovToken ? "CLAIM" : "NOCLAIM")
+        _prefix)
       ),
       getCoverAddress(_coverPoolName, _timestamp, _collateral, _claimNonce)
     );
