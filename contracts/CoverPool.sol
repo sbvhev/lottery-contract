@@ -222,12 +222,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /**
-   * @notice add cover for sender
-   *  - transfer collateral from sender to cover contract
-   *  - mint the same amount CLAIM covToken to sender
-   *  - mint the same amount NOCLAIM covToken to sender
+   * @notice add coverage (with expiry) for sender
    */
-  function addCover(address _collateral, uint48 _timestamp, uint256 _amount)
+  function addCoverWithExpiry(address _collateral, uint48 _timestamp, uint256 _amount)
     external override onlyActive nonReentrant returns (bool)
   {
     require(_amount > 0, "CoverPool: amount <= 0");

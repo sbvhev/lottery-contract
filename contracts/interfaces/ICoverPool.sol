@@ -45,7 +45,7 @@ interface ICoverPool {
   function expiriesLength() external view returns (uint256);
   function activeCoversLength() external view returns (uint256);
   function claimsLength() external view returns (uint256);
-  function addCover(address _collateral, uint48 _timestamp, uint256 _amount)
+  function addCoverWithExpiry(address _collateral, uint48 _timestamp, uint256 _amount)
     external returns (bool);
   function addPerpCover(address _collateral, uint256 _amount) external returns (bool);
 

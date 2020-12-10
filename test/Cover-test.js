@@ -79,7 +79,7 @@ describe('Cover', function() {
     await dai.connect(userBAccount).approve(coverPool.address, ETHER_UINT_10000);
 
     // add cover through coverPool
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10);
+    const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMP, ETHER_UINT_10);
     await txA.wait();
     const coverAddress = await coverPool.coverMap(COLLATERAL, TIMESTAMP);
     cover = Cover.attach(coverAddress);

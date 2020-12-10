@@ -118,7 +118,7 @@ describe('CoverPool', function() {
   });
 
   it('Should add cover for userA', async function() {
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, TIMESTAMPS[1], 10);
+    const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[1], 10);
     await txA.wait();
     const coverAddress = await coverPool.coverMap(COLLATERAL, TIMESTAMPS[1]);
     expect(coverAddress).to.not.equal(ADDRESS_ZERO);
@@ -126,7 +126,7 @@ describe('CoverPool', function() {
   });
 
   it('Should match cover with computed cover address', async function() {
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, TIMESTAMPS[1], 10);
+    const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[1], 10);
     await txA.wait();
     const coverAddress = await coverPool.coverMap(COLLATERAL, TIMESTAMPS[1]);
 
@@ -136,9 +136,9 @@ describe('CoverPool', function() {
   });
 
   it('Should create new cover contract for diffrent expiries', async function() {
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, TIMESTAMPS[1], 10);
+    const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[1], 10);
     await txA.wait();
-    const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMPS[2], 10);
+    const txB = await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[2], 10);
     await txB.wait();
 
     const activeCoversLength = await coverPool.activeCoversLength();
@@ -146,13 +146,13 @@ describe('CoverPool', function() {
   });
 
   it('Should add cover for userB on existing contract', async function() {
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, TIMESTAMPS[1], 10);
+    const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[1], 10);
     await txA.wait();
 
     await expect(coverPool.connect(ownerAccount).enactClaim(100, 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
 
-    const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMPS[1], 10);
+    const txB = await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[1], 10);
     await txB.wait();
     const activeCoversLength = await coverPool.activeCoversLength();
     expect(activeCoversLength).to.equal(1);
@@ -163,13 +163,13 @@ describe('CoverPool', function() {
   });
 
   it('Should create new cover for userB on existing contract when accepted claim', async function() {
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, TIMESTAMPS[1], 10);
+    const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[1], 10);
     await txA.wait();
 
     await expect(coverPool.connect(ownerAccount).enactClaim(100, 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
 
-    const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMPS[1], 10);
+    const txB = await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[1], 10);
     await txB.wait();
     const activeCoversLength = await coverPool.activeCoversLength();
     expect(activeCoversLength).to.equal(1);
@@ -209,6 +209,6 @@ describe('CoverPool', function() {
     await time.increaseTo(TIMESTAMPS[1]);
     await time.advanceBlock();
 
-    await expect(coverPool.connect(userAAccount).addCover(COLLATERAL, TIMESTAMPS[1], 10)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[1], 10)).to.be.reverted;
   });
 });

@@ -84,6 +84,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   }
 
   /// @notice return covToken contract address, the contract may not be deployed yet
+  // TODO to be updated for each asset
   function getCovTokenAddress(
     bytes32 _coverPoolName,
     uint48 _timestamp,
