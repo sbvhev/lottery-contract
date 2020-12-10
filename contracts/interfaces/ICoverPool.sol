@@ -34,6 +34,7 @@ interface ICoverPool {
   function claimRedeemDelay() external view returns (uint256);
   /// @notice delay # of seconds for redeem without accepted claim, redeemCollateral is not affected
   function noclaimRedeemDelay() external view returns (uint256);
+  function rolloverPeriod() external view returns (uint256);
   function assetList(uint256 _index) external view returns (bytes32);
   function activeCovers(uint256 _index) external view returns (address);
   function collaterals(uint256 _index) external view returns (address);

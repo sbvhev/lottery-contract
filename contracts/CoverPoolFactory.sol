@@ -17,6 +17,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(bytes32,bytes32[],address,uint48[],bytes32[])"));
 
   address public override coverPoolImpl;
+  address public override perpCoverImpl;
   address public override coverImpl;
   address public override coverERC20Impl;
 
@@ -36,12 +37,14 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
   constructor (
     address _coverPoolImpl,
+    address _perpCoverImpl,
     address _coverImpl,
     address _coverERC20Impl,
     address _governance,
     address _treasury
   ) {
     coverPoolImpl = _coverPoolImpl;
+    perpCoverImpl = _perpCoverImpl;
     coverImpl = _coverImpl;
     coverERC20Impl = _coverERC20Impl;
     governance = _governance;
@@ -83,6 +86,20 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     );
   }
 
+  /// @notice return cover contract address, the contract may not be deployed yet
+  function getPerpCoverAddress(
+    bytes32 _coverPoolName,
+    address _collateral,
+    uint256 _claimNonce
+  )
+   public view override returns (address)
+  {
+    return _computeAddress(
+      keccak256(abi.encodePacked(_coverPoolName, _collateral, _claimNonce)),
+      getCoverPoolAddress(_coverPoolName)
+    );
+  }
+
   /// @notice return covToken contract address, the contract may not be deployed yet
   // TODO to be updated for each asset
   function getCovTokenAddress(
@@ -103,6 +120,28 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
         _prefix)
       ),
       getCoverAddress(_coverPoolName, _timestamp, _collateral, _claimNonce)
+    );
+  }
+
+  /// @notice return covToken contract address, the contract may not be deployed yet
+  function getPerpCovTokenAddress(
+    bytes32 _coverPoolName,
+    uint256 _createdAt,
+    address _collateral,
+    uint256 _claimNonce,
+    string memory _prefix // "CLAIM_POOL2_CURVE" or "NOCLAIM_POOL2"
+  )
+   external view override returns (address)
+  {
+    return _computeAddress(
+      keccak256(abi.encodePacked(
+        _coverPoolName,
+        _createdAt,
+        _collateral,
+        _claimNonce,
+        _prefix)
+      ),
+      getPerpCoverAddress(_coverPoolName, _collateral, _claimNonce)
     );
   }
 
@@ -138,6 +177,12 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   function updateCoverPoolImpl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
     coverPoolImpl = _newImpl;
+  }
+
+  /// @dev update this will only affect covers of coverPools deployed after
+  function updatePerpCoverImpl(address _newImpl) external override onlyOwner {
+    require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
+    perpCoverImpl = _newImpl;
   }
 
   /// @dev update this will only affect covers of coverPools deployed after

@@ -22,6 +22,7 @@ module.exports = {
     const CoverPoolFactory = await ethers.getContractFactory('CoverPoolFactory');
     const CoverPool = await ethers.getContractFactory('CoverPool');
     const CoverWithExpiry = await ethers.getContractFactory('CoverWithExpiry');
+    const PerpCover = await ethers.getContractFactory('PerpCover');
     const CoverERC20 = await ethers.getContractFactory('CoverERC20');
 
     // deploy CoverPool contract
@@ -32,10 +33,14 @@ module.exports = {
     const coverImpl = await CoverWithExpiry.deploy();
     await coverImpl.deployed();
 
+    // deploy Cover contract
+    const perpCoverImpl = await PerpCover.deploy();
+    await perpCoverImpl.deployed();
+
     // deploy CoverERC20 contract
     const coverERC20Impl = await CoverERC20.deploy();
     await coverERC20Impl.deployed();
-    return {CoverPoolFactory, CoverPool, CoverWithExpiry, CoverERC20, coverPoolImpl, coverImpl, coverERC20Impl};
+    return {CoverPoolFactory, CoverPool, PerpCover, CoverWithExpiry, CoverERC20, coverPoolImpl, coverImpl, perpCoverImpl, coverERC20Impl};
   },
   deployCoin: async (ethers, symbol) => {
     const CoverERC20 = await ethers.getContractFactory('CoverERC20');

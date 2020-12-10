@@ -25,7 +25,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
-  bytes4 private constant COVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],uint48,address,uint256)"));
+  bytes4 private constant COVERWITHEXPIRY_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],uint48,address,uint256)"));
+  bytes4 private constant PERPCOVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint256,bytes32[],address,uint256)"));
   uint16 private redeemFeeNumerator;
   uint16 private redeemFeeDenominator;
 
@@ -38,6 +39,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   uint256 public override claimRedeemDelay;
   // delay # of seconds for redeem without accepted claim, redeemCollateral is not affected
   uint256 public override noclaimRedeemDelay;
+  uint256 public override rolloverPeriod;
 
   // only active covers, once there is an accepted claim (enactClaim called successfully), this sets to [].
   address[] public override activeCovers;
@@ -111,6 +113,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     noclaimRedeemDelay = 10 days;
     redeemFeeNumerator = 20; // 0 to 65,535
     redeemFeeDenominator = 10000; // 0 to 65,535
+    rolloverPeriod = 30 days;
 
     initializeOwner();
   }
@@ -172,10 +175,10 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       bytes32 salt = keccak256(abi.encodePacked(name, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);
 
-      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, 0, _collateral, claimNonce);
-      address coverImpl = ICoverPoolFactory(owner()).coverImpl();
+      bytes memory initData = abi.encodeWithSelector(PERPCOVER_INIT_SIGNITURE, coverName, rolloverPeriod, assetList, _collateral, claimNonce);
+      address perpCoverImpl = ICoverPoolFactory(owner()).perpCoverImpl();
       InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
-        coverImpl,
+        perpCoverImpl,
         IOwnable(owner()).owner(),
         initData
       );
@@ -217,7 +220,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       bytes32 salt = keccak256(abi.encodePacked(name, _timestamp, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);
 
-      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, assetList, _timestamp, _collateral, claimNonce);
+      bytes memory initData = abi.encodeWithSelector(COVERWITHEXPIRY_INIT_SIGNITURE, coverName, assetList, _timestamp, _collateral, claimNonce);
       address coverImpl = ICoverPoolFactory(owner()).coverImpl();
       InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
         coverImpl,
@@ -271,6 +274,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint16 _redeemFeeDenominator
   ) external override onlyGov {
     require(_redeemFeeDenominator > 0, "CoverPool: denominator cannot be 0");
+    require(_redeemFeeDenominator > _redeemFeeNumerator, "CoverPool: denominator cannot be 0");
     redeemFeeNumerator = _redeemFeeNumerator;
     redeemFeeDenominator = _redeemFeeDenominator;
   }

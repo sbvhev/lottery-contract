@@ -11,15 +11,6 @@ import "./ICoverERC20.sol";
 interface ICover {
   event NewCoverERC20(address);
 
-  function getCoverDetails()
-    external view returns (
-      string memory _name,
-      uint48 _expiry,
-      address _collateral,
-      uint256 _claimNonce,
-      ICoverERC20[] memory _claimCovTokens,
-      ICoverERC20 _noclaimCovToken
-    );
   function collateral() external view returns (address);
   function claimCovTokens(uint256 _index) external view returns (ICoverERC20);
   function noclaimCovToken() external view returns (ICoverERC20);

@@ -1,245 +1,212 @@
-// // SPDX-License-Identifier: No License
+// SPDX-License-Identifier: No License
 
-// pragma solidity ^0.7.5;
+pragma solidity ^0.7.5;
+pragma abicoder v2;
 
-// import "./proxy/InitializableAdminUpgradeabilityProxy.sol";
-// import "./utils/Create2.sol";
-// import "./utils/Initializable.sol";
-// import "./utils/Ownable.sol";
-// import "./utils/ReentrancyGuard.sol";
-// import "./utils/SafeMath.sol";
-// import "./utils/SafeERC20.sol";
-// import "./utils/StringHelper.sol";
-// import "./interfaces/ICover.sol";
-// import "./interfaces/ICoverERC20.sol";
-// import "./interfaces/IERC20.sol";
-// import "./interfaces/IOwnable.sol";
-// import "./interfaces/ICoverPool.sol";
-// import "./interfaces/ICoverPoolFactory.sol";
+import "./proxy/InitializableAdminUpgradeabilityProxy.sol";
+import "./utils/Create2.sol";
+import "./utils/Initializable.sol";
+import "./utils/Ownable.sol";
+import "./utils/ReentrancyGuard.sol";
+import "./utils/SafeMath.sol";
+import "./utils/SafeERC20.sol";
+import "./utils/StringHelper.sol";
+import "./interfaces/IPerpCover.sol";
+import "./interfaces/ICoverERC20.sol";
+import "./interfaces/IERC20.sol";
+import "./interfaces/IOwnable.sol";
+import "./interfaces/ICoverPool.sol";
+import "./interfaces/ICoverPoolFactory.sol";
 
-// /**
-//  * @title PerpCover contract
-//  * @author crypto-pumpkin@github
-//  *
-//  * The contract
-//  *  - Holds collateral funds
-//  *  - Mints and burns CovTokens (CoverERC20)
-//  *  - Allows redeem from collateral pool with or without an accepted claim
-//  */
-// contract PerpCover is ICover, Initializable, Ownable, ReentrancyGuard {
-//   using SafeMath for uint256;
-//   using SafeERC20 for IERC20;
+/**
+ * @title Cover contract
+ * @author crypto-pumpkin@github
+ * When a claim is accepted, all PerpCover will payout based on the decision
+ *
+ * The contract
+ *  - Holds collateral funds
+ *  - Mints and burns CovTokens (CoverERC20)
+ *  - Allows redeem from collateral pool with or without an accepted claim
+ */
+contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
+  using SafeMath for uint256;
+  using SafeERC20 for IERC20;
 
-//   bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string)"));
-//   uint256 public override createdAt;
-//   address public override collateral;
-//   ICoverERC20[] public override claimCovTokens;
-//   ICoverERC20 public override noclaimCovToken;
-//   string public override name;
-//   uint256 public override claimNonce;
+  bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string)"));
+  uint256 public override createdAt;
+  address public override collateral;
+  ICoverERC20 public override noclaimCovToken;
+  string public override name;
+  uint256 public override claimNonce;
+  uint256 public override rolloverPeriod;
+  ICoverERC20[] public override claimCovTokens;
+  mapping(bytes32 => ICoverERC20) public claimCovTokenMap;
 
-//   /// @dev Initialize, called once
-//   function initialize (
-//     string calldata _name,
-//     bytes32[] calldata _assetList,
-//     uint48 _timestamp,
-//     address _collateral,
-//     uint256 _claimNonce
-//   ) public initializer {
-//     name = _name;
-//     createdAt = block.timestamp;
-//     collateral = _collateral;
-//     claimNonce = _claimNonce;
+  /// @dev Initialize, called once
+  function initialize (
+    string calldata _name,
+    uint256 _rolloverPeriod,
+    bytes32[] calldata _assetList,
+    address _collateral,
+    uint256 _claimNonce
+  ) public initializer {
+    name = _name;
+    rolloverPeriod = _rolloverPeriod;
+    createdAt = block.timestamp;
+    collateral = _collateral;
+    claimNonce = _claimNonce;
 
+    initializeOwner();
+    require(_rolloverPeriod > 0, "PerCover: _rolloverPeriod is 0");
 
-//     for (uint256 i = 0; i < _assetList.length; i++) {
-//       string prefix = string(abi.encodePacked("CLAIM_", StringHelper.bytes32ToString(_assetList[i])));
-//       claimCovTokens.push(_createCovToken(prefix));
-//     }
-//     noclaimCovToken = _createCovToken("NOCLAIM");
-    
-//     initializeOwner();
-//   }
+    for (uint i = 0; i < _assetList.length; i++) {
+      ICoverERC20 claimToken;
+      if (_assetList.length > 1) {
+        string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
+        claimToken = _createCovToken(string(abi.encodePacked("CLAIM_", assetName)));
+      } else {
+        claimToken = _createCovToken("CLAIM");
+      }
+      claimCovTokens.push(claimToken);
+      claimCovTokenMap[_assetList[i]] = claimToken;
+    }
 
-//   function getCoverDetails()
-//     external view override returns (string memory _name, uint48 _createdAt, address _collateral, uint256 _claimNonce, ICoverERC20[] _claimCovTokens, ICoverERC20 _noclaimCovToken)
-//   {
-//     return (name, createdAt, collateral, claimNonce, claimCovTokens, noclaimCovToken);
-//   }
+    noclaimCovToken = _createCovToken("NOCLAIM");
+  }
 
-//   /**
-//    * @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
-//    * adjusted amount = amount * ( (1 - fee%) / (1 - multiplier * fee%))
-//    * 
-//    */
-//   function mint(uint256 _amount, address _receiver) external override onlyOwner {
-//     _noClaimAcceptedCheck(); // save gas than modifier
+  function getCoverDetails()
+    external view override returns (string memory _name, uint256 _rolloverPeriod, uint256 _createdAt, address _collateral, uint256 _claimNonce, ICoverERC20[] memory _claimCovTokens, ICoverERC20 _noclaimCovToken)
+  {
+    return (name, rolloverPeriod, createdAt, collateral, claimNonce, claimCovTokens, noclaimCovToken);
+  }
 
-//     ICoverPool coverPool = ICoverPool(owner());
-//     (uint256 redeemFeeNumerator, uint256 redeemFeeDenominator) = coverPool.getRedeemFees();
+  /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
+  function mint(uint256 _amount, address _receiver) external override onlyOwner {
+    _noClaimAcceptedCheck(); // save gas than modifier
+    ICoverERC20[] memory claimCovTokensCopy = claimCovTokens;
 
-//     uint256 fee = redeemFeeNumerator.div(redeemFeeDenominator);
-//     uint256 multiplier = _getFeeMultiplier();
-//     uint256 adjustedAmount = _amount.mul(uint256(1).sub(fee)).div(uint256(1).sub(fee.mul(2)));
+    (uint256 redeemFeeNumerator, uint256 redeemFeeDenominator) = ICoverPool(owner()).getRedeemFees();
 
-//     for (uint256 i = 0; i < claimCovTokens.length; i++) {
-//       claimCovTokens[i].mint(_receiver, adjustedAmount);
-//     }
-//     noclaimCovToken.mint(_receiver, adjustedAmount);
-//   }
+    uint256 multiplier = _getMultiplier();
+    // every passed rolloverPeriod, the amount mint for each collateral will = (1 - fee%) / (1 - mulitplier * fee%)
+    // this is to compensate the later minters as if they redeem, they will have to pay (1 - mulitplier * fee%) fees
+    uint256 adjustedAmount = _amount.mul(redeemFeeDenominator.sub(redeemFeeNumerator)).div(redeemFeeDenominator.sub(multiplier.mul(redeemFeeNumerator)));
 
-//   function _getFeeMultiplier() private returns (uint256) {
-//     uint256 perpCoverFeePeriod = ICoverPool(owner()).perpCoverFeePeriod();
-//     return (block.timestamp.sub(createdAt)).mod(perpCoverFeePeriod).add(1);
-//   }
+    for (uint i = 0; i < claimCovTokensCopy.length; i++) {
+      claimCovTokensCopy[i].mint(_receiver, adjustedAmount);
+    }
 
-//   /// @notice redeem CLAIM covToken, only if there is a claim accepted and delayWithClaim period passed
-//   function redeemClaim() external override {
-//     ICoverPool coverPool = ICoverPool(owner());
-//     require(coverPool.claimNonce() > claimNonce, "COVER: no claim accepted");
+    noclaimCovToken.mint(_receiver, adjustedAmount);
+  }
 
-//     (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
-//     require(_incidentTimestamp <= expiry, "COVER: cover expired before incident");
-//     require(block.timestamp >= uint256(_claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
+  /// @notice redeem collateral, only when no claim accepted and not expired
+  function redeemCollateral(uint256 _amount) external override {
+    require(_amount > 0, "PerpCover: amount is 0");
+    _noClaimAcceptedCheck(); // save gas than modifier
 
-//     _paySender(
-//       claimCovToken,
-//       uint256(_payoutNumerator),
-//       uint256(_payoutDenominator)
-//     );
-//   }
+    ICoverERC20 _noclaimCovToken = noclaimCovToken; // save gas
+    require(_amount <= _noclaimCovToken.balanceOf(msg.sender), "PerpCover: low NOCLAIM balance");
+    _noclaimCovToken.burnByCover(msg.sender, _amount);
 
-//   /**
-//    * @notice redeem NOCLAIM covToken, accept
-//    * - if no claim accepted, cover is expired, and delayWithoutClaim period passed
-//    * - if claim accepted, but payout % < 1, and delayWithClaim period passed
-//    */
-//   function redeemNoclaim() external override {
-//     ICoverPool coverPool = ICoverPool(owner());
-//     if (coverPool.claimNonce() > claimNonce) {
-//       // coverPool has an accepted claim
+    ICoverERC20[] memory claimCovTokensCopy = claimCovTokens; // save gas
+    for (uint i = 0; i < claimCovTokensCopy.length; i++) {
+      require(_amount <= claimCovTokensCopy[i].balanceOf(msg.sender), "PerpCover: low CLAIM balance");
+      claimCovTokensCopy[i].burnByCover(msg.sender, _amount);
+    }
 
-//       (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
+    _payShare(msg.sender, _amount);
+  }
 
-//       if (_incidentTimestamp > expiry) {
-//         // incident happened after expiration date, redeem back full collateral
+  /// @notice redeem CLAIM covToken, only if there is a claim accepted and delayWithClaim period passed
+  function redeemClaim() external override {
+    ICoverPool coverPool = ICoverPool(owner());
+    require(coverPool.claimNonce() > claimNonce, "PerpCover: no claim accepted");
 
-//         require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "COVER: not ready");
-//         _paySender(noclaimCovToken, 1, 1);
-//       } else {
-//         // incident happened before expiration date, pay 1 - payout%
+    ICoverPool.ClaimDetails memory claim = _claimDetails();
+    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "PerpCover: not ready");
 
-//         // If claim payout is 100%, nothing is left for NOCLAIM covToken holders
-//         require(_payoutNumerator < _payoutDenominator, "COVER: claim payout 100%");
+    uint256 totalAmount;
+    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
+      ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
+      uint256 amount = covToken.balanceOf(msg.sender);
+      totalAmount = totalAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
+      covToken.burnByCover(msg.sender, amount);
+    }
+    _payShare(msg.sender, totalAmount);
+  }
 
-//         require(block.timestamp >= uint256(_claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
-//         _paySender(
-//           noclaimCovToken,
-//           uint256(_payoutDenominator).sub(uint256(_payoutNumerator)),
-//           uint256(_payoutDenominator)
-//         );
-//       }
-//     } else {
-//       // coverPool has no accepted claim
+  /**
+   * @notice redeem NOCLAIM covToken (pay 1 - payout%), accept
+   * - if claim accepted, but payout % < 1, and delayWithClaim period passed
+   */
+  function redeemNoclaim() external override {
+    ICoverPool coverPool = ICoverPool(owner());
+    require(coverPool.claimNonce() > claimNonce, "PerpCover: no claim accepted");
 
-//       require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "COVER: not ready");
-//       _paySender(noclaimCovToken, 1, 1);
-//     }
-//   }
+    ICoverPool.ClaimDetails memory claim = _claimDetails();
 
-//   /// @notice redeem collateral, only when no claim accepted and not expired
-//   function redeemCollateral(uint256 _amount) external override onlyNotExpired {
-//     require(_amount > 0, "COVER: amount is 0");
-//     _noClaimAcceptedCheck(); // save gas than modifier
+    // If claim payout is 100%, nothing is left for NOCLAIM covToken holders
+    require(claim.payoutTotalNum < claim.payoutDenominator, "PerpCover: claim payout 100%");
+    require(claim.payoutTotalNum == 60 && claim.payoutDenominator == 100, "PerpCover: claim payout 100%");
 
-//     ICoverERC20 _claimCovToken = claimCovToken; // save gas
-//     ICoverERC20 _noclaimCovToken = noclaimCovToken; // save gas
+    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "PerpCover: not ready");
+    uint256 amount = noclaimCovToken.balanceOf(msg.sender);
+    require(amount > 0, "PerpCover: low covToken balance");
 
-//     require(_amount <= _claimCovToken.balanceOf(msg.sender), "COVER: low CLAIM balance");
-//     require(_amount <= _noclaimCovToken.balanceOf(msg.sender), "COVER: low NOCLAIM balance");
+    noclaimCovToken.burnByCover(msg.sender, amount);
 
-//     _claimCovToken.burnByCover(msg.sender, _amount);
-//     _noclaimCovToken.burnByCover(msg.sender, _amount);
-//     _payCollateral(msg.sender, _amount);
-//   }
+    uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
+    _payShare(msg.sender, payoutAmount);
+  }
 
-//   /**
-//    * @notice set CovTokenSymbol, will update symbols for both covTokens, only dev account (factory owner)
-//    * For example:
-//    *  - COVER_CURVE_2020_12_31_DAI_0
-//    */
-//   function setCovTokenSymbol(string calldata _name) external override {
-//     require(_dev() == msg.sender, "COVER: not dev");
+  /// @notice the owner of this contract is CoverPool contract, the owner of CoverPool is CoverPoolFactory contract
+  function _factory() private view returns (address) {
+    return IOwnable(owner()).owner();
+  }
 
-//     claimCovToken.setSymbol(string(abi.encodePacked(_name, "_CLAIM")));
-//     noclaimCovToken.setSymbol(string(abi.encodePacked(_name, "_NOCLAIM")));
-//   }
+  // get the claim details for the corresponding nonce from coverPool contract
+  function _claimDetails() private view returns (ICoverPool.ClaimDetails memory) {
+    return ICoverPool(owner()).getClaimDetails(claimNonce);
+  }
 
-//   /// @notice the owner of this contract is CoverPool contract, the owner of CoverPool is CoverPoolFactory contract
-//   function _factory() private view returns (address) {
-//     return IOwnable(owner()).owner();
-//   }
+  /// @notice make sure no claim is accepted
+  function _noClaimAcceptedCheck() private view {
+    require(ICoverPool(owner()).claimNonce() == claimNonce, "PerpCover: claim accepted");
+  }
 
-//   // get the claim details for the corresponding nonce from coverPool contract
-//   function _claimDetails() private view returns (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) {
-//     return ICoverPool(owner()).getClaimDetails(claimNonce);
-//   }
+  function _payShare(address _receiver, uint256 _amount) private {
+    ICoverPoolFactory factory = ICoverPoolFactory(_factory());
+    (uint256 redeemFeeNumerator, uint256 redeemFeeDenominator) = ICoverPool(owner()).getRedeemFees();
+    IERC20 collateralToken = IERC20(collateral);
 
-//   /// @notice the owner of CoverPoolFactory contract is dev, also see {_factory}
-//   function _dev() private view returns (address) {
-//     return IOwnable(_factory()).owner();
-//   }
+    uint256 multiplier = _getMultiplier();
+    uint256 fee = _amount.mul(redeemFeeNumerator).div(redeemFeeDenominator).mul(multiplier);
+    address treasury = factory.treasury();
 
-//   /// @notice make sure no claim is accepted
-//   function _noClaimAcceptedCheck() private view {
-//     require(ICoverPool(owner()).claimNonce() == claimNonce, "COVER: claim accepted");
-//   }
+    collateralToken.safeTransfer(_receiver, _amount.sub(fee));
+    collateralToken.safeTransfer(treasury, fee);
+  }
+  
+  /// @notice multiplier = 1 + math.floor(timepassed / rolloverPeriod)
+  function _getMultiplier() private view returns (uint256) {
+    return uint256(block.timestamp.add(rolloverPeriod).sub(createdAt)) / rolloverPeriod;
+  }
 
-//   /// @notice transfer collateral (amount - fee) from this contract to recevier, transfer fee to COVER treasury
-//   function _payCollateral(address _receiver, uint256 _amount) private nonReentrant {
-//     ICoverPoolFactory factory = ICoverPoolFactory(_factory());
-//     (uint256 redeemFeeNumerator, uint256 redeemFeeDenominator) = ICoverPool(owner()).getRedeemFees();
-//     uint256 fee = _amount.mul(_getFeeMultiplier()).mul(redeemFeeNumerator).div(redeemFeeDenominator);
-//     address treasury = factory.treasury();
-//     IERC20 collateralToken = IERC20(collateral);
+  /// @dev Emits NewCoverERC20
+  function _createCovToken(string memory _prefix) private returns (ICoverERC20) {
+    bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
+    bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), createdAt, collateral, claimNonce, _prefix));
+    address payable proxyAddr = Create2.deploy(0, salt, bytecode);
 
-//     collateralToken.safeTransfer(_receiver, _amount.sub(fee));
-//     collateralToken.safeTransfer(treasury, fee);
-//   }
+    bytes memory initData = abi.encodeWithSelector(COVERERC20_INIT_SIGNITURE, string(abi.encodePacked(_prefix, "_", name)));
+    address coverERC20Impl = ICoverPoolFactory(_factory()).coverERC20Impl();
+    InitializableAdminUpgradeabilityProxy(proxyAddr).initialize(
+      coverERC20Impl,
+      IOwnable(_factory()).owner(),
+      initData
+    );
 
-//   /// @notice burn covToken and pay sender
-//   function _paySender(
-//     ICoverERC20 _covToken,
-//     uint256 _payoutNumerator,
-//     uint256 _payoutDenominator
-//   ) private {
-//     require(_payoutNumerator <= _payoutDenominator, "COVER: payout % is > 100%");
-//     require(_payoutNumerator > 0, "COVER: payout % < 0%");
-
-//     uint256 amount = _covToken.balanceOf(msg.sender);
-//     require(amount > 0, "COVER: low covToken balance");
-
-//     _covToken.burnByCover(msg.sender, amount);
-
-//     uint256 payoutAmount = amount.mul(_payoutNumerator).div(_payoutDenominator);
-//     _payCollateral(msg.sender, payoutAmount);
-//   }
-
-//   /// @dev Emits NewCoverERC20
-//   function _createCovToken(string memory _prefix) private returns (ICoverERC20) {
-//     bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
-//     bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), createdAt, collateral, claimNonce, _prefix));
-//     address payable proxyAddr = Create2.deploy(0, salt, bytecode);
-
-//     bytes memory initData = abi.encodeWithSelector(COVERERC20_INIT_SIGNITURE, string(abi.encodePacked(_prefix, "_", name)));
-//     address coverERC20Impl = ICoverPoolFactory(_factory()).coverERC20Impl();
-//     InitializableAdminUpgradeabilityProxy(proxyAddr).initialize(
-//       coverERC20Impl,
-//       IOwnable(_factory()).owner(),
-//       initData
-//     );
-
-//     emit NewCoverERC20(proxyAddr);
-//     return ICoverERC20(proxyAddr);
-//   }
-// }
+    emit NewCoverERC20(proxyAddr);
+    return ICoverERC20(proxyAddr);
+  }
+}
