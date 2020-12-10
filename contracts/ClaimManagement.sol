@@ -165,7 +165,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     function validateClaim(address _coverPool, uint256 _nonce, uint256 _index, bool _claimIsValid)
         external 
         override 
-        onlyGovernance
+        onlyGov
         onlyWhenAuditorVoting 
     {
         Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];

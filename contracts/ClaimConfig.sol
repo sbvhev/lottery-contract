@@ -31,7 +31,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
 
     IERC20 public override feeCurrency = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
-    modifier onlyGovernance() {
+    modifier onlyGov() {
         require(msg.sender == governance, "COVER_CC: !governance");
         _;
     }
@@ -40,7 +40,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
      * @notice Set the address of governance
      * @dev Governance address cannot be set to owner or 0 address
      */
-    function setGovernance(address _governance) external override onlyGovernance {
+    function setGovernance(address _governance) external override onlyGov {
         require(_governance != address(0), "COVER_CC: governance cannot be 0");
         require(_governance != owner(), "COVER_CC: governance cannot be owner");
         governance = _governance;
@@ -83,7 +83,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
     function setFeeAndCurrency(uint256 _baseClaimFee, uint256 _forceClaimFee, address _currency)
         external 
         override 
-        onlyGovernance 
+        onlyGov 
     {
         require(_baseClaimFee > 0, "COVER_CC: baseClaimFee <= 0");
         require(_forceClaimFee > _baseClaimFee, "COVER_CC: forceClaimFee <= baseClaimFee");
@@ -97,7 +97,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
      * @notice Set the fee multiplier to `_multiplier`
      * @dev `_multiplier` must be atleast 1
      */
-    function setFeeMultiplier(uint256 _multiplier) external override onlyGovernance {
+    function setFeeMultiplier(uint256 _multiplier) external override onlyGov {
         require(_multiplier >= 1, "COVER_CC: multiplier < 1");
         feeMultiplier = _multiplier;
     }

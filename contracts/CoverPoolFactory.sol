@@ -29,7 +29,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
   mapping(bytes32 => address) public override coverPools;
 
-  modifier onlyGovernance() {
+  modifier onlyGov() {
     require(msg.sender == governance, "CoverPoolFactory: caller not governance");
     _;
   }
@@ -159,7 +159,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     claimManager = _address;
   }
 
-  function updateGovernance(address _address) external override onlyGovernance {
+  function updateGovernance(address _address) external override onlyGov {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
     require(_address != owner(), "CoverPoolFactory: governance cannot be owner");
     governance = _address;

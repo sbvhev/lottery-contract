@@ -74,7 +74,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     _;
   }
 
-  modifier onlyGovernance() {
+  modifier onlyGov() {
     require(msg.sender == ICoverPoolFactory(owner()).governance(), "CoverPool: caller not governance");
     _;
   }
@@ -269,7 +269,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   function updateFees(
     uint16 _redeemFeeNumerator,
     uint16 _redeemFeeDenominator
-  ) external override onlyGovernance {
+  ) external override onlyGov {
     require(_redeemFeeDenominator > 0, "CoverPool: denominator cannot be 0");
     redeemFeeNumerator = _redeemFeeNumerator;
     redeemFeeDenominator = _redeemFeeDenominator;
@@ -318,11 +318,11 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     isActive = _isActive;
   }
 
-  function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external override onlyGovernance {
+  function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external override onlyGov {
     claimRedeemDelay = _claimRedeemDelay;
   }
 
-  function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external override onlyGovernance {
+  function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external override onlyGov {
     noclaimRedeemDelay = _noclaimRedeemDelay;
   }
 
