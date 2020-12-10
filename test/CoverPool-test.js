@@ -31,9 +31,9 @@ describe('CoverPool', () => {
     await coverPoolFactory.updateClaimManager(ownerAddress);
 
     // add coverPool through coverPool factory
-    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES);
+    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, [consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES);
     await tx;
-    coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.PROTOCOL_NAME));
+    coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_2));
 
     // init test account balances
     dai.mint(userAAddress, 1000);
@@ -45,12 +45,12 @@ describe('CoverPool', () => {
   it('Should initialize correct state variables', async () => {
     const [name, isActive, assetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, allActiveCovers] = await coverPool.getCoverPoolDetails();
 
-    expect(name).to.equal(consts.PROTOCOL_NAME);
+    expect(name).to.equal(consts.POOL_2);
     expect(isActive).to.equal(true);
     expect(claimNonce).to.equal(0);
     expect(claimRedeemDelay).to.equal(2 * 24 * 60 * 60);
     expect(noclaimRedeemDelay).to.equal(10 * 24 * 60 * 60);
-    expect(assetList).to.deep.equal([consts.PROTOCOL_NAME]);
+    expect(assetList).to.deep.equal([consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2]);
     expect(collaterals).to.deep.equal([COLLATERAL]);
     expect(expiries).to.deep.equal(consts.ALLOWED_EXPIRYS);
     expect(allCovers.length).to.equal(0);
@@ -88,7 +88,7 @@ describe('CoverPool', () => {
     await expect(coverPool.connect(ownerAccount).updateClaimRedeemDelay(10 * 24 * 60 * 60)).to.be.reverted;
   });
 
-  it('Should add cover for userA', async () => {
+  it('Should add cover for userA and emit event', async () => {
     await expect(coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10)).to.emit(coverPool, 'CoverAdded')
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
@@ -101,7 +101,7 @@ describe('CoverPool', () => {
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
 
     const claimNonce = await coverPool.claimNonce();
-    const computedAddress = await coverPoolFactory.getCoverAddress(consts.PROTOCOL_NAME, consts.ALLOWED_EXPIRYS[1], COLLATERAL, claimNonce)
+    const computedAddress = await coverPoolFactory.getCoverAddress(consts.POOL_2, consts.ALLOWED_EXPIRYS[1], COLLATERAL, claimNonce)
     expect(computedAddress).to.equal(coverAddress);
   });
 
@@ -155,7 +155,7 @@ describe('CoverPool', () => {
     const oldClaimNonce = await coverPool.claimNonce();
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
-    expect(await coverPool.name()).to.equal(consts.PROTOCOL_NAME);
+    expect(await coverPool.name()).to.equal(consts.POOL_2);
     expect(await coverPool.isActive()).to.equal(true);
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce + 1);
   });
@@ -163,7 +163,7 @@ describe('CoverPool', () => {
   it('Should NOT enactClaim if coverPool nonce not match', async () => {
     const oldClaimNonce = await coverPool.claimNonce();
     await coverPool.connect(ownerAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0);
-    expect(await coverPool.name()).to.equal(consts.PROTOCOL_NAME);
+    expect(await coverPool.name()).to.equal(consts.POOL_2);
     expect(await coverPool.isActive()).to.equal(true);
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce + 1);
 
