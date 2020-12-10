@@ -136,7 +136,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   function getCoverPoolDetails()
-    external view override returns (
+    external view override
+    returns (
       bytes32 _name,
       bool _active,
       bytes32[] memory _assetList,
@@ -264,11 +265,14 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint256 coverBalanceAfter = collateral.balanceOf(addr);
     require(coverBalanceAfter > coverBalanceBefore, "CoverPool: collateral transfer failed");
     ICover(addr).mint(coverBalanceAfter.sub(coverBalanceBefore), msg.sender);
+    emit CoverAdded(addr, coverBalanceAfter.sub(coverBalanceBefore));
     return true;
   }
 
   /// @notice update status or add new expiry
-  function updateExpiry(uint48 _expiry, bytes32 _expiryName, uint8 _status) external override onlyDev returns (bool) {
+  function updateExpiry(uint48 _expiry, bytes32 _expiryName, uint8 _status)
+    external override onlyDev returns (bool)
+  {
     require(block.timestamp < _expiry, "CoverPool: invalid expiry");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
 

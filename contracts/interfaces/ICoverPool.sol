@@ -9,6 +9,7 @@ pragma solidity ^0.7.5;
 interface ICoverPool {
   /// @notice emit when a claim against the coverPool is accepted
   event ClaimAccepted(uint256 _claimNonce);
+  event CoverAdded(address indexed _cover, uint256 _amount);
 
   struct ExpiryInfo {
     bytes32 name;

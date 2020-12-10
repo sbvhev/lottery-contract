@@ -88,8 +88,7 @@ describe('CoverPool', () => {
   });
 
   it('Should add cover for userA', async () => {
-    const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
-    await txA.wait();
+    await expect(coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10)).to.emit(coverPool, 'CoverAdded')
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
     expect(await dai.balanceOf(coverAddress)).to.equal(10);
