@@ -10,6 +10,11 @@ interface ICoverPool {
   /// @notice emit when a claim against the coverPool is accepted
   event ClaimAccepted(uint256 _claimNonce);
 
+  struct ExpiryInfo {
+    bytes32 name;
+    uint8 status; // 0 never set; 1 active, 2 inactive
+  }
+
   struct ClaimDetails {
     bytes32[] payoutAssetList;
     uint256[] payoutNumerators;
@@ -51,7 +56,7 @@ interface ICoverPool {
     uint48 claimEnactedTimestamp
   );
   function collateralStatusMap(address _collateral) external view returns (uint8 _status);
-  function expiryMap(uint48 _expiry) external view returns (bytes32 _name, uint8 _status);
+  function expiryInfoMap(uint48 _expiry) external view returns (bytes32 _name, uint8 _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);
   function perpCoverMap(address _collateral) external view returns (address);
 

@@ -24,24 +24,15 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
-  struct ExpiryInfo {
-    bytes32 name;
-    uint8 status; // 0 never set; 1 active, 2 inactive
-  }
-
   bytes4 private constant COVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],uint48,address,uint256)"));
-
   uint16 private redeemFeeNumerator;
   uint16 private redeemFeeDenominator;
 
   /// @notice only active (true) coverPool allows adding more covers
   bool public override active;
-
   bytes32 public override name;
-
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
-
   // delay # of seconds for redeem with accepted claim, redeemCollateral is not affected
   uint256 public override claimRedeemDelay;
   // delay # of seconds for redeem without accepted claim, redeemCollateral is not affected
@@ -54,7 +45,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   /// @notice list of every supported expiry, all may not be active.
   uint48[] public override expiries;
 
-  /// @notice list of asset in pool
+  /// @notice list of assets in cover pool
   bytes32[] public override assetList;
 
   /// @notice list of every supported collateral, all may not be active.
@@ -65,8 +56,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   // @notice collateral => status. 0 never set; 1 active, 2 inactive
   mapping(address => uint8) public override collateralStatusMap;
-
-  mapping(uint48 => ExpiryInfo) public override expiryMap;
+  mapping(uint48 => ExpiryInfo) public override expiryInfoMap;
 
   // collateral => timestamp => coverAddress, most recent cover created for the collateral and timestamp combination
   mapping(address => mapping(uint48 => address)) public override coverMap;
@@ -108,7 +98,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
     for (uint i = 0; i < _expiries.length; i++) {
       if (block.timestamp < _expiries[i]) {
-        expiryMap[_expiries[i]] = ExpiryInfo(
+        expiryInfoMap[_expiries[i]] = ExpiryInfo(
           _expiryNames[i],
           1
         );
@@ -239,7 +229,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   {
     require(_amount > 0, "CoverPool: amount <= 0");
     require(collateralStatusMap[_collateral] == 1, "CoverPool: invalid collateral");
-    require(block.timestamp < _timestamp && expiryMap[_timestamp].status == 1, "CoverPool: invalid expiry");
+    require(block.timestamp < _timestamp && expiryInfoMap[_timestamp].status == 1, "CoverPool: invalid expiry");
 
     // Validate sender collateral balance is > amount
     IERC20 collateral = IERC20(_collateral);
@@ -282,10 +272,10 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     require(block.timestamp < _expiry, "CoverPool: invalid expiry");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
 
-    if (expiryMap[_expiry].status == 0) {
+    if (expiryInfoMap[_expiry].status == 0) {
       expiries.push(_expiry);
     }
-    expiryMap[_expiry] = ExpiryInfo(
+    expiryInfoMap[_expiry] = ExpiryInfo(
       _expiryName,
       _status
     );
@@ -389,7 +379,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return string(abi.encodePacked(
       _getCoverName(_collateralSymbol),
       "_",
-      StringHelper.bytes32ToString(expiryMap[_expiry].name)
+      StringHelper.bytes32ToString(expiryInfoMap[_expiry].name)
     ));
   }
 
