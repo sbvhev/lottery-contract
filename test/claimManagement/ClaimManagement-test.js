@@ -54,7 +54,7 @@ xdescribe("ClaimManagement", function () {
     await coverPoolImpl.deployed();
 
     // deploy Cover contract
-    coverImpl = await Cover.deploy();
+    coverImpl = await CoverWithExpiry.deploy();
     await coverImpl.deployed();
 
     // deploy CoverERC20 contract

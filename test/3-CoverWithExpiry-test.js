@@ -16,7 +16,7 @@ describe('CoverWithExpiry', function() {
   let startTimestamp, TIMESTAMP, TIMESTAMP_NAME, COLLATERAL;
   let ownerAddress, ownerAccount, userAAccount, userAAddress, userBAccount, userBAddress;
   let governanceAccount, governanceAddress, treasuryAccount, treasuryAddress, claimManager;
-  let CoverPoolFactory, CoverPool, coverPoolImpl, Cover, coverImpl, CoverERC20, coverERC20Impl;
+  let CoverPoolFactory, CoverPool, coverPoolImpl, CoverWithExpiry, coverImpl, CoverERC20, coverERC20Impl;
   let cover, dai;
 
   before(async () => {
@@ -33,7 +33,7 @@ describe('CoverWithExpiry', function() {
     // get main contracts
     CoverPoolFactory = await ethers.getContractFactory('CoverPoolFactory');
     CoverPool = await ethers.getContractFactory('CoverPool');
-    Cover = await ethers.getContractFactory('Cover');
+    CoverWithExpiry = await ethers.getContractFactory('CoverWithExpiry');
     CoverERC20 = await ethers.getContractFactory('CoverERC20');
 
     // deploy stablecoins to local blockchain emulator
@@ -47,7 +47,7 @@ describe('CoverWithExpiry', function() {
     await coverPoolImpl.deployed();
 
     // deploy Cover contract
-    coverImpl = await Cover.deploy();
+    coverImpl = await CoverWithExpiry.deploy();
     await coverImpl.deployed();
 
     // deploy CoverERC20 contract
@@ -82,7 +82,7 @@ describe('CoverWithExpiry', function() {
     const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMP, ETHER_UINT_10);
     await txA.wait();
     const coverAddress = await coverPool.coverMap(COLLATERAL, TIMESTAMP);
-    cover = Cover.attach(coverAddress);
+    cover = CoverWithExpiry.attach(coverAddress);
   });
 
   it('Should initialize correct state variables', async function() {

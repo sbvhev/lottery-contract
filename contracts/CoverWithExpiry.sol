@@ -19,7 +19,7 @@ import "./interfaces/ICoverPool.sol";
 import "./interfaces/ICoverPoolFactory.sol";
 
 /**
- * @title Cover contract
+ * @title CoverWithExpiry contract
  * @author crypto-pumpkin@github
  *
  * The contract
@@ -27,7 +27,7 @@ import "./interfaces/ICoverPoolFactory.sol";
  *  - Mints and burns CovTokens (CoverERC20)
  *  - Allows redeem from collateral pool with or without an accepted claim
  */
-contract Cover is ICoverWithExpiry, Initializable, Ownable, ReentrancyGuard {
+contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, ReentrancyGuard {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
