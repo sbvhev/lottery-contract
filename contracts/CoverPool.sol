@@ -194,6 +194,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint256 coverBalanceAfter = collateral.balanceOf(addr);
     require(coverBalanceAfter > coverBalanceBefore, "CoverPool: collateral transfer failed");
     ICover(addr).mint(coverBalanceAfter.sub(coverBalanceBefore), msg.sender);
+    emit CoverAdded(addr, coverBalanceAfter.sub(coverBalanceBefore));
   }
 
   /**

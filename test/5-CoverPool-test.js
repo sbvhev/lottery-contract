@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { expectRevert, time, BN } = require("@openzeppelin/test-helpers");
 const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
-describe('CoverPool', () => {
+xdescribe('CoverPool', () => {
   const NEW_TIMESTAMP = 2556057500000;
   const NEW_TIMESTAMP_NAME = ethers.utils.formatBytes32String('2040_12_31');
   const INCIDENT_TIMESTAMP = 1580515200000;
@@ -93,6 +93,21 @@ describe('CoverPool', () => {
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
     expect(await dai.balanceOf(coverAddress)).to.equal(10);
+  });
+
+  it('Should add perp cover for userA and userB and emit event', async () => {
+    await expect(coverPool.connect(userAAccount).addPerpCover(COLLATERAL, 10)).to.emit(coverPool, 'CoverAdded')
+    const coverAddress = await coverPool.perpCoverMap(COLLATERAL);
+    expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
+    expect(await dai.balanceOf(coverAddress)).to.equal(10);
+
+    const currentTime = await time.latest();
+    const rolloverPeriod = await coverPool.rolloverPeriod();
+    await time.increaseTo(currentTime.toNumber() + rolloverPeriod.toNumber());
+    await time.advanceBlock();
+
+    await expect(coverPool.connect(userBAccount).addPerpCover(COLLATERAL, 100)).to.emit(coverPool, 'CoverAdded')
+    expect(await dai.balanceOf(coverAddress)).to.equal(110);
   });
 
   it('Should match cover with computed cover address', async () => {
