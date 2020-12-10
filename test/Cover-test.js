@@ -146,7 +146,7 @@ describe('Cover', function() {
   });
 
   it('Should NOT redeem collateral with accepted claim', async function() {
-    const txA = await coverPool.connect(claimManager).enactClaim(100, 100, startTimestamp, 0);
+    const txA = await coverPool.connect(claimManager).enactClaim([PROTOCOL_NAME], [100], 100, startTimestamp, 0);
     await txA.wait();
 
     await expect(cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10)).to.be.reverted;
@@ -205,7 +205,7 @@ describe('Cover', function() {
   });
 
   it('Should NOT redeemClaim after enact claim before redeemDelay ends', async function() {
-    const txA = await coverPool.connect(claimManager).enactClaim(100, 100, startTimestamp, 0);
+    const txA = await coverPool.connect(claimManager).enactClaim([PROTOCOL_NAME], [100], 100, startTimestamp, 0);
     await txA.wait();
 
     const aDaiBalance = await dai.balanceOf(userAAddress);
@@ -219,10 +219,10 @@ describe('Cover', function() {
   });
 
   it('Should allow redeem partial claim and noclaim after enact 40% claim after claimRedeemDelay ends', async function() {
-    const txA = await coverPool.connect(claimManager).enactClaim(40, 100, startTimestamp, 0);
+    const txA = await coverPool.connect(claimManager).enactClaim([PROTOCOL_NAME], [40], 100, startTimestamp, 0);
     await txA.wait();
 
-    const { claimEnactedTimestamp } = await coverPool.claimDetails(0);
+    const [,,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
     const delay = await coverPool.claimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber() * 24 * 60 * 60);
     await time.advanceBlock();
@@ -235,7 +235,8 @@ describe('Cover', function() {
     expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
 
     expect(await dai.balanceOf(cover.address)).to.equal(ETHER_UINT_6);
-    expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(ETHER_UINT_4).sub(ethers.utils.parseEther("0.004")));
+    const [num, den] = await coverPool.getRedeemFees();
+    expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(ETHER_UINT_4).sub(ETHER_UINT_4.mul(num).div(den)));
 
     const aDaiBalance2 = await dai.balanceOf(userAAddress);
     await cover.connect(userAAccount).redeemNoclaim();
@@ -244,7 +245,7 @@ describe('Cover', function() {
     expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
 
     expect(await dai.balanceOf(cover.address)).to.equal(0);
-    expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance2.add(ETHER_UINT_6).sub(ethers.utils.parseEther("0.006")));
+    expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance2.add(ETHER_UINT_6).sub(ETHER_UINT_6.mul(num).div(den)));
   });
 
   it('Should allow redeem noclaim ONLY after enact and noclaimRedeemDelay if incident after expiry', async function() {
@@ -252,10 +253,10 @@ describe('Cover', function() {
     // const delay = await coverPool.noclaimRedeemDelay();
     // await time.increaseTo(ethers.BigNumber.from(timestamp).toNumber() + delay.toNumber());
 
-    const txA = await coverPool.connect(claimManager).enactClaim(40, 100, incidentTimestamp + 1, 0);
+    const txA = await coverPool.connect(claimManager).enactClaim([PROTOCOL_NAME], [40], 100, incidentTimestamp + 1, 0);
     await txA.wait();
 
-    const { claimEnactedTimestamp } = await coverPool.claimDetails(0);
+    const [,,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
     const delay = await coverPool.noclaimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber() * 24 * 60 * 60);
     await time.advanceBlock();
@@ -270,11 +271,13 @@ describe('Cover', function() {
     expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
 
     expect(await dai.balanceOf(cover.address)).to.equal(0);
-    expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(ETHER_UINT_10).sub(ethers.utils.parseEther("0.01")));
+
+    const [num, den] = await coverPool.getRedeemFees();
+    expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(ETHER_UINT_10).sub(ETHER_UINT_10.mul(num).div(den)));
   });
 
   it('Should NOT redeemClaim after enact if does not have claim token', async function() {
-    const txA = await coverPool.connect(claimManager).enactClaim(100, 100, startTimestamp, 0);
+    const txA = await coverPool.connect(claimManager).enactClaim([PROTOCOL_NAME], [100], 100, startTimestamp, 0);
     await txA.wait();
 
     await expect(cover.connect(userBAccount).redeemClaim()).to.be.reverted;

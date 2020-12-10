@@ -24,13 +24,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
-  struct ClaimDetails {
-    uint16 payoutNumerator; // 0 to 65,535
-    uint16 payoutDenominator; // 0 to 65,535
-    uint48 incidentTimestamp;
-    uint48 claimEnactedTimestamp;
-  }
-
   struct ExpiryInfo {
     bytes32 name;
     uint8 status; // 0 never set; 1 active, 2 inactive
@@ -68,7 +61,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   address[] public override collaterals;
 
   // [claimNonce] => accepted ClaimDetails
-  ClaimDetails[] public override claimDetails;
+  ClaimDetails[] private claimDetails;
 
   // @notice collateral => status. 0 never set; 1 active, 2 inactive
   mapping(address => uint8) public override collateralStatusMap;
@@ -133,6 +126,23 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   function getRedeemFees() external view override returns (uint16 _numerator, uint16 _denominator) {
     return (redeemFeeNumerator, redeemFeeDenominator);
+  }
+
+  function getClaimDetails(uint256 _nonce) external view override returns (
+    bytes32[] memory _payoutAssetList,
+    uint256[] memory _payoutNumerators,
+    uint256 _payoutTotalNum,
+    uint256 _payoutDenominator,
+    uint48 _incidentTimestamp,
+    uint48 _claimEnactedTimestamp
+  ) {
+    ClaimDetails memory claim = claimDetails[_nonce];
+    _payoutAssetList =  claim.payoutAssetList;
+    _payoutNumerators =  claim.payoutNumerators;
+    _payoutTotalNum =  claim.payoutTotalNum;
+    _payoutDenominator =  claim.payoutDenominator;
+    _incidentTimestamp =  claim.incidentTimestamp;
+    _claimEnactedTimestamp =  claim.claimEnactedTimestamp;
   }
 
   function getCoverPoolDetails()
@@ -315,21 +325,30 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
    * Emit ClaimAccepted
    */
   function enactClaim(
-    uint16 _payoutNumerator,
-    uint16 _payoutDenominator,
+    bytes32[] calldata _payoutAssetList,
+    uint256[] calldata _payoutNumerators,
+    uint256 _payoutDenominator,
     uint48 _incidentTimestamp,
     uint256 _coverPoolNonce
   )
    external override returns (bool)
   {
     require(_coverPoolNonce == claimNonce, "CoverPool: nonces do not match");
-    require(_payoutNumerator <= _payoutDenominator && _payoutNumerator > 0, "CoverPool: payout % is not in (0%, 100%]");
+    require(_payoutAssetList.length == _payoutNumerators.length, "CoverPool: payout asset length don't match");
     require(msg.sender == ICoverPoolFactory(owner()).claimManager(), "CoverPool: caller not claimManager");
+
+    uint256 totalNum;
+    for (uint256 i = 0; i < _payoutAssetList.length; i++) {
+      totalNum = totalNum.add(_payoutNumerators[i]);
+    }
+    require(totalNum <= _payoutDenominator && totalNum > 0, "CoverPool: payout % is not in (0%, 100%]");
 
     claimNonce = claimNonce.add(1);
     delete activeCovers;
     claimDetails.push(ClaimDetails(
-      _payoutNumerator,
+      _payoutAssetList,
+      _payoutNumerators,
+      totalNum,
       _payoutDenominator,
       _incidentTimestamp,
       uint48(block.timestamp)

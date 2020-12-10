@@ -99,15 +99,17 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
     ICoverPool coverPool = ICoverPool(owner());
     require(coverPool.claimNonce() > claimNonce, "COVER: no claim accepted");
 
-    (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
+    (bytes32[] memory _payoutAssetList, uint256[] memory _payoutNumerators, , uint256 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
     require(_incidentTimestamp <= expiry, "COVER: cover expired before incident");
     require(block.timestamp >= uint256(_claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
 
-    _paySender(
-      claimCovTokens[0],
-      uint256(_payoutNumerator),
-      uint256(_payoutDenominator)
-    );
+    for (uint256 i = 0; i < _payoutAssetList.length; i++) {
+      _paySender(
+        claimCovTokens[i],
+        uint256(_payoutNumerators[i]),
+        uint256(_payoutDenominator)
+      );
+    }
   }
 
   /**
@@ -120,7 +122,8 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
     if (coverPool.claimNonce() > claimNonce) {
       // coverPool has an accepted claim
 
-      (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
+      // (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
+      (,, uint256 _totalNum, uint256 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
 
       if (_incidentTimestamp > expiry) {
         // incident happened after expiry, redeem back full collateral
@@ -131,12 +134,12 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
         // incident happened before expiry, pay 1 - payout%
 
         // If claim payout is 100%, nothing is left for NOCLAIM covToken holders
-        require(_payoutNumerator < _payoutDenominator, "COVER: claim payout 100%");
+        require(_totalNum < _payoutDenominator, "COVER: claim payout 100%");
 
         require(block.timestamp >= uint256(_claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
         _paySender(
           noclaimCovToken,
-          uint256(_payoutDenominator).sub(uint256(_payoutNumerator)),
+          uint256(_payoutDenominator).sub(uint256(_totalNum)),
           uint256(_payoutDenominator)
         );
       }
@@ -172,8 +175,8 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   }
 
   // get the claim details for the corresponding nonce from coverPool contract
-  function _claimDetails() private view returns (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) {
-    return ICoverPool(owner()).claimDetails(claimNonce);
+  function _claimDetails() private view returns (bytes32[] memory _payoutAssetList, uint256[] memory _payoutNumerators, uint256 _totalNum, uint256 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) {
+    return ICoverPool(owner()).getClaimDetails(claimNonce);
   }
 
   /// @notice make sure no claim is accepted

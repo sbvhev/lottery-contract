@@ -251,7 +251,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
             claim.payoutDenominator = _payoutDenominator;
             feeCurrency.safeTransfer(claim.filedBy, claim.feePaid);
             _resetCoverPoolClaimFee(_coverPool);
-            ICoverPool(_coverPool).enactClaim(_payoutNumerator, _payoutDenominator, claim.incidentTimestamp, _nonce);
+            // TODO use new enact claim on coverPool
+            // ICoverPool(_coverPool).enactClaim(_payoutNumerator, _payoutDenominator, claim.incidentTimestamp, _nonce);
         } else {
             require(_payoutNumerator == 0, "COVER_CM: claim denied (default if passed window), but payoutNumerator != 0");
             claim.state = ClaimState.Denied;

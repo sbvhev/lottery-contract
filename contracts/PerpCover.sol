@@ -182,7 +182,7 @@
 
 //   // get the claim details for the corresponding nonce from coverPool contract
 //   function _claimDetails() private view returns (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) {
-//     return ICoverPool(owner()).claimDetails(claimNonce);
+//     return ICoverPool(owner()).getClaimDetails(claimNonce);
 //   }
 
 //   /// @notice the owner of CoverPoolFactory contract is dev, also see {_factory}

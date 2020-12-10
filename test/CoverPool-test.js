@@ -149,7 +149,7 @@ describe('CoverPool', function() {
     const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[1], 10);
     await txA.wait();
 
-    await expect(coverPool.connect(ownerAccount).enactClaim(100, 100, INCIDENT_TIMESTAMP, 0))
+    await expect(coverPool.connect(ownerAccount).enactClaim([PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
 
     const txB = await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[1], 10);
@@ -166,7 +166,7 @@ describe('CoverPool', function() {
     const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[1], 10);
     await txA.wait();
 
-    await expect(coverPool.connect(ownerAccount).enactClaim(100, 100, INCIDENT_TIMESTAMP, 0))
+    await expect(coverPool.connect(ownerAccount).enactClaim([PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
 
     const txB = await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMPS[1], 10);
@@ -181,7 +181,7 @@ describe('CoverPool', function() {
 
   it('Should emit event and enactClaim if called by claimManager', async function() {
     const oldClaimNonce = await coverPool.claimNonce();
-    await expect(coverPool.connect(ownerAccount).enactClaim(100, 100, INCIDENT_TIMESTAMP, 0))
+    await expect(coverPool.connect(ownerAccount).enactClaim([PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
     expect(await coverPool.name()).to.equal(PROTOCOL_NAME);
     expect(await coverPool.active()).to.equal(true);
@@ -190,17 +190,17 @@ describe('CoverPool', function() {
 
   it('Should NOT enactClaim if coverPool nonce not match', async function() {
     const oldClaimNonce = await coverPool.claimNonce();
-    await coverPool.connect(ownerAccount).enactClaim(100, 100, INCIDENT_TIMESTAMP, 0);
+    await coverPool.connect(ownerAccount).enactClaim([PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0);
     expect(await coverPool.name()).to.equal(PROTOCOL_NAME);
     expect(await coverPool.active()).to.equal(true);
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce + 1);
 
-    await expect(coverPool.connect(userAAccount).enactClaim(100, 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).enactClaim([PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
   });
   
   it('Should NOT enactClaim if called by non-claimManager', async function() {
     const oldClaimNonce = await coverPool.claimNonce();
-    await expect(coverPool.connect(userAAccount).enactClaim(100, 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).enactClaim([PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce);
   });
 

@@ -8,7 +8,16 @@ pragma solidity ^0.7.5;
  */
 interface ICoverPool {
   /// @notice emit when a claim against the coverPool is accepted
-  event ClaimAccepted(uint256 newClaimNonce);
+  event ClaimAccepted(uint256 _claimNonce);
+
+  struct ClaimDetails {
+    bytes32[] payoutAssetList;
+    uint256[] payoutNumerators;
+    uint256 payoutTotalNum;
+    uint256 payoutDenominator;
+    uint48 incidentTimestamp;
+    uint48 claimEnactedTimestamp;
+  }
 
   function getCoverPoolDetails()
     external view returns (
@@ -33,7 +42,14 @@ interface ICoverPool {
   function getRedeemFees() external view returns (uint16 _numerator, uint16 _denominator);
   function assetList(uint256 _index) external view returns (bytes32);
   function activeCovers(uint256 _index) external view returns (address);
-  function claimDetails(uint256 _claimNonce) external view returns (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _timestamp);
+  function getClaimDetails(uint256 _claimNonce) external view returns (
+    bytes32[] memory _payoutAssetList,
+    uint256[] memory _payoutNumerators,
+    uint256 payoutTotalNum,
+    uint256 _payoutDenominator,
+    uint48 incidentTimestamp,
+    uint48 claimEnactedTimestamp
+  );
   function collateralStatusMap(address _collateral) external view returns (uint8 _status);
   function expiryMap(uint48 _expiry) external view returns (bytes32 _name, uint8 _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);
@@ -50,7 +66,13 @@ interface ICoverPool {
   function addPerpCover(address _collateral, uint256 _amount) external returns (bool);
 
   /// @notice access restriction - claimManager
-  function enactClaim(uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint256 _coverPoolNonce) external returns (bool);
+  function enactClaim(
+    bytes32[] calldata _payoutAssetList,
+    uint256[] calldata _payoutNumerators,
+    uint256 _payoutDenominator,
+    uint48 _incidentTimestamp,
+    uint256 _coverPoolNonce
+  ) external returns (bool);
 
   /// @notice access restriction - dev
   function setActive(bool _active) external returns (bool);
