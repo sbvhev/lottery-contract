@@ -1,4 +1,5 @@
 const { expect } = require('chai');
+const { expectRevert } = require("@openzeppelin/test-helpers");
 const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
 describe('CoverPoolFactory', () => {
@@ -37,11 +38,11 @@ describe('CoverPoolFactory', () => {
 
   // test functions with governance access restriction
   it('Should NOT update governance to address(0) by governance', async function() {
-    await expect(coverPoolFactory.connect(governanceAccount).updateGovernance(consts.ADDRESS_ZERO)).to.be.reverted;
+    await expectRevert(coverPoolFactory.connect(governanceAccount).updateGovernance(consts.ADDRESS_ZERO), 'CoverPoolFactory: address cannot be 0');
   });
 
   it('Should NOT update governance to owner by governance', async function() {
-    await expect(coverPoolFactory.connect(governanceAccount).updateGovernance(ownerAddress)).to.be.reverted;
+    await expectRevert(coverPoolFactory.connect(governanceAccount).updateGovernance(ownerAddress), 'CoverPoolFactory: governance cannot be owner');
   });
 
   // test functions with owner access restriction
