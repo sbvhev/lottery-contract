@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: No License
 
 pragma solidity ^0.7.5;
+pragma abicoder v2;
 
 /**
  * @dev CoverPool contract interface. See {CoverPool}.
@@ -25,6 +26,25 @@ interface ICoverPool {
     uint48 claimEnactedTimestamp;
   }
 
+  // state vars
+  function isActive() external view returns (bool);
+  function name() external view returns (bytes32);
+  function claimNonce() external view returns (uint256);
+  /// @notice delay # of seconds for redeem with accepted claim, redeemCollateral is not affected
+  function claimRedeemDelay() external view returns (uint256);
+  /// @notice delay # of seconds for redeem without accepted claim, redeemCollateral is not affected
+  function noclaimRedeemDelay() external view returns (uint256);
+  function assetList(uint256 _index) external view returns (bytes32);
+  function activeCovers(uint256 _index) external view returns (address);
+  function collaterals(uint256 _index) external view returns (address);
+  function expiries(uint256 _index) external view returns (uint48);
+  // function claimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
+  function collateralStatusMap(address _collateral) external view returns (uint8 _status);
+  function expiryInfoMap(uint48 _expiry) external view returns (bytes32 _name, uint8 _status);
+  function coverMap(address _collateral, uint48 _expiry) external view returns (address);
+  function perpCoverMap(address _collateral) external view returns (address);
+
+  // extra view
   function getCoverPoolDetails()
     external view returns (
       bytes32 _name,
@@ -38,35 +58,10 @@ interface ICoverPool {
       address[] memory _allCovers,
       address[] memory _allActiveCovers
     );
-  function active() external view returns (bool);
-  function name() external view returns (bytes32);
-  function claimNonce() external view returns (uint256);
-  /// @notice delay # of seconds for redeem with accepted claim, redeemCollateral is not affected
-  function claimRedeemDelay() external view returns (uint256);
-  /// @notice delay # of seconds for redeem without accepted claim, redeemCollateral is not affected
-  function noclaimRedeemDelay() external view returns (uint256);
   function getRedeemFees() external view returns (uint16 _numerator, uint16 _denominator);
-  function assetList(uint256 _index) external view returns (bytes32);
-  function activeCovers(uint256 _index) external view returns (address);
-  function getClaimDetails(uint256 _claimNonce) external view returns (
-    bytes32[] memory _payoutAssetList,
-    uint256[] memory _payoutNumerators,
-    uint256 payoutTotalNum,
-    uint256 _payoutDenominator,
-    uint48 incidentTimestamp,
-    uint48 claimEnactedTimestamp
-  );
-  function collateralStatusMap(address _collateral) external view returns (uint8 _status);
-  function expiryInfoMap(uint48 _expiry) external view returns (bytes32 _name, uint8 _status);
-  function coverMap(address _collateral, uint48 _expiry) external view returns (address);
-  function perpCoverMap(address _collateral) external view returns (address);
+  function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
 
-  function collaterals(uint256 _index) external view returns (address);
-  function collateralsLength() external view returns (uint256);
-  function expiries(uint256 _index) external view returns (uint48);
-  function expiriesLength() external view returns (uint256);
-  function activeCoversLength() external view returns (uint256);
-  function claimsLength() external view returns (uint256);
+  /// @notice user action
   function addCoverWithExpiry(address _collateral, uint48 _timestamp, uint256 _amount)
     external returns (bool);
   function addPerpCover(address _collateral, uint256 _amount) external returns (bool);

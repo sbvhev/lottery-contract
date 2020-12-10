@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: No License
 
 pragma solidity ^0.7.5;
+pragma abicoder v2;
 
 import "./proxy/InitializableAdminUpgradeabilityProxy.sol";
 import "./utils/Create2.sol";
@@ -29,7 +30,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   uint16 private redeemFeeDenominator;
 
   /// @notice only active (true) coverPool allows adding more covers
-  bool public override active;
+  bool public override isActive;
   bytes32 public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
@@ -64,7 +65,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   mapping(address => address) public override perpCoverMap;
 
   modifier onlyActive() {
-    require(active, "CoverPool: coverPool not active");
+    require(isActive, "CoverPool: coverPool not active");
     _;
   }
 
@@ -91,7 +92,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     name = _coverPoolName;
     assetList = _assetList;
     collaterals.push(_collateral);
-    active = true;
+    isActive = true;
     expiries = _expiries;
 
     collateralStatusMap[_collateral] = 1;
@@ -118,28 +119,15 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return (redeemFeeNumerator, redeemFeeDenominator);
   }
 
-  function getClaimDetails(uint256 _nonce) external view override returns (
-    bytes32[] memory _payoutAssetList,
-    uint256[] memory _payoutNumerators,
-    uint256 _payoutTotalNum,
-    uint256 _payoutDenominator,
-    uint48 _incidentTimestamp,
-    uint48 _claimEnactedTimestamp
-  ) {
-    ClaimDetails memory claim = claimDetails[_nonce];
-    _payoutAssetList =  claim.payoutAssetList;
-    _payoutNumerators =  claim.payoutNumerators;
-    _payoutTotalNum =  claim.payoutTotalNum;
-    _payoutDenominator =  claim.payoutDenominator;
-    _incidentTimestamp =  claim.incidentTimestamp;
-    _claimEnactedTimestamp =  claim.claimEnactedTimestamp;
+  function getClaimDetails(uint256 _nonce) external view override returns (ClaimDetails memory) {
+    return claimDetails[_nonce];
   }
 
   function getCoverPoolDetails()
     external view override
     returns (
       bytes32 _name,
-      bool _active,
+      bool _isActive,
       bytes32[] memory _assetList,
       uint256 _claimNonce,
       uint256 _claimRedeemDelay,
@@ -152,7 +140,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   {
     return (
       name,
-      active,
+      isActive,
       assetList,
       claimNonce,
       claimRedeemDelay,
@@ -162,22 +150,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       allCovers,
       activeCovers
     );
-  }
-
-  function collateralsLength() external view override returns (uint256) {
-    return collaterals.length;
-  }
-
-  function expiriesLength() external view override returns (uint256) {
-    return expiries.length;
-  }
-
-  function activeCoversLength() external view override returns (uint256) {
-    return activeCovers.length;
-  }
-
-  function claimsLength() external view override returns (uint256) {
-    return claimDetails.length;
   }
 
   function addPerpCover(address _collateral, uint256 _amount)
@@ -352,8 +324,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   // update status of coverPool, if false, will pause new cover creation
-  function setActive(bool _active) external override onlyDev returns (bool) {
-    active = _active;
+  function setActive(bool _isActive) external override onlyDev returns (bool) {
+    isActive = _isActive;
     return true;
   }
 

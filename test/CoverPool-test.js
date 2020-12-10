@@ -43,30 +43,31 @@ describe('CoverPool', () => {
   });
 
   it('Should initialize correct state variables', async () => {
-    expect(await coverPool.name()).to.equal(consts.PROTOCOL_NAME);
-    expect(await coverPool.active()).to.equal(true);
-    expect(await coverPool.claimNonce()).to.equal(0);
-    expect(await coverPool.claimRedeemDelay()).to.equal(2 * 24 * 60 * 60);
-    expect(await coverPool.noclaimRedeemDelay()).to.equal(10 * 24 * 60 * 60);
-    expect(await coverPool.expiriesLength()).to.equal(consts.ALLOWED_EXPIRYS.length);
-    expect(await coverPool.expiries(0)).to.equal(consts.ALLOWED_EXPIRYS[0]);
-    expect(await coverPool.collateralsLength()).to.equal(1);
-    expect(await coverPool.collaterals(0)).to.equal(COLLATERAL);
+    const [name, isActive, assetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, allActiveCovers] = await coverPool.getCoverPoolDetails();
+
+    expect(name).to.equal(consts.PROTOCOL_NAME);
+    expect(isActive).to.equal(true);
+    expect(claimNonce).to.equal(0);
+    expect(claimRedeemDelay).to.equal(2 * 24 * 60 * 60);
+    expect(noclaimRedeemDelay).to.equal(10 * 24 * 60 * 60);
+    expect(assetList).to.deep.equal([consts.PROTOCOL_NAME]);
+    expect(collaterals).to.deep.equal([COLLATERAL]);
+    expect(expiries).to.deep.equal(consts.ALLOWED_EXPIRYS);
+    expect(allCovers.length).to.equal(0);
+    expect(allActiveCovers.length).to.equal(0);
   });
 
   it('Should update state variables by the correct authority', async () => {
     await coverPool.connect(ownerAccount).updateCollateral(NEW_COLLATERAL, 2);
-    expect(await coverPool.collateralsLength()).to.equal(2);
     expect(await coverPool.collaterals(1)).to.equal(NEW_COLLATERAL);
     expect(await coverPool.collateralStatusMap(NEW_COLLATERAL)).to.equal(2);
     
     await coverPool.connect(ownerAccount).updateExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1);
-    expect(await coverPool.expiriesLength()).to.equal(consts.ALLOWED_EXPIRYS.length + 1);
     expect(await coverPool.expiries(consts.ALLOWED_EXPIRYS.length)).to.equal(NEW_TIMESTAMP);
     expect((await coverPool.expiryInfoMap(NEW_TIMESTAMP)).status).to.equal(1);
 
     await coverPool.connect(ownerAccount).setActive(false);
-    expect(await coverPool.active()).to.equal(false);
+    expect(await coverPool.isActive()).to.equal(false);
 
     const newDelay = 10 * 24 * 60 * 60;
     await coverPool.connect(governanceAccount).updateClaimRedeemDelay(newDelay);
@@ -110,8 +111,8 @@ describe('CoverPool', () => {
     const txB = await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[2], 10);
     await txB.wait();
 
-    const activeCoversLength = await coverPool.activeCoversLength();
-    expect(activeCoversLength).to.equal(2);
+    const lastActiveCover = await coverPool.activeCovers(1);
+    expect(lastActiveCover).to.not.equal(consts.ADDRESS_ZERO);
   });
 
   it('Should add cover for userB on existing contract', async () => {
@@ -123,8 +124,9 @@ describe('CoverPool', () => {
 
     const txB = await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txB.wait();
-    const activeCoversLength = await coverPool.activeCoversLength();
-    expect(activeCoversLength).to.equal(1);
+
+    const lastActiveCover = await coverPool.activeCovers(0);
+    expect(lastActiveCover).to.not.equal(consts.ADDRESS_ZERO);
 
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
@@ -140,8 +142,9 @@ describe('CoverPool', () => {
 
     const txB = await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txB.wait();
-    const activeCoversLength = await coverPool.activeCoversLength();
-    expect(activeCoversLength).to.equal(1);
+
+    const lastActiveCover = await coverPool.activeCovers(0);
+    expect(lastActiveCover).to.not.equal(consts.ADDRESS_ZERO);
 
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
@@ -153,7 +156,7 @@ describe('CoverPool', () => {
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
     expect(await coverPool.name()).to.equal(consts.PROTOCOL_NAME);
-    expect(await coverPool.active()).to.equal(true);
+    expect(await coverPool.isActive()).to.equal(true);
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce + 1);
   });
 
@@ -161,7 +164,7 @@ describe('CoverPool', () => {
     const oldClaimNonce = await coverPool.claimNonce();
     await coverPool.connect(ownerAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0);
     expect(await coverPool.name()).to.equal(consts.PROTOCOL_NAME);
-    expect(await coverPool.active()).to.equal(true);
+    expect(await coverPool.isActive()).to.equal(true);
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce + 1);
 
     await expect(coverPool.connect(userAAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;

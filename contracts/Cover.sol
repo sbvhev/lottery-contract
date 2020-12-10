@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: No License
 
 pragma solidity ^0.7.5;
+pragma abicoder v2;
 
 import "./proxy/InitializableAdminUpgradeabilityProxy.sol";
 import "./utils/Create2.sol";
@@ -99,15 +100,15 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
     ICoverPool coverPool = ICoverPool(owner());
     require(coverPool.claimNonce() > claimNonce, "COVER: no claim accepted");
 
-    (bytes32[] memory _payoutAssetList, uint256[] memory _payoutNumerators, , uint256 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
-    require(_incidentTimestamp <= expiry, "COVER: cover expired before incident");
-    require(block.timestamp >= uint256(_claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
+    ICoverPool.ClaimDetails memory claim = _claimDetails();
+    require(claim.incidentTimestamp <= expiry, "COVER: cover expired before incident");
+    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
 
-    for (uint256 i = 0; i < _payoutAssetList.length; i++) {
+    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
       _paySender(
         claimCovTokens[i],
-        uint256(_payoutNumerators[i]),
-        uint256(_payoutDenominator)
+        uint256(claim.payoutNumerators[i]),
+        uint256(claim.payoutDenominator)
       );
     }
   }
@@ -122,10 +123,9 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
     if (coverPool.claimNonce() > claimNonce) {
       // coverPool has an accepted claim
 
-      // (uint16 _payoutNumerator, uint16 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
-      (,, uint256 _totalNum, uint256 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) = _claimDetails();
+      ICoverPool.ClaimDetails memory claim = _claimDetails();
 
-      if (_incidentTimestamp > expiry) {
+      if (claim.incidentTimestamp > expiry) {
         // incident happened after expiry, redeem back full collateral
 
         require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "COVER: not ready");
@@ -134,13 +134,13 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
         // incident happened before expiry, pay 1 - payout%
 
         // If claim payout is 100%, nothing is left for NOCLAIM covToken holders
-        require(_totalNum < _payoutDenominator, "COVER: claim payout 100%");
+        require(claim.payoutTotalNum < claim.payoutDenominator, "COVER: claim payout 100%");
 
-        require(block.timestamp >= uint256(_claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
+        require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
         _paySender(
           noclaimCovToken,
-          uint256(_payoutDenominator).sub(uint256(_totalNum)),
-          uint256(_payoutDenominator)
+          uint256(claim.payoutDenominator).sub(uint256(claim.payoutTotalNum)),
+          uint256(claim.payoutDenominator)
         );
       }
     } else {
@@ -175,7 +175,7 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   }
 
   // get the claim details for the corresponding nonce from coverPool contract
-  function _claimDetails() private view returns (bytes32[] memory _payoutAssetList, uint256[] memory _payoutNumerators, uint256 _totalNum, uint256 _payoutDenominator, uint48 _incidentTimestamp, uint48 _claimEnactedTimestamp) {
+  function _claimDetails() private view returns (ICoverPool.ClaimDetails memory) {
     return ICoverPool(owner()).getClaimDetails(claimNonce);
   }
 
