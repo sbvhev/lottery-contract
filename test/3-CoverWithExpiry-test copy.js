@@ -3,7 +3,7 @@ const { time, BN } = require("@openzeppelin/test-helpers");
 const testHelper = require('./testHelper');
 
 // TODO: add test for the fee amounts, how to deal with decimal
-describe('Cover', function() {
+describe('CoverWithExpiry', function() {
   const PROTOCOL_NAME = ethers.utils.formatBytes32String('CURVE');
   const NAME = 'CURVE_0_DAI_2020_12_31';
   const ADDRESS_ZERO = ethers.constants.AddressZero;

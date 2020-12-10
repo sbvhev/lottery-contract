@@ -1,4 +1,41 @@
 module.exports = {
+  consts: {
+    PROTOCOL_NAME: ethers.utils.formatBytes32String('Binance'),
+    PROTOCOL_NAME_2: ethers.utils.formatBytes32String('Curve'),
+    POOL_2: ethers.utils.formatBytes32String('Pool2'),
+    ADDRESS_ZERO: ethers.constants.AddressZero,
+    ALLOWED_EXPIRYS: [1580515200000, 1612051200000, 4105123200000],
+    ALLOWED_EXPIRY_NAMES: ['2020_1_1', '2050_12_31', '2100_1_1'].map(s => ethers.utils.formatBytes32String(s)),
+  },
+  getAccounts: async() => {
+    const accounts = await ethers.getSigners();
+    [ ownerAccount, userAAccount, governanceAccount, treasuryAccount ] = accounts;
+    ownerAddress = await ownerAccount.getAddress();
+    userAAddress = await userAAccount.getAddress();
+    governanceAddress = await governanceAccount.getAddress();
+    treasuryAddress = await treasuryAccount.getAddress();
+    return {ownerAccount, ownerAddress, userAAccount, userAAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress};
+  },
+  getImpls: async() =>{
+    // get main contracts
+    const CoverPoolFactory = await ethers.getContractFactory('CoverPoolFactory');
+    const CoverPool = await ethers.getContractFactory('CoverPool');
+    const Cover = await ethers.getContractFactory('Cover');
+    const CoverERC20 = await ethers.getContractFactory('CoverERC20');
+
+    // deploy CoverPool contract
+    const coverPoolImpl = await CoverPool.deploy();
+    await coverPoolImpl.deployed();
+
+    // deploy Cover contract
+    const coverImpl = await Cover.deploy();
+    await coverImpl.deployed();
+
+    // deploy CoverERC20 contract
+    const coverERC20Impl = await CoverERC20.deploy();
+    await coverERC20Impl.deployed();
+    return {CoverPoolFactory, CoverPool, Cover, CoverERC20, coverPoolImpl, coverImpl, coverERC20Impl};
+  },
   deployCoin: async (ethers, symbol) => {
     const CoverERC20 = await ethers.getContractFactory('CoverERC20');
     const dai = await CoverERC20.deploy();
