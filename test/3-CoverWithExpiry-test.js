@@ -192,7 +192,7 @@ describe('CoverWithExpiry', function() {
   });
 
   it('Should allow redeem partial claim and noclaim after enact 40% claim after claimRedeemDelay ends', async function() {
-    const txA = await coverPool.connect(claimManager).enactClaim([consts.PROTOCOL_NAME], [40], 100, startTimestamp, 0);
+    const txA = await coverPool.connect(claimManager).enactClaim([consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], [40, 20], 100, startTimestamp, 0);
     await txA.wait();
 
     const [,,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
@@ -207,9 +207,13 @@ describe('CoverWithExpiry', function() {
     expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(0);
     expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
 
-    expect(await dai.balanceOf(cover.address)).to.equal(ETHER_UINT_6);
+    const claimCovTokenAddress2 = await cover.claimCovTokenMap(consts.PROTOCOL_NAME_2);
+    expect(await CoverERC20.attach(claimCovTokenAddress2).totalSupply()).to.equal(0);
+    expect(await CoverERC20.attach(claimCovTokenAddress2).balanceOf(userAAddress)).to.equal(0);
+
+    expect(await dai.balanceOf(cover.address)).to.equal(ETHER_UINT_4);
     const [num, den] = await coverPool.getRedeemFees();
-    expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(ETHER_UINT_4).sub(ETHER_UINT_4.mul(num).div(den)));
+    expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(ETHER_UINT_6).sub(ETHER_UINT_6.mul(num).div(den)));
 
     const aDaiBalance2 = await dai.balanceOf(userAAddress);
     await cover.connect(userAAccount).redeemNoclaim();
@@ -218,7 +222,7 @@ describe('CoverWithExpiry', function() {
     expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
 
     expect(await dai.balanceOf(cover.address)).to.equal(0);
-    expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance2.add(ETHER_UINT_6).sub(ETHER_UINT_6.mul(num).div(den)));
+    expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance2.add(ETHER_UINT_4).sub(ETHER_UINT_4.mul(num).div(den)));
   });
 
   it('Should allow redeem noclaim ONLY after enact and noclaimRedeemDelay if incident after expiry', async function() {
