@@ -11,7 +11,7 @@ import "./utils/ReentrancyGuard.sol";
 import "./utils/SafeMath.sol";
 import "./utils/SafeERC20.sol";
 import "./utils/StringHelper.sol";
-import "./interfaces/ICover.sol";
+import "./interfaces/ICoverWithExpiry.sol";
 import "./interfaces/ICoverERC20.sol";
 import "./interfaces/IERC20.sol";
 import "./interfaces/IOwnable.sol";
@@ -27,7 +27,7 @@ import "./interfaces/ICoverPoolFactory.sol";
  *  - Mints and burns CovTokens (CoverERC20)
  *  - Allows redeem from collateral pool with or without an accepted claim
  */
-contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
+contract Cover is ICoverWithExpiry, Initializable, Ownable, ReentrancyGuard {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
@@ -40,11 +40,6 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   ICoverERC20 public override noclaimCovToken;
   string public override name;
   uint256 public override claimNonce;
-
-  modifier onlyNotExpired() {
-    require(block.timestamp < expiry, "COVER: cover expired");
-    _;
-  }
 
   /// @dev Initialize, called once
   function initialize (
@@ -95,7 +90,6 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   }
 
   /// @notice redeem CLAIM covToken, only if there is a claim accepted and delayWithClaim period passed
-  // TODO update redeem Claim with claim asset
   function redeemClaim() external override {
     ICoverPool coverPool = ICoverPool(owner());
     require(coverPool.claimNonce() > claimNonce, "COVER: no claim accepted");
@@ -104,13 +98,14 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
     require(claim.incidentTimestamp <= expiry, "COVER: cover expired before incident");
     require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "COVER: not ready");
 
-    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
-      _paySender(
-        claimCovTokens[i],
-        uint256(claim.payoutNumerators[i]),
-        uint256(claim.payoutDenominator)
-      );
+    uint256 totalAmount;
+    for (uint256 i = 0; i < claimCovTokens.length; i++) {
+      uint256 amount = claimCovTokens[i].balanceOf(msg.sender);
+      totalAmount = totalAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
+      claimCovTokens[i].burnByCover(msg.sender, amount);
     }
+    require(totalAmount > 0, "COVER: low covToken balance");
+    _payCollateral(msg.sender, totalAmount);
   }
 
   /**
@@ -152,7 +147,8 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   }
 
   /// @notice redeem collateral, only when no claim accepted and not expired
-  function redeemCollateral(uint256 _amount) external override onlyNotExpired {
+  function redeemCollateral(uint256 _amount) external override {
+    require(block.timestamp < expiry, "COVER: cover expired");
     require(_amount > 0, "COVER: amount is 0");
     _noClaimAcceptedCheck(); // save gas than modifier
 

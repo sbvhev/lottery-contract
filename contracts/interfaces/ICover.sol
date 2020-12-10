@@ -20,7 +20,6 @@ interface ICover {
       ICoverERC20[] memory _claimCovTokens,
       ICoverERC20 _noclaimCovToken
     );
-  function expiry() external view returns (uint48);
   function collateral() external view returns (address);
   function claimCovTokens(uint256 _index) external view returns (ICoverERC20);
   function noclaimCovToken() external view returns (ICoverERC20);
