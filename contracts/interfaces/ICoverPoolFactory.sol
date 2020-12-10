@@ -11,9 +11,9 @@ interface ICoverPoolFactory {
   event CoverPoolCreation(address coverPoolAddress);
 
   function getCoverPoolAddresses() external view returns (address[] memory);
-  function coverPoolImplementation() external view returns (address);
-  function coverImplementation() external view returns (address);
-  function coverERC20Implementation() external view returns (address);
+  function coverPoolImpl() external view returns (address);
+  function coverImpl() external view returns (address);
+  function coverERC20Impl() external view returns (address);
   function treasury() external view returns (address);
   function governance() external view returns (address);
   function claimManager() external view returns (address);
@@ -29,11 +29,11 @@ interface ICoverPoolFactory {
 
   /// @notice access restriction - owner (dev)
   /// @dev update this will only affect contracts deployed after
-  function updateCoverPoolImplementation(address _newImplementation) external returns (bool);
+  function updateCoverPoolImpl(address _newImpl) external;
   /// @dev update this will only affect contracts deployed after
-  function updateCoverImplementation(address _newImplementation) external returns (bool);
+  function updateCoverImpl(address _newImpl) external;
   /// @dev update this will only affect contracts deployed after
-  function updateCoverERC20Implementation(address _newImplementation) external returns (bool);
+  function updateCoverERC20Impl(address _newImpl) external;
   function createCoverPool(
     bytes32 _name,
     bytes32[] calldata _assetList,
@@ -41,9 +41,9 @@ interface ICoverPoolFactory {
     uint48[] calldata _timestamps,
     bytes32[] calldata _timestampNames
   ) external returns (address);
-  function updateTreasury(address _address) external returns (bool);
-  function updateClaimManager(address _address) external returns (bool);
+  function updateTreasury(address _address) external;
+  function updateClaimManager(address _address) external;
 
   /// @notice access restriction - governance
-  function updateGovernance(address _address) external returns (bool);
+  function updateGovernance(address _address) external;
 }  

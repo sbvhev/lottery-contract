@@ -221,9 +221,9 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
     address payable proxyAddr = Create2.deploy(0, salt, bytecode);
 
     bytes memory initData = abi.encodeWithSelector(COVERERC20_INIT_SIGNITURE, string(abi.encodePacked(_prefix, "_", name)));
-    address coverERC20Implementation = ICoverPoolFactory(_factory()).coverERC20Implementation();
+    address coverERC20Impl = ICoverPoolFactory(_factory()).coverERC20Impl();
     InitializableAdminUpgradeabilityProxy(proxyAddr).initialize(
-      coverERC20Implementation,
+      coverERC20Impl,
       IOwnable(_factory()).owner(),
       initData
     );

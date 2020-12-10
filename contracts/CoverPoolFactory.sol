@@ -16,9 +16,9 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
   bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(bytes32,bytes32[],address,uint48[],bytes32[])"));
 
-  address public override coverPoolImplementation;
-  address public override coverImplementation;
-  address public override coverERC20Implementation;
+  address public override coverPoolImpl;
+  address public override coverImpl;
+  address public override coverERC20Impl;
 
   address public override treasury;
   address public override governance;
@@ -35,15 +35,15 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   }
 
   constructor (
-    address _coverPoolImplementation,
-    address _coverImplementation,
-    address _coverERC20Implementation,
+    address _coverPoolImpl,
+    address _coverImpl,
+    address _coverERC20Impl,
     address _governance,
     address _treasury
   ) {
-    coverPoolImplementation = _coverPoolImplementation;
-    coverImplementation = _coverImplementation;
-    coverERC20Implementation = _coverERC20Implementation;
+    coverPoolImpl = _coverPoolImpl;
+    coverImpl = _coverImpl;
+    coverERC20Impl = _coverERC20Impl;
     governance = _governance;
     treasury = _treasury;
 
@@ -127,7 +127,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     emit CoverPoolCreation(proxyAddr);
 
     bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _assetList, _collateral, _timestamps, _timestampNames);
-    InitializableAdminUpgradeabilityProxy(proxyAddr).initialize(coverPoolImplementation, owner(), initData);
+    InitializableAdminUpgradeabilityProxy(proxyAddr).initialize(coverPoolImpl, owner(), initData);
 
     coverPools[_name] = proxyAddr;
 
@@ -135,55 +135,39 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   }
 
   /// @dev update this will only affect coverPools deployed after
-  function updateCoverPoolImplementation(address _newImplementation)
-   external override onlyOwner returns (bool)
-  {
-    require(Address.isContract(_newImplementation), "CoverPoolFactory: new implementation is not a contract");
-    coverPoolImplementation = _newImplementation;
-    return true;
+  function updateCoverPoolImpl(address _newImpl) external override onlyOwner {
+    require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
+    coverPoolImpl = _newImpl;
   }
 
   /// @dev update this will only affect covers of coverPools deployed after
-  function updateCoverImplementation(address _newImplementation)
-   external override onlyOwner returns (bool)
-  {
-    require(Address.isContract(_newImplementation), "CoverPoolFactory: new implementation is not a contract");
-    coverImplementation = _newImplementation;
-    return true;
+  function updateCoverImpl(address _newImpl) external override onlyOwner {
+    require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
+    coverImpl = _newImpl;
   }
 
   /// @dev update this will only affect covTokens of covers of coverPools deployed after
-  function updateCoverERC20Implementation(address _newImplementation)
-   external override onlyOwner returns (bool)
-  {
-    require(Address.isContract(_newImplementation), "CoverPoolFactory: new implementation is not a contract");
-    coverERC20Implementation = _newImplementation;
-    return true;
+  function updateCoverERC20Impl(address _newImpl) external override onlyOwner {
+    require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
+    coverERC20Impl = _newImpl;
   }
 
   function updateClaimManager(address _address)
-   external override onlyOwner returns (bool)
+   external override onlyOwner
   {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
     claimManager = _address;
-    return true;
   }
 
-  function updateGovernance(address _address)
-   external override onlyGovernance returns (bool)
-  {
+  function updateGovernance(address _address) external override onlyGovernance {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
     require(_address != owner(), "CoverPoolFactory: governance cannot be owner");
     governance = _address;
-    return true;
   }
 
-  function updateTreasury(address _address)
-   external override onlyOwner returns (bool)
-  {
+  function updateTreasury(address _address) external override onlyOwner {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
     treasury = _address;
-    return true;
   }
 
   function _computeAddress(bytes32 salt, address deployer) private pure returns (address) {

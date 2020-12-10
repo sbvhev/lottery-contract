@@ -23,9 +23,9 @@ describe('CoverPoolFactory', () => {
   });
 
   it('Should deploy with correct state variable values', async () => {
-    expect(await coverPoolFactory.coverPoolImplementation()).to.equal(coverPoolImpl.address);
-    expect(await coverPoolFactory.coverImplementation()).to.equal(coverImpl.address);
-    expect(await coverPoolFactory.coverERC20Implementation()).to.equal(coverERC20Impl.address);
+    expect(await coverPoolFactory.coverPoolImpl()).to.equal(coverPoolImpl.address);
+    expect(await coverPoolFactory.coverImpl()).to.equal(coverImpl.address);
+    expect(await coverPoolFactory.coverERC20Impl()).to.equal(coverERC20Impl.address);
     expect(await coverPoolFactory.governance()).to.equal(governanceAddress);
     expect(await coverPoolFactory.treasury()).to.equal(treasuryAddress);
   });

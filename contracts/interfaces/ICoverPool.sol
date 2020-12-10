@@ -62,9 +62,8 @@ interface ICoverPool {
   function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
 
   /// @notice user action
-  function addCoverWithExpiry(address _collateral, uint48 _timestamp, uint256 _amount)
-    external returns (bool);
-  function addPerpCover(address _collateral, uint256 _amount) external returns (bool);
+  function addCoverWithExpiry(address _collateral, uint48 _timestamp, uint256 _amount) external;
+  function addPerpCover(address _collateral, uint256 _amount) external;
 
   /// @notice access restriction - claimManager
   function enactClaim(
@@ -73,15 +72,15 @@ interface ICoverPool {
     uint256 _payoutDenominator,
     uint48 _incidentTimestamp,
     uint256 _coverPoolNonce
-  ) external returns (bool);
+  ) external;
 
   /// @notice access restriction - dev
-  function setActive(bool _active) external returns (bool);
-  function updateExpiry(uint48 _expiry, bytes32 _expiryName, uint8 _status) external returns (bool);
-  function updateCollateral(address _collateral, uint8 _status) external returns (bool);
+  function setActive(bool _active) external;
+  function updateExpiry(uint48 _expiry, bytes32 _expiryName, uint8 _status) external;
+  function updateCollateral(address _collateral, uint8 _status) external;
 
   /// @notice access restriction - governance
-  function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external returns (bool);
-  function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external returns (bool);
-  function updateFees(uint16 _redeemFeeNumerator, uint16 _redeemFeeDenominator) external returns (bool);
+  function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external;
+  function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external;
+  function updateFees(uint16 _redeemFeeNumerator, uint16 _redeemFeeDenominator) external;
 }

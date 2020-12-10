@@ -153,7 +153,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   function addPerpCover(address _collateral, uint256 _amount)
-    external override onlyActive nonReentrant returns (bool)
+    external override onlyActive nonReentrant
   {
     require(_amount > 0, "CoverPool: amount <= 0");
     require(collateralStatusMap[_collateral] == 1, "CoverPool: invalid collateral");
@@ -173,9 +173,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       addr = Create2.deploy(0, salt, bytecode);
 
       bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, 0, _collateral, claimNonce);
-      address coverImplementation = ICoverPoolFactory(owner()).coverImplementation();
+      address coverImpl = ICoverPoolFactory(owner()).coverImpl();
       InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
-        coverImplementation,
+        coverImpl,
         IOwnable(owner()).owner(),
         initData
       );
@@ -191,14 +191,13 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint256 coverBalanceAfter = collateral.balanceOf(addr);
     require(coverBalanceAfter > coverBalanceBefore, "CoverPool: collateral transfer failed");
     ICover(addr).mint(coverBalanceAfter.sub(coverBalanceBefore), msg.sender);
-    return true;
   }
 
   /**
    * @notice add coverage (with expiry) for sender
    */
   function addCoverWithExpiry(address _collateral, uint48 _timestamp, uint256 _amount)
-    external override onlyActive nonReentrant returns (bool)
+    external override onlyActive nonReentrant
   {
     require(_amount > 0, "CoverPool: amount <= 0");
     require(collateralStatusMap[_collateral] == 1, "CoverPool: invalid collateral");
@@ -219,9 +218,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       addr = Create2.deploy(0, salt, bytecode);
 
       bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, assetList, _timestamp, _collateral, claimNonce);
-      address coverImplementation = ICoverPoolFactory(owner()).coverImplementation();
+      address coverImpl = ICoverPoolFactory(owner()).coverImpl();
       InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
-        coverImplementation,
+        coverImpl,
         IOwnable(owner()).owner(),
         initData
       );
@@ -238,12 +237,11 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     require(coverBalanceAfter > coverBalanceBefore, "CoverPool: collateral transfer failed");
     ICover(addr).mint(coverBalanceAfter.sub(coverBalanceBefore), msg.sender);
     emit CoverAdded(addr, coverBalanceAfter.sub(coverBalanceBefore));
-    return true;
   }
 
   /// @notice update status or add new expiry
   function updateExpiry(uint48 _expiry, bytes32 _expiryName, uint8 _status)
-    external override onlyDev returns (bool)
+    external override onlyDev
   {
     require(block.timestamp < _expiry, "CoverPool: invalid expiry");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
@@ -255,11 +253,10 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       _expiryName,
       _status
     );
-    return true;
   }
 
   /// @notice update status or add new collateral
-  function updateCollateral(address _collateral, uint8 _status) external override onlyDev returns (bool) {
+  function updateCollateral(address _collateral, uint8 _status) external override onlyDev {
     require(_collateral != address(0), "CoverPool: address cannot be 0");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
 
@@ -267,19 +264,15 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       collaterals.push(_collateral);
     }
     collateralStatusMap[_collateral] = _status;
-    return true;
   }
 
   function updateFees(
     uint16 _redeemFeeNumerator,
     uint16 _redeemFeeDenominator
-  )
-    external override onlyGovernance returns (bool)
-  {
+  ) external override onlyGovernance {
     require(_redeemFeeDenominator > 0, "CoverPool: denominator cannot be 0");
     redeemFeeNumerator = _redeemFeeNumerator;
     redeemFeeDenominator = _redeemFeeDenominator;
-    return true;
   }
 
   /**
@@ -296,9 +289,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint256 _payoutDenominator,
     uint48 _incidentTimestamp,
     uint256 _coverPoolNonce
-  )
-   external override returns (bool)
-  {
+  ) external override {
     require(_coverPoolNonce == claimNonce, "CoverPool: nonces do not match");
     require(_payoutAssetList.length == _payoutNumerators.length, "CoverPool: payout asset length don't match");
     require(msg.sender == ICoverPoolFactory(owner()).claimManager(), "CoverPool: caller not claimManager");
@@ -320,27 +311,19 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       uint48(block.timestamp)
     ));
     emit ClaimAccepted(_coverPoolNonce);
-    return true;
   }
 
   // update status of coverPool, if false, will pause new cover creation
-  function setActive(bool _isActive) external override onlyDev returns (bool) {
+  function setActive(bool _isActive) external override onlyDev {
     isActive = _isActive;
-    return true;
   }
 
-  function updateClaimRedeemDelay(uint256 _claimRedeemDelay)
-   external override onlyGovernance returns (bool)
-  {
+  function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external override onlyGovernance {
     claimRedeemDelay = _claimRedeemDelay;
-    return true;
   }
 
-  function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay)
-   external override onlyGovernance returns (bool)
-  {
+  function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external override onlyGovernance {
     noclaimRedeemDelay = _noclaimRedeemDelay;
-    return true;
   }
 
   /// @dev the owner of this contract is CoverPoolFactory contract. The owner of CoverPoolFactory is dev
