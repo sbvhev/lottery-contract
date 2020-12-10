@@ -8,12 +8,12 @@ describe('CoverPool', () => {
   const INCIDENT_TIMESTAMP = 1580515200000;
 
   let ownerAddress, ownerAccount, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
-  let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
+  let CoverPoolFactory, CoverPool, coverPoolImpl, perpCoverImpl, coverImpl, coverERC20Impl;
   let COLLATERAL, NEW_COLLATERAL, coverPoolFactory, coverPool, dai, weth;
 
   before(async () => {
     ({ownerAccount, ownerAddress, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress} = await getAccounts());
-    ({CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
+    ({CoverPoolFactory, CoverPool, coverPoolImpl, perpCoverImpl, coverImpl, coverERC20Impl} = await getImpls());
 
     // deploy stablecoins to local blockchain emulator
     dai = await deployCoin(ethers, 'dai');
@@ -26,7 +26,7 @@ describe('CoverPool', () => {
   
   beforeEach(async () => {
     // deploy coverPool factory
-    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
+    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, perpCoverImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
     await coverPoolFactory.deployed();
     await coverPoolFactory.updateClaimManager(ownerAddress);
 

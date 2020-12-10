@@ -14,12 +14,12 @@ describe('CoverWithExpiry', function() {
   let startTimestamp, TIMESTAMP, TIMESTAMP_NAME, COLLATERAL;
 
   let ownerAddress, ownerAccount, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
-  let CoverPoolFactory, CoverPool, CoverWithExpiry, CoverERC20, coverPoolImpl, coverImpl, coverERC20Impl;
+  let CoverPoolFactory, CoverPool, CoverWithExpiry, CoverERC20, coverPoolImpl, perpCoverImpl, coverImpl, coverERC20Impl;
   let claimManager, cover, dai;
 
   before(async () => {
     ({ownerAccount, ownerAddress, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress} = await getAccounts());
-    ({CoverPoolFactory, CoverPool, CoverWithExpiry, CoverERC20, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
+    ({CoverPoolFactory, CoverPool, CoverWithExpiry, CoverERC20, perpCoverImpl, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
     claimManager = governanceAccount;
 
     // deploy stablecoins to local blockchain emulator
@@ -35,7 +35,7 @@ describe('CoverWithExpiry', function() {
     TIMESTAMP_NAME = '2020_12_31';
 
     // deploy coverPool factory
-    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
+    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, perpCoverImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
     await coverPoolFactory.deployed();
     await coverPoolFactory.updateClaimManager(claimManager.getAddress());
     // await coverPoolFactory.updateTreasury(treasuryAddress);

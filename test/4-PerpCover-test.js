@@ -156,7 +156,6 @@ describe('PerpCover', function() {
     const claimCovTokenAddress = await cover.claimCovTokenMap(consts.PROTOCOL_NAME);
     const claimCovTokenAddress2 = await cover.claimCovTokenMap(consts.PROTOCOL_NAME_2);
     const aDaiBalance = await dai.balanceOf(userAAddress);
-    console.log('before redeem claim userA bal: ', aDaiBalance.toString(), (await CoverERC20.attach(claimCovTokenAddress2).balanceOf(userAAddress)).toString(), (await dai.balanceOf(cover.address)).toString());
     await cover.connect(userAAccount).redeemClaim();
 
     expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(0);
@@ -165,19 +164,16 @@ describe('PerpCover', function() {
     expect(await CoverERC20.attach(claimCovTokenAddress2).totalSupply()).to.equal(0);
     expect(await CoverERC20.attach(claimCovTokenAddress2).balanceOf(userAAddress)).to.equal(0);
 
-    console.log('after redeem claim userA bal: ',  (await dai.balanceOf(cover.address)).toString(), (await dai.balanceOf(userAAddress)).toString(), (await CoverERC20.attach(claimCovTokenAddress2).balanceOf(userAAddress)).toString(), (await dai.balanceOf(treasuryAddress)).toString());
     expect(await dai.balanceOf(cover.address)).to.equal(ETHER_UINT_4);
     const [num, den] = await coverPool.getRedeemFees();
     expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(ETHER_UINT_6).sub(ETHER_UINT_6.mul(num).div(den)));
     
     const aDaiBalance2 = await dai.balanceOf(userAAddress);
     const noclaimCovTokenAddress = await cover.noclaimCovToken();
-    console.log('before redeem noclaim userA bal: ',  (await dai.balanceOf(cover.address)).toString(), (await dai.balanceOf(userAAddress)).toString(), (await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).toString(), (await CoverERC20.attach(noclaimCovTokenAddress).totalSupply()).toString());
     await cover.connect(userAAccount).redeemNoclaim();
     expect(await CoverERC20.attach(noclaimCovTokenAddress).totalSupply()).to.equal(0);
     expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
     
-    console.log('after redeem noclaim userA bal: ',  (await dai.balanceOf(cover.address)).toString(), (await dai.balanceOf(userAAddress)).toString(), (await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).toString(), (await dai.balanceOf(treasuryAddress)).toString());
     expect(await dai.balanceOf(cover.address)).to.equal(0);
     expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance2.add(ETHER_UINT_4).sub(ETHER_UINT_4.mul(num).div(den)));
   });

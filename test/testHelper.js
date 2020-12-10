@@ -4,7 +4,7 @@ module.exports = {
     PROTOCOL_NAME_2: ethers.utils.formatBytes32String('Curve'),
     POOL_2: ethers.utils.formatBytes32String('Pool2'),
     ADDRESS_ZERO: ethers.constants.AddressZero,
-    ALLOWED_EXPIRYS: [1580515200000, 1612051200000, 4105123200000],
+    ALLOWED_EXPIRYS: [Math.floor(Date.now()) + 30 * 24 * 60 * 60, Math.floor(Date.now()) + 60 * 24 * 60 * 60, Math.floor(Date.now()) + 90 * 24 * 60 * 60],
     ALLOWED_EXPIRY_NAMES: ['2020_1_1', '2050_12_31', '2100_1_1'].map(s => ethers.utils.formatBytes32String(s)),
   },
   getAccounts: async() => {
