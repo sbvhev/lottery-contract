@@ -156,10 +156,10 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       claimNonce,
       claimRedeemDelay,
       noclaimRedeemDelay,
-      getCollaterals(),
-      getExpiries(),
-      getAllCovers(),
-      getAllActiveCovers()
+      collaterals,
+      expiries,
+      allCovers,
+      activeCovers
     );
   }
 
@@ -356,22 +356,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   {
     noclaimRedeemDelay = _noclaimRedeemDelay;
     return true;
-  }
-
-  function getAllCovers() private view returns (address[] memory) {
-    return allCovers;
-  }
-
-  function getAllActiveCovers() private view returns (address[] memory) {
-    return activeCovers;
-  }
-
-  function getCollaterals() private view returns (address[] memory) {
-    return collaterals;
-  }
-
-  function getExpiries() private view returns (uint48[] memory) {
-    return expiries;
   }
 
   /// @dev the owner of this contract is CoverPoolFactory contract. The owner of CoverPoolFactory is dev

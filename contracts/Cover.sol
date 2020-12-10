@@ -67,7 +67,7 @@ contract Cover is ICover, Initializable, Ownable, ReentrancyGuard {
   }
 
   /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
-  function mint(uint256 _amount, address _receiver) external override onlyOwner onlyNotExpired {
+  function mint(uint256 _amount, address _receiver) external override onlyOwner {
     _noClaimAcceptedCheck(); // save gas than modifier
 
     claimCovToken.mint(_receiver, _amount);
