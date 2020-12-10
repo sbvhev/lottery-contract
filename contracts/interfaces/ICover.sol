@@ -9,7 +9,7 @@ import "./ICoverERC20.sol";
  * @author crypto-pumpkin@github
  */
 interface ICover {
-  event NewCoverERC20(address);
+  event NewCovTokenCreation(address);
 
   function collateral() external view returns (address);
   function claimCovTokens(uint256 _index) external view returns (ICoverERC20);
@@ -18,7 +18,6 @@ interface ICover {
   function claimNonce() external view returns (uint256);
 
   function redeemClaim() external;
-  function redeemNoclaim() external;
   function redeemCollateral(uint256 _amount) external;
 
   /// @notice access restriction - owner (CoverPool)

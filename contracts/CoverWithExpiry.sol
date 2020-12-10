@@ -90,7 +90,7 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
   }
 
   /// @notice redeem CLAIM covToken, only if there is a claim accepted and delayWithClaim period passed
-  function redeemClaim() external override {
+  function redeemClaim() external override nonReentrant {
     ICoverPool coverPool = ICoverPool(owner());
     require(coverPool.claimNonce() > claimNonce, "CoverWithExpiry: no claim accepted");
 
@@ -114,7 +114,7 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
    * - if no claim accepted, cover is expired, and delayWithoutClaim period passed
    * - if claim accepted, but payout % < 1, and delayWithClaim period passed
    */
-  function redeemNoclaim() external override {
+  function redeemNoclaim() external override nonReentrant {
     ICoverPool coverPool = ICoverPool(owner());
     if (coverPool.claimNonce() > claimNonce) {
       // coverPool has an accepted claim
@@ -148,7 +148,7 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
   }
 
   /// @notice redeem collateral, only when no claim accepted and not expired
-  function redeemCollateral(uint256 _amount) external override {
+  function redeemCollateral(uint256 _amount) external override nonReentrant {
     require(block.timestamp < expiry, "CoverWithExpiry: cover expired");
     require(_amount > 0, "CoverWithExpiry: amount is 0");
     _noClaimAcceptedCheck(); // save gas than modifier
@@ -182,7 +182,7 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
   }
 
   /// @notice transfer collateral (amount - fee) from this contract to recevier, transfer fee to COVER treasury
-  function _payCollateral(address _receiver, uint256 _amount) private nonReentrant {
+  function _payCollateral(address _receiver, uint256 _amount) private {
     ICoverPoolFactory factory = ICoverPoolFactory(_factory());
     (uint256 redeemFeeNumerator, uint256 redeemFeeDenominator) = ICoverPool(owner()).getRedeemFees();
     uint256 fee = _amount.mul(redeemFeeNumerator).div(redeemFeeDenominator);
@@ -211,7 +211,7 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
     _payCollateral(msg.sender, payoutAmount);
   }
 
-  /// @dev Emits NewCoverERC20
+  /// @dev Emits NewCovTokenCreation
   function _createCovToken(string memory _prefix) private returns (ICoverERC20) {
     bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
     bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), expiry, collateral, claimNonce, _prefix));
@@ -225,7 +225,7 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
       initData
     );
 
-    emit NewCoverERC20(proxyAddr);
+    emit NewCovTokenCreation(proxyAddr);
     return ICoverERC20(proxyAddr);
   }
 }

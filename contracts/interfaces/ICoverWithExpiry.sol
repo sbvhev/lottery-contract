@@ -10,6 +10,8 @@ import "./ICoverERC20.sol";
  * @author crypto-pumpkin@github
  */
 interface ICoverWithExpiry is ICover {
+  function expiry() external view returns (uint48);
+  function redeemNoclaim() external;
   function getCoverDetails()
     external view returns (
       string memory _name,
@@ -19,5 +21,4 @@ interface ICoverWithExpiry is ICover {
       ICoverERC20[] memory _claimCovTokens,
       ICoverERC20 _noclaimCovToken
     );
-  function expiry() external view returns (uint48);
 }
