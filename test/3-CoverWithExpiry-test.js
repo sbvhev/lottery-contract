@@ -2,7 +2,6 @@ const { expect } = require('chai');
 const { expectRevert, time, BN } = require('@openzeppelin/test-helpers');
 const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
-// TODO: add test for the fee amounts, how to deal with decimal
 describe('CoverWithExpiry', function() {
   const NAME = 'Pool2_0_DAI_2020_12_31';
   const ETHER_UINT_10000 = ethers.utils.parseEther('10000');

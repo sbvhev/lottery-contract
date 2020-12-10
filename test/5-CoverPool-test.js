@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { expectRevert, time, BN } = require("@openzeppelin/test-helpers");
 const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
-xdescribe('CoverPool', () => {
+describe('CoverPool', () => {
   const NEW_TIMESTAMP = 2556057500000;
   const NEW_TIMESTAMP_NAME = ethers.utils.formatBytes32String('2040_12_31');
   const INCIDENT_TIMESTAMP = 1580515200000;
@@ -106,7 +106,7 @@ xdescribe('CoverPool', () => {
     await time.increaseTo(currentTime.toNumber() + rolloverPeriod.toNumber());
     await time.advanceBlock();
 
-    await expect(coverPool.connect(userBAccount).addPerpCover(COLLATERAL, 100)).to.emit(coverPool, 'CoverAdded')
+    await expect(coverPool.connect(userBAccount).addPerpCover(COLLATERAL, 100)).to.emit(coverPool, 'CoverAdded');
     expect(await dai.balanceOf(coverAddress)).to.equal(110);
   });
 

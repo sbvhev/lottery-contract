@@ -87,7 +87,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
 
     (uint256 redeemFeeNumerator, uint256 redeemFeeDenominator) = ICoverPool(owner()).getRedeemFees();
 
-    uint256 multiplier = _getMultiplier();
+    uint256 multiplier = getMultiplier();
     // every passed rolloverPeriod, the amount mint for each collateral will = (1 - fee%) / (1 - mulitplier * fee%)
     // this is to compensate the later minters as if they redeem, they will have to pay (1 - mulitplier * fee%) fees
     uint256 adjustedAmount = _amount.mul(redeemFeeDenominator.sub(redeemFeeNumerator)).div(redeemFeeDenominator.sub(multiplier.mul(redeemFeeNumerator)));
@@ -99,7 +99,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     noclaimCovToken.mint(_receiver, adjustedAmount);
   }
 
-  /// @notice redeem collateral, only when no claim accepted and not expired
+  /// @notice redeem collateral, only when no claim accepted
   function redeemCollateral(uint256 _amount) external override {
     require(_amount > 0, "PerpCover: amount is 0");
     _noClaimAcceptedCheck(); // save gas than modifier
@@ -115,9 +115,10 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     }
 
     _payShare(msg.sender, _amount);
+    _sendAccuFeesToTreasury(_noclaimCovToken.totalSupply());
   }
 
-  /// @notice redeem CLAIM covToken, only if there is a claim accepted and delayWithClaim period passed
+  /// @notice redeem claimable account with covTokens, only if there is a claim accepted and delayWithClaim period passed
   function redeemClaim() external override {
     ICoverPool coverPool = ICoverPool(owner());
     require(coverPool.claimNonce() > claimNonce, "PerpCover: no claim accepted");
@@ -126,13 +127,27 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "PerpCover: not ready");
 
     uint256 totalAmount;
+    uint256 totalDebt;
     for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
       uint256 amount = covToken.balanceOf(msg.sender);
       totalAmount = totalAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
       covToken.burnByCover(msg.sender, amount);
+      uint256 remSupply = covToken.totalSupply();
+      totalDebt = totalDebt.add(remSupply.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
     }
+
+    if(claim.payoutTotalNum < claim.payoutDenominator) {
+      uint256 amount = noclaimCovToken.balanceOf(msg.sender);
+      uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
+      noclaimCovToken.burnByCover(msg.sender, amount);
+      totalAmount = totalAmount.add(payoutAmount);
+      uint256 totalNoclaimDebt = noclaimCovToken.totalSupply().mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
+      totalDebt = totalDebt.add(totalNoclaimDebt);
+    }
+
     _payShare(msg.sender, totalAmount);
+    _sendAccuFeesToTreasury(totalDebt);
   }
 
   /**
@@ -140,23 +155,6 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
    * - if claim accepted, but payout % < 1, and delayWithClaim period passed
    */
   function redeemNoclaim() external override {
-    ICoverPool coverPool = ICoverPool(owner());
-    require(coverPool.claimNonce() > claimNonce, "PerpCover: no claim accepted");
-
-    ICoverPool.ClaimDetails memory claim = _claimDetails();
-
-    // If claim payout is 100%, nothing is left for NOCLAIM covToken holders
-    require(claim.payoutTotalNum < claim.payoutDenominator, "PerpCover: claim payout 100%");
-    require(claim.payoutTotalNum == 60 && claim.payoutDenominator == 100, "PerpCover: claim payout 100%");
-
-    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "PerpCover: not ready");
-    uint256 amount = noclaimCovToken.balanceOf(msg.sender);
-    require(amount > 0, "PerpCover: low covToken balance");
-
-    noclaimCovToken.burnByCover(msg.sender, amount);
-
-    uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
-    _payShare(msg.sender, payoutAmount);
   }
 
   /// @notice the owner of this contract is CoverPool contract, the owner of CoverPool is CoverPoolFactory contract
@@ -175,20 +173,37 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   }
 
   function _payShare(address _receiver, uint256 _amount) private {
-    ICoverPoolFactory factory = ICoverPoolFactory(_factory());
     (uint256 redeemFeeNumerator, uint256 redeemFeeDenominator) = ICoverPool(owner()).getRedeemFees();
     IERC20 collateralToken = IERC20(collateral);
 
-    uint256 multiplier = _getMultiplier();
+    uint256 multiplier = getMultiplier();
     uint256 fee = _amount.mul(redeemFeeNumerator).div(redeemFeeDenominator).mul(multiplier);
-    address treasury = factory.treasury();
 
     collateralToken.safeTransfer(_receiver, _amount.sub(fee));
-    collateralToken.safeTransfer(treasury, fee);
   }
+
+  function _sendAccuFeesToTreasury(uint256 _debtTotal) private {
+    IERC20 collateralToken = IERC20(collateral);
+    ICoverPoolFactory factory = ICoverPoolFactory(_factory());
+    address treasury = factory.treasury();
+    
+    if (_debtTotal == 0) {
+      collateralToken.safeTransfer(treasury, collateralToken.balanceOf(address(this)));
+    } else {
+      (uint256 redeemFeeNumerator, uint256 redeemFeeDenominator) = ICoverPool(owner()).getRedeemFees();
+
+      uint256 multiplier = getMultiplier();
+      uint256 fee = _debtTotal.mul(redeemFeeNumerator).mul(multiplier).div(redeemFeeDenominator);
+      uint256 accuFees = collateralToken.balanceOf(address(this)).sub(_debtTotal.sub(fee));
+      if (accuFees > 0.001 ether) {
+        collateralToken.safeTransfer(treasury, accuFees.mul(999).div(1000));
+      }
+    }
+  }
+
   
   /// @notice multiplier = 1 + math.floor(timepassed / rolloverPeriod)
-  function _getMultiplier() private view returns (uint256) {
+  function getMultiplier() public view returns (uint256) {
     return uint256(block.timestamp.add(rolloverPeriod).sub(createdAt)) / rolloverPeriod;
   }
 
