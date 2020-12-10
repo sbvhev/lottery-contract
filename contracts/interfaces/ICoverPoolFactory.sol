@@ -24,8 +24,8 @@ interface ICoverPoolFactory {
   function getCoverPoolAddress(bytes32 _name) external view returns (address);
   /// @notice return contract address, the contract may not be deployed yet
   function getCoverAddress(bytes32 _coverPoolName, uint48 _timestamp, address _collateral, uint256 _claimNonce) external view returns (address);
-  /// @notice return contract address, the contract may not be deployed yet
-  function getCovTokenAddress(bytes32 _coverPoolName, uint48 _timestamp, address _collateral, uint256 _claimNonce, bool _isClaimCovToken) external view returns (address);
+  /// @notice return contract address, the contract may not be deployed yet, "CLAIM_POOL2_CURVE" or "NOCLAIM_POOL2"
+  function getCovTokenAddress(bytes32 _coverPoolName, uint48 _timestamp, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
 
   /// @notice access restriction - owner (dev)
   /// @dev update this will only affect contracts deployed after
