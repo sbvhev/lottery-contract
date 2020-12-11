@@ -9,13 +9,14 @@ module.exports = {
   },
   getAccounts: async() => {
     const accounts = await ethers.getSigners();
-    const [ ownerAccount, userAAccount, userBAccount, governanceAccount, treasuryAccount ] = accounts;
+    const [ ownerAccount, userAAccount, userBAccount, governanceAccount, treasuryAccount, auditorAccount ] = accounts;
     const ownerAddress = await ownerAccount.getAddress();
     const userAAddress = await userAAccount.getAddress();
     const userBAddress = await userBAccount.getAddress();
     const governanceAddress = await governanceAccount.getAddress();
     const treasuryAddress = await treasuryAccount.getAddress();
-    return {ownerAccount, ownerAddress, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress};
+    const auditorAddress = await auditorAccount.getAddress();
+    return {ownerAccount, ownerAddress, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress, auditorAccount, auditorAddress};
   },
   getImpls: async() =>{
     // get main contracts

@@ -22,7 +22,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
     
     // The max time allowed from filing a claim to a decision made
     uint256 public override maxClaimDecisionWindow = 7 days;
-    uint256 public override baseClaimFee = 10e18;
+    uint256 public override baseClaimFee = 50e18;
     uint256 public override forceClaimFee = 500e18;
     uint256 public override feeMultiplier = 2;
 
@@ -113,11 +113,11 @@ contract ClaimConfig is IClaimConfig, Ownable {
 
     /**
      * @notice Get the claim fee for coverPool `_coverPool`
-     * @dev Will return `baseClaimFee` if fee is 0
+     * @dev Will return `baseClaimFee` if fee is less
      * @return fee for filing a claim for coverPool
      */
     function getCoverPoolClaimFee(address _coverPool) public view override returns (uint256) {
-        return coverPoolClaimFee[_coverPool] == 0 ? baseClaimFee : coverPoolClaimFee[_coverPool];
+        return coverPoolClaimFee[_coverPool] < baseClaimFee ? baseClaimFee : coverPoolClaimFee[_coverPool];
     }
 
     /**

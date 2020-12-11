@@ -1,10 +1,9 @@
 const { expect } = require("chai");
 const { time } = require("@openzeppelin/test-helpers");
 
-const testHelper = require('../testHelper');
-const { ZERO_ADDRESS } = require("@openzeppelin/test-helpers/src/constants");
+const { deployCoin, consts, getAccounts, getImpls} = require('../testHelper');
 
-xdescribe("ClaimManagement", function () {
+describe("ClaimManagement", function () {
   const ZERO_ADDR = ethers.constants.AddressZero;
   const BINANCE_PROTOCOL = ethers.utils.formatBytes32String("Binance");
   const BOGEY_PROTOCOL = ethers.utils.formatBytes32String("BOGEY");
@@ -19,67 +18,25 @@ xdescribe("ClaimManagement", function () {
     accepted: 4,
     denied: 5,
   };
-  let TIMESTAMP, TIMESTAMP_NAME, COLLATERAL;
-  let CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
-  var management, coverPool, dai, coverPoolFactory;
-  var ownerAccount,
-    ownerAddress,
-    auditorAccount,
-    auditorAddress,
-    treasuryAccount,
-    treasuryAddress,
-    governanceAccount,
-    governanceAddress;
+  let COLLATERAL;
+  let ownerAccount, ownerAddress, auditorAccount, auditorAddress, treasuryAccount, treasuryAddress, governanceAccount, governanceAddress;
+  let CoverPoolFactory, CoverPool, coverPoolImpl, perpCoverImpl, coverImpl, coverERC20Impl;
+  let management, coverPool, dai, coverPoolFactory;
 
   before(async () => {
-    const accounts = await ethers.getSigners();
-    [
-      ownerAccount,
-      auditorAccount,
-      treasuryAccount,
-      governanceAccount,
-    ] = accounts;
-    ownerAddress = await ownerAccount.getAddress();
-    auditorAddress = await auditorAccount.getAddress();
-    treasuryAddress = await treasuryAccount.getAddress();
-    governanceAddress = await governanceAccount.getAddress();
-
-    // get main contracts
-    CoverPool = await ethers.getContractFactory('CoverPool');
-    const Cover = await ethers.getContractFactory('Cover');
-    const CoverERC20 = await ethers.getContractFactory('CoverERC20');
-
-    // deploy CoverPool contract
-    coverPoolImpl = await CoverPool.deploy();
-    await coverPoolImpl.deployed();
-
-    // deploy Cover contract
-    coverImpl = await CoverWithExpiry.deploy();
-    await coverImpl.deployed();
-
-    // deploy CoverERC20 contract
-    coverERC20Impl = await CoverERC20.deploy();
-    await coverERC20Impl.deployed();
-
-    const startTime = await time.latest();
-    const startTimestamp = startTime.toNumber();
-    TIMESTAMP = startTimestamp + 1 * 24 * 60 * 60;
-    TIMESTAMP_NAME = '2020_12_31';
+    ({ownerAccount, ownerAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress, auditorAccount, auditorAddress} = await getAccounts());
+    ({CoverPoolFactory, CoverPool, perpCoverImpl, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
 
     // deploy coverPool factory
-    const CoverPoolFactory = await ethers.getContractFactory('CoverPoolFactory');
-    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
+    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, perpCoverImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
     await coverPoolFactory.deployed();
 
     // deploy stablecoins to local blockchain emulator
-    dai = await testHelper.deployCoin(ethers, 'DAI');
-    await dai.mint(ownerAddress, ethers.utils.parseEther("5000"));
-
-    // use deployed stablecoin address for COVRT collateral
+    dai = await deployCoin(ethers, 'dai');
     COLLATERAL = dai.address;
 
     // add coverPool through coverPool factory
-    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(BINANCE_PROTOCOL, [BINANCE_PROTOCOL], COLLATERAL, [TIMESTAMP], [ethers.utils.formatBytes32String(TIMESTAMP_NAME)]);
+    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, [consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES);
     await tx;
     coverPool = CoverPool.attach(await coverPoolFactory.coverPools(BINANCE_PROTOCOL));
 
