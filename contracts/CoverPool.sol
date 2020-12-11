@@ -19,7 +19,8 @@ import "./interfaces/ICoverPoolFactory.sol";
 
 /**
  * @title CoverPool contract
- * @author crypto-pumpkin@github
+ * @author crypto-pumpkin
+ * @notice Each CoverPool can have two types of coverages (cover with expiry like V1, or perpetual cover)
  */
 contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeMath for uint256;
@@ -32,22 +33,23 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   uint16 private redeemFeeDenominator;
   uint256 private feeUpdatedAt;
 
-  /// @notice only active (true) coverPool allows adding more covers
+  /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   bool public override isActive;
   bytes32 public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
   // delay # of seconds for redeem with accepted claim, redeemCollateral is not affected
   uint256 public override claimRedeemDelay;
-  // delay # of seconds for redeem without accepted claim, redeemCollateral is not affected
+  // CoverWithExpiry type only, redeemCollateral is not affected
   uint256 public override noclaimRedeemDelay;
+  // PerpCover only
   uint256 public override rolloverPeriod;
 
   // only active covers, once there is an accepted claim (enactClaim called successfully), this sets to [].
   address[] public override activeCovers;
   address[] private allCovers;
 
-  /// @notice list of every supported expiry, all may not be active.
+  /// @notice CoverWithExpiry type only, list of every supported expiry, all may not be active.
   uint48[] public override expiries;
 
   /// @notice list of assets in cover pool
@@ -61,10 +63,11 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   // @notice collateral => status. 0 never set; 1 active, 2 inactive
   mapping(address => uint8) public override collateralStatusMap;
+  // CoverWithExpiry type only
   mapping(uint48 => ExpiryInfo) public override expiryInfoMap;
 
   // collateral => timestamp => coverAddress, most recent cover created for the collateral and timestamp combination
-  mapping(address => mapping(uint48 => address)) public override coverMap;
+  mapping(address => mapping(uint48 => address)) public override coverWithExpiryMap;
   // collateral => coverAddress, most recent perpetual cover created for the collateral
   mapping(address => address) public override perpCoverMap;
 
@@ -215,7 +218,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     IERC20 collateral = IERC20(_collateral);
     require(collateral.balanceOf(msg.sender) >= _amount, "CoverPool: amount > collateral balance");
 
-    address addr = coverMap[_collateral][_timestamp];
+    address addr = coverWithExpiryMap[_collateral][_timestamp];
 
     // Deploy new cover contract if not exist or if claim accepted
     if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
@@ -235,7 +238,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
       activeCovers.push(addr);
       allCovers.push(addr);
-      coverMap[_collateral][_timestamp] = addr;
+      coverWithExpiryMap[_collateral][_timestamp] = addr;
     }
 
     // move collateral to the cover contract and mint CovTokens to sender

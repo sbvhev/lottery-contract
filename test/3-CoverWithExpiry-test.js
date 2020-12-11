@@ -53,7 +53,7 @@ describe('CoverWithExpiry', function() {
     // add cover through coverPool
     const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMP, ETHER_UINT_10);
     await txA.wait();
-    const coverAddress = await coverPool.coverMap(COLLATERAL, TIMESTAMP);
+    const coverAddress = await coverPool.coverWithExpiryMap(COLLATERAL, TIMESTAMP);
     cover = CoverWithExpiry.attach(coverAddress);
   });
 

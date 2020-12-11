@@ -91,7 +91,7 @@ describe('CoverPool', () => {
 
   it('Should add cover for userA and emit event', async () => {
     await expect(coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10)).to.emit(coverPool, 'CoverAdded')
-    const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
+    const coverAddress = await coverPool.coverWithExpiryMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
     expect(await dai.balanceOf(coverAddress)).to.equal(10);
   });
@@ -114,7 +114,7 @@ describe('CoverPool', () => {
   it('Should match cover with computed cover address', async () => {
     const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txA.wait();
-    const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
+    const coverAddress = await coverPool.coverWithExpiryMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
 
     const claimNonce = await coverPool.claimNonce();
     const computedAddress = await coverPoolFactory.getCoverAddress(consts.POOL_2, consts.ALLOWED_EXPIRYS[1], COLLATERAL, claimNonce)
@@ -144,7 +144,7 @@ describe('CoverPool', () => {
     const lastActiveCover = await coverPool.activeCovers(0);
     expect(lastActiveCover).to.not.equal(consts.ADDRESS_ZERO);
 
-    const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
+    const coverAddress = await coverPool.coverWithExpiryMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
     expect(await dai.balanceOf(coverAddress)).to.equal(10);
   });
@@ -162,7 +162,7 @@ describe('CoverPool', () => {
     const lastActiveCover = await coverPool.activeCovers(0);
     expect(lastActiveCover).to.not.equal(consts.ADDRESS_ZERO);
 
-    const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
+    const coverAddress = await coverPool.coverWithExpiryMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
     expect(await dai.balanceOf(coverAddress)).to.equal(10);
   });

@@ -27,6 +27,7 @@ interface ICoverPool {
   }
 
   // state vars
+  /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   function isActive() external view returns (bool);
   function name() external view returns (bytes32);
   function claimNonce() external view returns (uint256);
@@ -41,7 +42,7 @@ interface ICoverPool {
   function expiries(uint256 _index) external view returns (uint48);
   function collateralStatusMap(address _collateral) external view returns (uint8 _status);
   function expiryInfoMap(uint48 _expiry) external view returns (bytes32 _name, uint8 _status);
-  function coverMap(address _collateral, uint48 _expiry) external view returns (address);
+  function coverWithExpiryMap(address _collateral, uint48 _expiry) external view returns (address);
   function perpCoverMap(address _collateral) external view returns (address);
 
   // extra view
