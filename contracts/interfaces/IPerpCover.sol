@@ -6,7 +6,7 @@ import "./ICover.sol";
 import "./ICoverERC20.sol";
 
 /**
- * @title Cover contract interface. See {Cover}.
+ * @title Perpetual Cover contract interface. See {PerpCover}.
  * @author crypto-pumpkin@github
  */
 interface IPerpCover is ICover {

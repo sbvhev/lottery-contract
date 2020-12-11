@@ -118,18 +118,6 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
   }
 
   /**
-   * @notice redeem NOCLAIM covToken, accept
-   * - if no claim accepted, cover is expired, and delayWithoutClaim period passed
-   */
-  function redeemNoclaim() external override nonReentrant {
-    _noClaimAcceptedCheck(); // save gas than modifier
-    ICoverPool coverPool = ICoverPool(owner());
-
-    require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "CoverWithExpiry: not ready");
-    _paySender(noclaimCovToken, 1, 1);
-  }
-
-  /**
    * @notice redeem collateral, only when no claim accepted. If expired (with or withour claim), _amount is not respected, all will be redeemed
    * - if no claim accepted, cover is expired, and delayWithoutClaim period passed
    */

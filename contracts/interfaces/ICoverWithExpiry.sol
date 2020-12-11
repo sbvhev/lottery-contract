@@ -6,12 +6,11 @@ import "./ICover.sol";
 import "./ICoverERC20.sol";
 
 /**
- * @title Cover contract interface. See {Cover}.
+ * @title Cover with expiry contract interface. See {CoverWithExpiry}.
  * @author crypto-pumpkin@github
  */
 interface ICoverWithExpiry is ICover {
   function expiry() external view returns (uint48);
-  function redeemNoclaim() external;
   function getCoverDetails()
     external view returns (
       string memory _name,

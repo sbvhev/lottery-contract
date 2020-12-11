@@ -7,7 +7,6 @@ pragma solidity ^0.7.5;
  * @author crypto-pumpkin@github
  */
 interface ICoverPoolFactory {
-  /// @notice emit when a new coverPool is supported in COVER
   event CoverPoolCreation(address coverPoolAddress);
 
   function getCoverPoolAddresses() external view returns (address[] memory);
@@ -23,21 +22,17 @@ interface ICoverPoolFactory {
   function getCoverPoolsLength() external view returns (uint256);
   /// @notice return contract address, the contract may not be deployed yet
   function getCoverPoolAddress(bytes32 _name) external view returns (address);
-  /// @notice return contract address, the contract may not be deployed yet
   function getCoverAddress(bytes32 _coverPoolName, uint48 _timestamp, address _collateral, uint256 _claimNonce) external view returns (address);
   function getPerpCoverAddress(bytes32 _coverPoolName, address _collateral, uint256 _claimNonce) external view returns (address);
-  /// @notice return contract address, the contract may not be deployed yet, "CLAIM_POOL2_CURVE" or "NOCLAIM_POOL2"
+  /// @notice _prefix example: "CLAIM_CURVE_POOL2" or "NOCLAIM_POOL2"
   function getCovTokenAddress(bytes32 _coverPoolName, uint48 _expiry, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
   function getPerpCovTokenAddress(bytes32 _coverPoolName, uint256 _createdAt, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
 
-  /// @notice access restriction - owner (dev)
-  /// @dev update this will only affect contracts deployed after
+  // access restriction - owner (dev)
+  /// @dev update Impl will only affect contracts deployed after
   function updateCoverPoolImpl(address _newImpl) external;
-  /// @dev update this will only affect contracts deployed after
   function updatePerpCoverImpl(address _newImpl) external;
-  /// @dev update this will only affect contracts deployed after
   function updateCoverImpl(address _newImpl) external;
-  /// @dev update this will only affect contracts deployed after
   function updateCoverERC20Impl(address _newImpl) external;
   function createCoverPool(
     bytes32 _name,
@@ -49,6 +44,6 @@ interface ICoverPoolFactory {
   function updateTreasury(address _address) external;
   function updateClaimManager(address _address) external;
 
-  /// @notice access restriction - governance
+  // access restriction - governance
   function updateGovernance(address _address) external;
 }  

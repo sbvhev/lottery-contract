@@ -22,11 +22,6 @@ import "./interfaces/ICoverPoolFactory.sol";
  * @title Cover contract
  * @author crypto-pumpkin@github
  * When a claim is accepted, all PerpCover will payout based on the decision
- *
- * The contract
- *  - Holds collateral funds
- *  - Mints and burns CovTokens (CoverERC20)
- *  - Allows redeem from collateral pool with or without an accepted claim
  */
 contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   using SafeMath for uint256;
@@ -39,7 +34,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   string public override name;
   uint256 public override claimNonce;
   uint256 public override rolloverPeriod;
-  uint256 public constant BASE = 10**18;
+  uint256 public constant BASE = 10**18; // necessary to calculate the fee rates
   uint256 private feeFactor;
   uint256 private baseFeeFactor;
   uint256 private feePeriodCounts;
@@ -112,6 +107,17 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     }
   }
 
+  /**********************************************************************************
+  // @notice Fee factor is the multiplier (for minting) for any given time period. //
+  // e.g. if fee never change (f), feeFactor = 1 / (1 - f)^M                       //
+  //                   __                                                          //
+  //                   ||              /      fee numberator at i    \             //
+  //   feeFactor = 1 / ||             | 1 - ------------------------  |            //
+  //                   ||(i in [0-M])  \      fee denominator at i   /             //
+  //                   --                                                          //
+  // M = rollover period count, Math.floor(timepassed / rolloverPeriod)            //
+  // e.g. 30 days as rolloverPeriod, 87 days later. M = 2                          //
+  **********************************************************************************/
   function updateFeeFactor() public {
     (uint256 redeemFeePerpNumerator,, uint256 redeemFeeDenominator, uint256 _updatedAt) = ICoverPool(owner()).getRedeemFees();
 
@@ -146,8 +152,6 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     _noClaimAcceptedCheck(); // save gas than modifier
     ICoverERC20[] memory claimCovTokensCopy = claimCovTokens;
     updateFeeFactor();
-    // every passed rolloverPeriod, the amount mint for each collateral will = (1 - fee%) / (1 - mulitplier * fee%)
-    // this is to compensate the later minters as if they redeem, they will have to pay (1 - mulitplier * fee%) fees
     uint256 adjustedAmount = _amount.mul(feeFactor).div(BASE);
 
     for (uint i = 0; i < claimCovTokensCopy.length; i++) {
@@ -171,7 +175,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
       claimCovTokensCopy[i].burnByCover(msg.sender, _amount);
     }
     updateFeeFactor();
-    _payShare(msg.sender, _amount);
+    _payAmount(msg.sender, _amount);
     _sendAccuFeesToTreasury(_noclaimCovToken.totalSupply());
   }
 
@@ -194,7 +198,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
       totalDebt = totalDebt.add(remSupply.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
     }
 
-    if(claim.payoutTotalNum < claim.payoutDenominator) {
+    if (claim.payoutTotalNum < claim.payoutDenominator) {
       uint256 amount = noclaimCovToken.balanceOf(msg.sender);
       uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
       noclaimCovToken.burnByCover(msg.sender, amount);
@@ -205,7 +209,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     require(totalAmount > 0, "PerpCover: amount is 0");
 
     updateFeeFactor();
-    _payShare(msg.sender, totalAmount);
+    _payAmount(msg.sender, totalAmount);
     _sendAccuFeesToTreasury(totalDebt);
   }
 
@@ -224,11 +228,13 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     return ICoverPool(owner()).getClaimDetails(claimNonce);
   }
 
-  function _payShare(address _receiver, uint256 _amount) private {
+  /// @notice Payable amount is discounted based on the current feeFactor and baseFeeFactor
+  function _payAmount(address _receiver, uint256 _amount) private {
     IERC20 collateralToken = IERC20(collateral);
     collateralToken.safeTransfer(_receiver, _amount.mul(BASE).div(baseFeeFactor).mul(BASE).div(feeFactor));
   }
 
+  /// @notice 99.9% of (vault Value - debt owed) is send to treasury if > 0.001 ether unit
   function _sendAccuFeesToTreasury(uint256 _debtTotal) private {
     IERC20 collateralToken = IERC20(collateral);
     ICoverPoolFactory factory = ICoverPoolFactory(_factory());

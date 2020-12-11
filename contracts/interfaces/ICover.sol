@@ -5,7 +5,7 @@ pragma solidity ^0.7.5;
 import "./ICoverERC20.sol";
 
 /**
- * @title Cover contract interface. See {Cover}.
+ * @title Cover interface. See {PerpCover} or {CoverWithExpiry}.
  * @author crypto-pumpkin@github
  */
 interface ICover {
@@ -17,9 +17,12 @@ interface ICover {
   function name() external view returns (string memory);
   function claimNonce() external view returns (uint256);
 
+  // user action
+  /// @notice redeem func when there is a claim on the cover, aka. the cover is affected
   function redeemClaim() external;
+  /// @notice redeem func when the cover is not affected by any accepted claim, _amount is respected only when when no claim accepted before expiry (for cover with expiry)
   function redeemCollateral(uint256 _amount) external;
 
-  /// @notice access restriction - owner (CoverPool)
+  // access restriction - owner (CoverPool)
   function mint(uint256 _amount, address _receiver) external;
 }
