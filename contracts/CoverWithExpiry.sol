@@ -81,6 +81,20 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
     return (name, expiry, collateral, claimNonce, claimCovTokens, noclaimCovToken);
   }
 
+  function viewClaimable() external view override returns (uint256 totalAmount) {
+    ICoverPool.ClaimDetails memory claim = _claimDetails();
+    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
+      ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
+      uint256 amount = covToken.balanceOf(msg.sender);
+      totalAmount = totalAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
+    }
+    if (claim.payoutTotalNum < claim.payoutDenominator) {
+      uint256 amount = noclaimCovToken.balanceOf(msg.sender);
+      uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
+      totalAmount = totalAmount.add(payoutAmount);
+    }
+  }
+
   /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
   function mint(uint256 _amount, address _receiver) external override onlyOwner {
     _noClaimAcceptedCheck(); // save gas than modifier
