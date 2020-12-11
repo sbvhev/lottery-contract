@@ -116,7 +116,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   // @notice Fee factor is the multiplier (for minting) for any given time period. //
   // e.g. if fee never change (f), feeFactor = 1 / (1 - f)^M                       //
   //                   __                                                          //
-  //                   ||              /      fee numberator at i    \             //
+  //                   ||              /      fee numerator at i     \             //
   //   feeFactor = 1 / ||             | 1 - ------------------------  |            //
   //                   ||(i in [0-M])  \      fee denominator at i   /             //
   //                   --                                                          //
