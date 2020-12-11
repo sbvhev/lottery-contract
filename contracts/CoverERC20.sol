@@ -9,7 +9,7 @@ import "./interfaces/ICoverERC20.sol";
 
 /**
  * @title CoverERC20 implements {ERC20} standards with expended features for COVER
- * @author crypto-pumpkin@github
+ * @author crypto-pumpkin
  *
  * COVER's covToken Features:
  *  - Has mint and burn by owner (Cover contract) only feature.

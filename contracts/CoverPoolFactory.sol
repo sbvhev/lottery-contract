@@ -10,7 +10,7 @@ import "./interfaces/ICoverPoolFactory.sol";
 
 /**
  * @title CoverPoolFactory contract
- * @author crypto-pumpkin@github
+ * @author crypto-pumpkin
  */
 contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 

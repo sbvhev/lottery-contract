@@ -4,7 +4,7 @@ pragma solidity ^0.7.5;
 
 /**
  * @title Cover contract interface. See {Cover}.
- * @author crypto-pumpkin@github
+ * @author crypto-pumpkin
  * Help convert other types to string
  */
 library StringHelper {
