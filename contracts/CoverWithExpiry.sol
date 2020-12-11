@@ -105,6 +105,14 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
       totalAmount = totalAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
       covToken.burnByCover(msg.sender, amount);
     }
+
+    if(claim.payoutTotalNum < claim.payoutDenominator) {
+      uint256 amount = noclaimCovToken.balanceOf(msg.sender);
+      uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
+      totalAmount = totalAmount.add(payoutAmount);
+      noclaimCovToken.burnByCover(msg.sender, amount);
+    }
+
     require(totalAmount > 0, "CoverWithExpiry: low covToken balance");
     _payCollateral(msg.sender, totalAmount);
   }
@@ -112,58 +120,42 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
   /**
    * @notice redeem NOCLAIM covToken, accept
    * - if no claim accepted, cover is expired, and delayWithoutClaim period passed
-   * - if claim accepted, but payout % < 1, and delayWithClaim period passed
    */
   function redeemNoclaim() external override nonReentrant {
+    _noClaimAcceptedCheck(); // save gas than modifier
     ICoverPool coverPool = ICoverPool(owner());
-    if (coverPool.claimNonce() > claimNonce) {
-      // coverPool has an accepted claim
 
-      ICoverPool.ClaimDetails memory claim = _claimDetails();
+    require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "CoverWithExpiry: not ready");
+    _paySender(noclaimCovToken, 1, 1);
+  }
 
-      if (claim.incidentTimestamp > expiry) {
-        // incident happened after expiry, redeem back full collateral
+  /// @notice redeem collateral, only when no claim accepted. If expired, _amount is not respected, all will be redeemed
+  function redeemCollateral(uint256 _amount) external override nonReentrant {
+    if (block.timestamp < expiry) {
+      _noClaimAcceptedCheck(); // save gas than modifier
+      require(_amount > 0, "CoverWithExpiry: amount is 0");
 
-        require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "CoverWithExpiry: not ready");
-        _paySender(noclaimCovToken, 1, 1);
-      } else {
-        // incident happened before expiry, pay 1 - payout%
+      ICoverERC20 _noclaimCovToken = noclaimCovToken; // save gas
+      require(_amount <= _noclaimCovToken.balanceOf(msg.sender), "CoverWithExpiry: low NOCLAIM balance");
+      _noclaimCovToken.burnByCover(msg.sender, _amount);
 
-        // If claim payout is 100%, nothing is left for NOCLAIM covToken holders
-        require(claim.payoutTotalNum < claim.payoutDenominator, "CoverWithExpiry: claim payout 100%");
-
-        require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "CoverWithExpiry: not ready");
-        _paySender(
-          noclaimCovToken,
-          uint256(claim.payoutDenominator).sub(uint256(claim.payoutTotalNum)),
-          uint256(claim.payoutDenominator)
-        );
+      ICoverERC20[] memory claimCovTokensCopy = claimCovTokens; // save gas
+      for (uint i = 0; i < claimCovTokensCopy.length; i++) {
+        require(_amount <= claimCovTokensCopy[i].balanceOf(msg.sender), "CoverWithExpiry: low CLAIM balance");
+        claimCovTokensCopy[i].burnByCover(msg.sender, _amount);
       }
+
+      _payCollateral(msg.sender, _amount);
     } else {
-      // coverPool has no accepted claim
+      ICoverPool coverPool = ICoverPool(owner());
+      if (coverPool.claimNonce() > claimNonce) {
+        ICoverPool.ClaimDetails memory claim = _claimDetails();
+        require(claim.incidentTimestamp != 0 && claim.incidentTimestamp > expiry, "CoverWithExpiry: claimable covTokens cannot redeem collateral");
+      }
 
       require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "CoverWithExpiry: not ready");
       _paySender(noclaimCovToken, 1, 1);
     }
-  }
-
-  /// @notice redeem collateral, only when no claim accepted and not expired
-  function redeemCollateral(uint256 _amount) external override nonReentrant {
-    require(block.timestamp < expiry, "CoverWithExpiry: cover expired");
-    require(_amount > 0, "CoverWithExpiry: amount is 0");
-    _noClaimAcceptedCheck(); // save gas than modifier
-
-    ICoverERC20 _noclaimCovToken = noclaimCovToken; // save gas
-    require(_amount <= _noclaimCovToken.balanceOf(msg.sender), "CoverWithExpiry: low NOCLAIM balance");
-    _noclaimCovToken.burnByCover(msg.sender, _amount);
-
-    ICoverERC20[] memory claimCovTokensCopy = claimCovTokens; // save gas
-    for (uint i = 0; i < claimCovTokensCopy.length; i++) {
-      require(_amount <= claimCovTokensCopy[i].balanceOf(msg.sender), "CoverWithExpiry: low CLAIM balance");
-      claimCovTokensCopy[i].burnByCover(msg.sender, _amount);
-    }
-
-    _payCollateral(msg.sender, _amount);
   }
 
   /// @notice the owner of this contract is CoverPool contract, the owner of CoverPool is CoverPoolFactory contract
