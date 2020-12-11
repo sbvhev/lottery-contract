@@ -16,7 +16,6 @@ interface ICoverPool {
     bytes32 name;
     uint8 status; // 0 never set; 1 active, 2 inactive
   }
-
   struct ClaimDetails {
     bytes32[] payoutAssetList;
     uint256[] payoutNumerators;
@@ -83,5 +82,5 @@ interface ICoverPool {
   // access restriction - governance
   function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external;
   function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external;
-  function updateFees(uint16 _redeemFeePerpNumerator, uint16 _redeemFeeNumerator, uint16 _redeemFeeDenominator) external;
+  function updateFees(uint16 _perpFeeNum, uint16 _expiryFeeNum, uint16 _feeDenominator) external;
 }

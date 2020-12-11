@@ -76,10 +76,10 @@ describe('CoverPool', () => {
     await expect(coverPool.connect(governanceAccount).updateFees(0, 0, 0)).to.be.reverted;
 
     await coverPool.connect(governanceAccount).updateFees(0, 0, 1);
-    const [redeemFeePerpNumerator, redeemFeeNumerator, redeemFeeDenominator] = await coverPool.getRedeemFees();
-    expect(redeemFeePerpNumerator).to.equal(0);
-    expect(redeemFeeNumerator).to.equal(0);
-    expect(redeemFeeDenominator).to.equal(1);
+    const [perpFeeNum, expiryFeeNum, feeDenominator] = await coverPool.getRedeemFees();
+    expect(perpFeeNum).to.equal(0);
+    expect(expiryFeeNum).to.equal(0);
+    expect(feeDenominator).to.equal(1);
   });
 
   it('Should NOT update state variables by the wrong authority', async () => {

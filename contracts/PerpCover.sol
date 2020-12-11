@@ -119,7 +119,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   // e.g. 30 days as rolloverPeriod, 87 days later. M = 2                          //
   **********************************************************************************/
   function updateFeeFactor() public {
-    (uint256 redeemFeePerpNumerator,, uint256 redeemFeeDenominator, uint256 _updatedAt) = ICoverPool(owner()).getRedeemFees();
+    (uint256 perpFeeNum,, uint256 feeDenominator, uint256 _updatedAt) = ICoverPool(owner()).getRedeemFees();
 
     // update factor till last updatedAt with last fee rates    
     uint256 updatePassed = getPassedPeriodCount(_updatedAt);
@@ -129,9 +129,9 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     }
 
     // update fee rates to new rate
-    if (redeemFeePerpNumerator != lastFeeNum || redeemFeeDenominator != lastFeeDen) {
-      lastFeeNum = redeemFeePerpNumerator;
-      lastFeeDen = redeemFeeDenominator;
+    if (perpFeeNum != lastFeeNum || feeDenominator != lastFeeDen) {
+      lastFeeNum = perpFeeNum;
+      lastFeeDen = feeDenominator;
       if (netUpdatePassed == 0 && feePeriodCounts == 1) {
         // when fees changed before even 1 rollover Period passed, update base fee factor
         baseFeeFactor = lastFeeDen.mul(BASE).div(lastFeeDen.sub(lastFeeNum));
