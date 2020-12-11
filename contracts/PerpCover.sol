@@ -92,11 +92,6 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   {
     return (name, rolloverPeriod, createdAt, collateral, claimNonce, claimCovTokens, noclaimCovToken);
   }
-  
-  /// @notice multiplier = 1 + math.floor(timepassed / rolloverPeriod)
-  function getPassedPeriodCount(uint256 _timestamp) public view returns (uint256) {
-    return uint256(_timestamp.add(rolloverPeriod).sub(createdAt)) / rolloverPeriod;
-  }
 
   function viewClaimable() external view override returns (uint256 totalAmount) {
     ICoverPool.ClaimDetails memory claim = _claimDetails();
@@ -224,6 +219,11 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   /// @notice the owner of this contract is CoverPool contract, the owner of CoverPool is CoverPoolFactory contract
   function _factory() private view returns (address) {
     return IOwnable(owner()).owner();
+  }
+
+  /// @notice multiplier = 1 + math.floor(timepassed / rolloverPeriod)
+  function getPassedPeriodCount(uint256 _timestamp) private view returns (uint256) {
+    return uint256(_timestamp.add(rolloverPeriod).sub(createdAt)) / rolloverPeriod;
   }
 
   /// @notice make sure no claim is accepted
