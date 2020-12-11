@@ -120,12 +120,13 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       uint256 _claimNonce,
       uint256 _claimRedeemDelay,
       uint256 _noclaimRedeemDelay,
+      uint256 _rolloverPeriod,
       address[] memory _collaterals,
       uint48[] memory _expiries,
       address[] memory _allCovers,
       address[] memory _allActiveCovers)
   {
-    return (name, isActive, assetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, activeCovers);
+    return (name, isActive, assetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, rolloverPeriod, collaterals, expiries, allCovers, activeCovers);
   }
 
   function getRedeemFees()
@@ -210,13 +211,18 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     _addCover(collateral, addr, _amount);
   }
 
-  function updateFees( uint16 _perpFeeNum, uint16 _expiryFeeNum, uint16 _feeDenominator) external override onlyGov {
+  function updateFees(uint16 _perpFeeNum, uint16 _expiryFeeNum, uint16 _feeDenominator) external override onlyGov {
     require(_feeDenominator > 0, "CoverPool: denominator cannot be 0");
     require(_feeDenominator > _perpFeeNum && _feeDenominator > _expiryFeeNum, "CoverPool: must < 100%");
     perpFeeNum = _perpFeeNum;
     expiryFeeNum = _expiryFeeNum;
     feeDenominator = _feeDenominator;
     feeUpdatedAt = block.timestamp;
+  }
+
+  function updateRolloverPeriod(uint256 _rolloverPeriod) external override onlyDev {
+    require(_rolloverPeriod > 0, "CoverPool: _rolloverPeriod cannot be 0");
+    rolloverPeriod = _rolloverPeriod;
   }
 
   /// @notice update status or add new collateral

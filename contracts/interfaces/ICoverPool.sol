@@ -53,6 +53,7 @@ interface ICoverPool {
       uint256 _claimNonce,
       uint256 _claimRedeemDelay,
       uint256 _noclaimRedeemDelay,
+      uint256 _rolloverPeriod,
       address[] memory _collaterals,
       uint48[] memory _expiries,
       address[] memory _allCovers,
@@ -78,6 +79,7 @@ interface ICoverPool {
   function setActive(bool _active) external;
   function updateExpiry(uint48 _expiry, bytes32 _expiryName, uint8 _status) external;
   function updateCollateral(address _collateral, uint8 _status) external;
+  function updateRolloverPeriod(uint256 _rolloverPeriod) external;
 
   // access restriction - governance
   function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external;

@@ -43,11 +43,12 @@ describe('CoverPool', () => {
   });
 
   it('Should initialize correct state variables', async () => {
-    const [name, isActive, assetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, allActiveCovers] = await coverPool.getCoverPoolDetails();
+    const [name, isActive, assetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, rolloverPeriod, collaterals, expiries, allCovers, allActiveCovers] = await coverPool.getCoverPoolDetails();
 
     expect(name).to.equal(consts.POOL_2);
     expect(isActive).to.equal(true);
     expect(claimNonce).to.equal(0);
+    expect(rolloverPeriod).to.equal(30 * 24 * 60 * 60);
     expect(claimRedeemDelay).to.equal(2 * 24 * 60 * 60);
     expect(noclaimRedeemDelay).to.equal(10 * 24 * 60 * 60);
     expect(assetList).to.deep.equal([consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2]);
@@ -72,6 +73,8 @@ describe('CoverPool', () => {
     const newDelay = 10 * 24 * 60 * 60;
     await coverPool.connect(governanceAccount).updateClaimRedeemDelay(newDelay);
     expect(await coverPool.claimRedeemDelay()).to.equal(newDelay);
+    await coverPool.updateRolloverPeriod(newDelay);
+    expect(await coverPool.rolloverPeriod()).to.equal(newDelay);
 
     await expect(coverPool.connect(governanceAccount).updateFees(0, 0, 0)).to.be.reverted;
 
