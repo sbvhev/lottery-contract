@@ -27,6 +27,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   bytes4 private constant COVERWITHEXPIRY_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],uint48,address,uint256)"));
   bytes4 private constant PERPCOVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint256,bytes32[],address,uint256)"));
+  uint16 private redeemFeePerpNumerator;
   uint16 private redeemFeeNumerator;
   uint16 private redeemFeeDenominator;
 
@@ -111,6 +112,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     // set default delay for redeem
     claimRedeemDelay = 2 days;
     noclaimRedeemDelay = 10 days;
+    redeemFeePerpNumerator = 10; // fee per rollover period for perp cover
     redeemFeeNumerator = 20; // 0 to 65,535
     redeemFeeDenominator = 10000; // 0 to 65,535
     rolloverPeriod = 30 days;
@@ -118,8 +120,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     initializeOwner();
   }
 
-  function getRedeemFees() external view override returns (uint16 _numerator, uint16 _denominator) {
-    return (redeemFeeNumerator, redeemFeeDenominator);
+  function getRedeemFees() external view override returns (uint16 _perpNumerator, uint16 _numerator, uint16 _denominator) {
+    return (redeemFeePerpNumerator, redeemFeeNumerator, redeemFeeDenominator);
   }
 
   function getClaimDetails(uint256 _nonce) external view override returns (ClaimDetails memory) {
@@ -271,11 +273,13 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   function updateFees(
+    uint16 _redeemFeePerpNumerator,
     uint16 _redeemFeeNumerator,
     uint16 _redeemFeeDenominator
   ) external override onlyGov {
     require(_redeemFeeDenominator > 0, "CoverPool: denominator cannot be 0");
-    require(_redeemFeeDenominator > _redeemFeeNumerator, "CoverPool: denominator cannot be 0");
+    require(_redeemFeeDenominator > _redeemFeePerpNumerator && _redeemFeeDenominator > _redeemFeeNumerator, "CoverPool: must < 100%");
+    redeemFeePerpNumerator = _redeemFeePerpNumerator;
     redeemFeeNumerator = _redeemFeeNumerator;
     redeemFeeDenominator = _redeemFeeDenominator;
   }

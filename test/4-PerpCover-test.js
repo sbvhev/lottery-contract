@@ -99,12 +99,12 @@ describe('PerpCover', function() {
     expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
     expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
     expect(await dai.balanceOf(cover.address)).to.equal(0);
-    const [num, den] = await coverPool.getRedeemFees();
+    const [num, , den] = await coverPool.getRedeemFees();
     expect(await dai.balanceOf(treasuryAddress)).to.deep.equal(ETHER_UINT_10.mul(num).div(den));
   });
 
   it('Should redeem collateral(0 fee) without accepted claim', async function() {
-    await coverPool.connect(governanceAccount).updateFees(0, 1);
+    await coverPool.connect(governanceAccount).updateFees(0, 0, 1);
     const collateralBalanceBefore = await dai.balanceOf(userAAddress);
     const collateralTreasuryBefore = await dai.balanceOf(treasuryAddress);
     await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
@@ -167,7 +167,7 @@ describe('PerpCover', function() {
     expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
     expect(await dai.balanceOf(cover.address)).to.equal(0);
 
-    const [num, den] = await coverPool.getRedeemFees();
+    const [num, , den] = await coverPool.getRedeemFees();
     expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(ETHER_UINT_10).sub(ETHER_UINT_10.mul(num).div(den)));
   });
 
@@ -187,7 +187,7 @@ describe('PerpCover', function() {
     await expect(coverPool.connect(userBAccount).addPerpCover(COLLATERAL, ETHER_UINT_20)).to.emit(coverPool, 'CoverAdded');
     
     const noclaimCovTokenAddress = await cover.noclaimCovToken();
-    const [num, den] = await coverPool.getRedeemFees();
+    const [num, , den] = await coverPool.getRedeemFees();
     const noclaimCovToken = CoverERC20.attach(noclaimCovTokenAddress);
     const userBNoclaimBal = await noclaimCovToken.balanceOf(userBAddress);
     // user B should receive more covTokens than depositted amount to compensate the fees
@@ -236,7 +236,7 @@ describe('PerpCover', function() {
     await time.advanceBlock();
 
     await expect(coverPool.connect(userBAccount).addPerpCover(COLLATERAL, ETHER_UINT_20)).to.emit(coverPool, 'CoverAdded');
-    const [num, den] = await coverPool.getRedeemFees();
+    const [num, , den] = await coverPool.getRedeemFees();
     const feeFromUserA = ETHER_UINT_10.mul(4).mul(num).div(den);
     const feeFromUserB = ETHER_UINT_20.mul(num).div(den);
     const treaBal = await dai.balanceOf(treasuryAddress);

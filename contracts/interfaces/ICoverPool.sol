@@ -59,7 +59,7 @@ interface ICoverPool {
       address[] memory _allCovers,
       address[] memory _allActiveCovers
     );
-  function getRedeemFees() external view returns (uint16 _numerator, uint16 _denominator);
+  function getRedeemFees() external view returns (uint16 _perpNumerator, uint16 _numerator, uint16 _denominator);
   function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
 
   /// @notice user action
@@ -83,5 +83,5 @@ interface ICoverPool {
   /// @notice access restriction - governance
   function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external;
   function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external;
-  function updateFees(uint16 _redeemFeeNumerator, uint16 _redeemFeeDenominator) external;
+  function updateFees(uint16 _redeemFeePerpNumerator, uint16 _redeemFeeNumerator, uint16 _redeemFeeDenominator) external;
 }

@@ -97,12 +97,12 @@ describe('CoverWithExpiry', function() {
     expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
     expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
     expect(await dai.balanceOf(cover.address)).to.equal(0);
-    const [num, den] = await coverPool.getRedeemFees();
+    const [, num, den] = await coverPool.getRedeemFees();
     expect(await dai.balanceOf(treasuryAddress)).to.deep.equal(ETHER_UINT_10.mul(num).div(den));
   });
 
   it('Should redeem collateral(0 fee) without accepted claim', async function() {
-    await coverPool.connect(governanceAccount).updateFees(0, 1);
+    await coverPool.connect(governanceAccount).updateFees(0, 0, 1);
     const collateralBalanceBefore = await dai.balanceOf(userAAddress);
     const collateralTreasuryBefore = await dai.balanceOf(treasuryAddress);
     await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
@@ -210,7 +210,7 @@ describe('CoverWithExpiry', function() {
     expect(await CoverERC20.attach(claimCovTokenAddress2).balanceOf(userAAddress)).to.equal(0);
     
     expect(await dai.balanceOf(cover.address)).to.equal(ownerRedeemable);
-    const [num, den] = await coverPool.getRedeemFees();
+    const [, num, den] = await coverPool.getRedeemFees();
     expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(userARedeemable).sub(userARedeemable.mul(num).div(den)));
     
     const ownerDaiBalance = await dai.balanceOf(ownerAddress);
@@ -247,7 +247,7 @@ describe('CoverWithExpiry', function() {
 
     expect(await dai.balanceOf(cover.address)).to.equal(0);
 
-    const [num, den] = await coverPool.getRedeemFees();
+    const [, num, den] = await coverPool.getRedeemFees();
     expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(ETHER_UINT_10).sub(ETHER_UINT_10.mul(num).div(den)));
   });
 

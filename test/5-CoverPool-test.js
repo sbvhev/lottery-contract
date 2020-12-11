@@ -73,10 +73,11 @@ describe('CoverPool', () => {
     await coverPool.connect(governanceAccount).updateClaimRedeemDelay(newDelay);
     expect(await coverPool.claimRedeemDelay()).to.equal(newDelay);
 
-    await expect(coverPool.connect(governanceAccount).updateFees(0, 0)).to.be.reverted;
+    await expect(coverPool.connect(governanceAccount).updateFees(0, 0, 0)).to.be.reverted;
 
-    await coverPool.connect(governanceAccount).updateFees(0, 1);
-    const [redeemFeeNumerator, redeemFeeDenominator] = await coverPool.getRedeemFees();
+    await coverPool.connect(governanceAccount).updateFees(0, 0, 1);
+    const [redeemFeePerpNumerator, redeemFeeNumerator, redeemFeeDenominator] = await coverPool.getRedeemFees();
+    expect(redeemFeePerpNumerator).to.equal(0);
     expect(redeemFeeNumerator).to.equal(0);
     expect(redeemFeeDenominator).to.equal(1);
   });
