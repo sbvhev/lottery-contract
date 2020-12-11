@@ -4,9 +4,8 @@ const { time } = require("@openzeppelin/test-helpers");
 const { deployCoin, consts, getAccounts, getImpls} = require('../testHelper');
 
 describe("ClaimManagement", function () {
-  const ZERO_ADDR = ethers.constants.AddressZero;
-  const BINANCE_PROTOCOL = ethers.utils.formatBytes32String("Binance");
   const BOGEY_PROTOCOL = ethers.utils.formatBytes32String("BOGEY");
+
   const timestamp = Math.round(new Date().getTime() / 1000);
   // allowed timestamps: [1/1/2020, 31/12/2050, 1/1/2100] UTC
   const TIMESTAMPS = [1580515200000, 2556057600000, 4105123200000];
@@ -33,17 +32,18 @@ describe("ClaimManagement", function () {
 
     // deploy stablecoins to local blockchain emulator
     dai = await deployCoin(ethers, 'dai');
+    await dai.mint(ownerAddress, ethers.utils.parseEther('5000'));
     COLLATERAL = dai.address;
 
     // add coverPool through coverPool factory
-    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, [consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES);
+    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, [consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], COLLATERAL, TIMESTAMPS, consts.ALLOWED_EXPIRY_NAMES);
     await tx;
-    coverPool = CoverPool.attach(await coverPoolFactory.coverPools(BINANCE_PROTOCOL));
+    coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_2));
 
     const ClaimManagement = await ethers.getContractFactory("ClaimManagement");
     management = await ClaimManagement.deploy(
       governanceAddress,
-      ZERO_ADDR,
+      consts.ADDRESS_ZERO,
       treasuryAddress,
       coverPoolFactory.address
     );
@@ -51,371 +51,203 @@ describe("ClaimManagement", function () {
     
     // set claim manager in coverPool Factory
     await coverPoolFactory.updateClaimManager(management.address);
-  });
-
-  it("Should deploy ClaimManagement and set governance, auditor(set to 0x0), treasury, and factory", async function () {
-    expect(await management.governance()).to.equal(governanceAddress);
-    expect(await management.auditor()).to.equal(ZERO_ADDR);
-    expect(await management.treasury()).to.equal(treasuryAddress);
-    expect(await management.coverPoolFactory()).to.equal(
-      coverPoolFactory.address
-    );
-  });
-
-  it("Should approve claim management for balance", async function () {
     await dai.approve(management.address, await dai.balanceOf(ownerAddress));
-    expect(await dai.allowance(ownerAddress, management.address)).to.equal(
-      await dai.balanceOf(ownerAddress)
-    );
   });
 
-  it("Should set feeCurrency to dai", async function () {
-    let baseClaimFee = ethers.utils.parseEther("10");
+  it("Should deploy ClaimManagement correctly", async function () {
+    expect(await management.governance()).to.equal(governanceAddress);
+    expect(await management.auditor()).to.equal(consts.ADDRESS_ZERO);
+    expect(await management.treasury()).to.equal(treasuryAddress);
+    expect(await management.coverPoolFactory()).to.equal(coverPoolFactory.address);
+    expect(await management.isAuditorVoting()).to.equal(false);
+  });
+
+  it("Should set vars correctly", async function () {
+    let baseClaimFee = ethers.utils.parseEther("40");
     let forceClaimFee = ethers.utils.parseEther("500");
     let feeCurrency = dai.address;
-    await management
-      .connect(governanceAccount)
-      .setFeeAndCurrency(baseClaimFee, forceClaimFee, feeCurrency);
+    await management.connect(governanceAccount).setFeeAndCurrency(baseClaimFee, forceClaimFee, feeCurrency);
     expect(await management.feeCurrency()).to.equal(dai.address);
-  });
-  it("Should not rely on auditor since address is set to 0x0", async function () {
-    expect(await management.isAuditorVoting()).to.equal(false);
-    expect(await management.auditor()).to.equal(ZERO_ADDR);
-  });
-  it("Should set auditor", async function () {
+    
     await management.setAuditor(auditorAddress);
     expect(await management.isAuditorVoting()).to.equal(true);
     expect(await management.auditor()).to.equal(auditorAddress);
   });
+
   // fileClaim
-  it("Should throw if filing a claim for incident in the future", async function () {
-    await expect(
-      management.fileClaim(coverPool.address, BINANCE_PROTOCOL, timestamp + 5000)
-    ).to.be.reverted;
-  });
-  it("Should throw if filing a claim for incident more than 14 days ago", async function () {
-    await expect(
-      management.fileClaim(
-        coverPool.address,
-        BINANCE_PROTOCOL,
-        timestamp - 10000000
-      )
-    ).to.be.reverted;
-  });
-  it("Should throw if filing a claim for 0 address", async function () {
-    await expect(management.fileClaim(ZERO_ADDR, BINANCE_PROTOCOL, timestamp))
-      .to.be.reverted;
-  });
-  it("Should throw if coverPool name doesn't match address", async function () {
-    await expect(
-      management.fileClaim(coverPool.address, BOGEY_PROTOCOL, timestamp)
-    ).to.be.reverted;
-  });
-  it("Should cost 10 dai to file claim", async function () {
-    expect(await management.getCoverPoolClaimFee(coverPool.address)).to.equal(
-      ethers.utils.parseEther("10")
-    );
-  });
-  it("Should file a normal claim", async function () {
-    await management.fileClaim(coverPool.address, BINANCE_PROTOCOL, timestamp);
-  });
-  it("Should have correct claim values", async function () {
+  it("Should file a claim for incident correctly", async function () {
+    expect(await management.getCoverPoolClaimFee(coverPool.address)).to.equal(ethers.utils.parseEther("40"));
+    await expect(management.fileClaim(coverPool.address, consts.POOL_2, timestamp + 5000)).to.be.reverted;
+    await expect(management.fileClaim(coverPool.address,consts.POOL_2,timestamp - 10000000)).to.be.reverted;
+    await expect(management.fileClaim(consts.ADDRESS_ZERO, consts.POOL_2, timestamp)).to.be.reverted;
+    await expect(management.fileClaim(coverPool.address, BOGEY_PROTOCOL, timestamp)).to.be.reverted;
+
+    await management.fileClaim(coverPool.address, consts.POOL_2, timestamp);
     const claim = await management.coverPoolClaims(coverPool.address, 0, 0);
     expect(claim.state).to.equal(state.filed);
     expect(claim.filedBy).to.equal(ownerAddress);
-    expect(claim.feePaid).to.equal(ethers.utils.parseEther("10"));
+    expect(claim.feePaid).to.equal(ethers.utils.parseEther("40"));
     expect(claim.payoutNumerator).to.equal(0);
     expect(claim.payoutDenominator).to.equal(1);
-  });
-  it("Should be mapped under nonce = 0", async function () {
     expect(await management.coverPoolClaims(coverPool.address, 0, 0)).to.exist;
+    expect(await dai.balanceOf(ownerAddress)).to.equal(ethers.utils.parseEther("4960"));
   });
-  it("Should deduct 10 dai from claim filer", async function () {
-    expect(await dai.balanceOf(ownerAddress)).to.equal(
-      ethers.utils.parseEther("4990")
-    );
-  });
-  it("Should cost 20 dai to file next claim", async function () {
-    expect(await management.getCoverPoolClaimFee(coverPool.address)).to.equal(
-      ethers.utils.parseEther("20")
-    );
-  });
-  it("Should file another normal claim", async function () {
-    await management.fileClaim(coverPool.address, BINANCE_PROTOCOL, timestamp);
-  });
-  it("Should deduct 20 dai from claim filer", async function () {
-    expect(await dai.balanceOf(ownerAddress)).to.equal(
-      ethers.utils.parseEther("4970")
-    );
-  });
-  it("Should have both claims under filed", async function () {
-    let filedClaims = await management.getAllClaimsByState(
-      coverPool.address,
-      0,
-      state.filed
-    );
+
+  it("Should cost 80 dai to file next claim", async function () {
+    expect(await management.getCoverPoolClaimFee(coverPool.address)).to.equal(ethers.utils.parseEther("80"));
+    await management.fileClaim(coverPool.address, consts.POOL_2, timestamp);
+    expect(await dai.balanceOf(ownerAddress)).to.equal(ethers.utils.parseEther("4880"));
+    let filedClaims = await management.getAllClaimsByState(coverPool.address, 0, state.filed);
     expect(filedClaims.length).to.equal(2);
   });
+
   // forceFileClaim
-  it("Should throw when forceFileClaim if !isAuditorVoting", async function () {
-    await management.setAuditor(ZERO_ADDR);
-    await expect(
-      management.forceFileClaim(coverPool.address, BINANCE_PROTOCOL, timestamp)
-    ).to.be.reverted;
+  it("Should NOT allow force filing when condition not right", async function () {
+    await management.setAuditor(consts.ADDRESS_ZERO);
+    await expect(management.forceFileClaim(coverPool.address, consts.POOL_2, timestamp)).to.be.reverted;
     await management.setAuditor(auditorAddress);
+    await expect(management.forceFileClaim(consts.ADDRESS_ZERO, consts.POOL_2, timestamp)).to.be.reverted;
   });
-  it("Should NOT allow force filing a claim for 0 address", async function () {
-    await expect(
-      management.forceFileClaim(ZERO_ADDR, BINANCE_PROTOCOL, timestamp)
-    ).to.be.reverted;
-  });
+
   it("Should file a forced claim", async function () {
-    await management.forceFileClaim(
-      coverPool.address,
-      BINANCE_PROTOCOL,
-      timestamp
-    );
-  });
-  it("Should deduct 500 dai from claim filer", async function () {
-    expect(await dai.balanceOf(ownerAddress)).to.equal(
-      ethers.utils.parseEther("4470")
-    );
-  });
-  it("Should have correct force claim values", async function () {
+    const userBal = await dai.balanceOf(ownerAddress);
+    await management.forceFileClaim(coverPool.address,consts.POOL_2,timestamp);
+    expect(await dai.balanceOf(ownerAddress)).to.equal(userBal.sub(ethers.utils.parseEther("500")));
     const claim = await management.coverPoolClaims(coverPool.address, 0, 2);
     expect(claim.state).to.equal(state.forceFiled);
     expect(claim.filedBy).to.equal(ownerAddress);
     expect(claim.feePaid).to.equal(ethers.utils.parseEther("500"));
     expect(claim.payoutNumerator).to.equal(0);
     expect(claim.payoutDenominator).to.equal(1);
+
+    // Should have (40 + 80 + 500) dai in management contract
+    expect(await dai.balanceOf(management.address)).to.equal(ethers.utils.parseEther("620"));
   });
-  it("Should have 530(10 + 20 + 500) dai in management contract", async function () {
-    expect(await dai.balanceOf(management.address)).to.equal(
-      ethers.utils.parseEther("530")
-    );
-  });
+
   // validateClaim
-  it("Should throw if try to validate when !isAuditorVoting", async function () {
-    await management.setAuditor(ZERO_ADDR);
-    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 0, false)).to.be
-      .reverted;
+  it("Should NOT validate if condition is wrong", async function () {
+    // error to validate when !isAuditorVoting
+    await management.setAuditor(consts.ADDRESS_ZERO);
+    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 0, false)).to.be.reverted;
     await management.setAuditor(auditorAddress);
+
+    // validate zero address
+    await expect(management.connect(governanceAccount).validateClaim(consts.ADDRESS_ZERO, 0, 0, true)).to.be.reverted;
+    // nonce != claimNonce()
+    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 1, 0, true)).to.be.reverted;
+    // index >= coverPoolClaims length
+    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 5, true)).to.be.reverted;
+    // validating a forcedClaim
+    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 2, true)).to.be.reverted;
   });
-  it("Should throw if try to validate zero address", async function () {
-    await expect(management.connect(governanceAccount).validateClaim(ZERO_ADDR, 0, 0, true)).to.be
-      .reverted;
-  });
-  it("Should throw if nonce != claimNonce()", async function () {
-    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 1, 0, true)).to.be
-      .reverted;
-  });
-  it("Should throw if index >= coverPoolClaims length", async function () {
-    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 5, true)).to.be
-      .reverted;
-  });
-  it("Should not allow validating a forcedClaim", async function () {
-    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 2, true)).to.be
-      .reverted;
-  });
+
   // invalidated
-  it("Should invalidate claim", async function () {
+  it("Should invalidate claim once", async function () {
     await management.connect(governanceAccount).connect(governanceAccount).validateClaim(coverPool.address, 0, 0, false);
-  });
-  it("Should be in invalidated state", async function () {
     const claim = await management.coverPoolClaims(coverPool.address, 0, 0);
     expect(claim.state).to.equal(state.invalidated);
-  });
-  it("Should have a decidedTimestamp", async function () {
-    const claim = await management.coverPoolClaims(coverPool.address, 0, 0);
     expect(claim.decidedTimestamp).to.greaterThan(0);
+    expect(await dai.balanceOf(treasuryAddress)).to.equal(ethers.utils.parseEther("40"));
+
+    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 0, true)).to.be.reverted;
   });
-  it("Should send feePaid (10) to treasury", async function () {
-    expect(await dai.balanceOf(treasuryAddress)).to.equal(
-      ethers.utils.parseEther("10")
-    );
-  });
-  it("Should throw if trying to validate claim that is already validated", async function () {
-    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 0, true)).to.be
-      .reverted;
-  });
-  it("Should throw if claim is not pending for validateClaim", async function () {
-    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 0, true)).to.be
-      .reverted;
-  });
+
   // validated
   it("Should validate claim", async function () {
     await management.connect(governanceAccount).validateClaim(coverPool.address, 0, 1, true);
     const claim = await management.coverPoolClaims(coverPool.address, 0, 1);
     expect(claim.state).to.equal(state.validated);
+    expect(await management.getCoverPoolClaimFee(coverPool.address)).to.equal(await management.baseClaimFee());
   });
-  it("Should resetClaimFee to baseClaimFee when claim is validated", async function () {
-    expect(await management.getCoverPoolClaimFee(coverPool.address)).to.equal(
-      await management.baseClaimFee()
-    );
-  });
+
   it("Should file and validate more claims for further testing", async function () {
-    await management.fileClaim(coverPool.address, BINANCE_PROTOCOL, timestamp);
+    await management.fileClaim(coverPool.address, consts.POOL_2, timestamp);
     await management.connect(governanceAccount).validateClaim(coverPool.address, 0, 3, true);
 
-    await management.fileClaim(coverPool.address, BINANCE_PROTOCOL, timestamp);
+    await management.fileClaim(coverPool.address, consts.POOL_2, timestamp);
     await management.connect(governanceAccount).validateClaim(coverPool.address, 0, 4, true);
   });
   // decideClaim
-  it("Should throw if owner decideClaim when isAuditorVoting", async function () {
-    await expect(
-      management
-        .connect(ownerAccount)
-        .decideClaim(coverPool.address, 0, 1, true, 100, 100)
-    ).to.be.reverted;
-  });
-  it("Should throw if auditor decideClaim when !isAuditorVoting", async function () {
-    await management.setAuditor(ZERO_ADDR);
-    await expect(
-      management
-        .connect(auditorAccount)
-        .decideClaim(coverPool.address, 0, 1, true, 100, 100)
-    ).to.be.reverted;
+  it("Should NOT decideClaim if condition is wrong", async function () {
+    // owner decideClaim when isAuditorVoting
+    await expect(management.connect(ownerAccount).decideClaim(coverPool.address, 0, 1, true, 100, 100)).to.be.reverted;
+    // if auditor decideClaim when !isAuditorVoting
+    await management.setAuditor(consts.ADDRESS_ZERO);
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, true, 100, 100)).to.be.reverted;
     await management.setAuditor(auditorAddress);
-  });
-  it("Should throw if deciding a claim for zero address", async function () {
-    await expect(
-      management
-        .connect(auditorAccount)
-        .decideClaim(ZERO_ADDR, 0, 1, true, 100, 100)
-    ).to.be.reverted;
-  });
-  it("Should throw if input nonce != coverPool nonce", async function () {
-    await expect(
-      management
-        .connect(auditorAccount)
-        .decideClaim(coverPool.address, 1, 1, true, 100, 100)
-    ).to.be.reverted;
-  });
-  it("Should throw if index >= length", async function () {
-    await expect(
-      management
-        .connect(auditorAccount)
-        .decideClaim(coverPool.address, 0, 10, true, 100, 100)
-    ).to.be.reverted;
-  });
-  it("Should throw if claim is not pending for decideClaim", async function () {
-    await expect(
-      management
-        .connect(auditorAccount)
-        .decideClaim(coverPool.address, 0, 0, true, 100, 100)
-    ).to.be.reverted;
-  });
-  it("Should throw if payoutNumerator != payoutDenominator when allowPartialClaim == false", async function () {
+    // if deciding a claim for zero address
+    await expect(management.connect(auditorAccount).decideClaim(consts.ADDRESS_ZERO, 0, 1, true, 100, 100)).to.be.reverted;
+    // if input nonce != coverPool nonce
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 1, 1, true, 100, 100)).to.be.reverted;
+    // if index >= length
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 10, true, 100, 100)).to.be.reverted;
+    // Should throw if claim is not pending for decideClaim
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 0, true, 100, 100)).to.be.reverted;
+    // if payoutNumerator != payoutDenominator when allowPartialClaim == false
     await management.setPartialClaimStatus(false);
-    await expect(
-      management
-        .connect(auditorAccount)
-        .decideClaim(coverPool.address, 0, 1, true, 95, 100)
-    ).to.be.reverted;
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, true, 95, 100)).to.be.reverted;
+    // if payoutNumerator > payoutDenominator
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, true, 105, 100)).to.be.reverted;
+    // if payoutNumerator <= 0 when accepting
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, true, 0, 100)).to.be.reverted;
   });
-  it("Should throw if payoutNumerator > payoutDenominator", async function () {
-    await expect(
-      management
-        .connect(auditorAccount)
-        .decideClaim(coverPool.address, 0, 1, true, 105, 100)
-    ).to.be.reverted;
-  });
-  it("Should throw if payoutNumerator <= 0 when accepting", async function () {
-    await expect(
-      management
-        .connect(auditorAccount)
-        .decideClaim(coverPool.address, 0, 1, true, 0, 100)
-    ).to.be.reverted;
-  });
+
   // claim accepted
   it("Should accept claim", async function () {
-    await management
-      .connect(auditorAccount)
-      .decideClaim(coverPool.address, 0, 1, true, 100, 100);
-    let claim = await management.coverPoolClaims(coverPool.address, 0, 1);
-    expect(claim.payoutNumerator / claim.payoutDenominator).to.equal(1);
-  });
-  it("Should be in accepted state", async function () {
+    const ownerBal = await dai.balanceOf(ownerAddress);
+    await management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, true, 100, 100);
     const claim = await management.coverPoolClaims(coverPool.address, 0, 1);
     expect(claim.state).to.equal(state.accepted);
-  });
-  it("Should have payoutNumerator/payoutDenominator = 1", async function () {
-    var claim = await management.coverPoolClaims(coverPool.address, 0, 1);
     expect(claim.payoutNumerator / claim.payoutDenominator).to.equal(1);
-  });
-  it("Should have decidedTimestamp", async function () {
-    const claim = await management.coverPoolClaims(coverPool.address, 0, 1);
     expect(claim.decidedTimestamp).to.greaterThan(0);
+    expect(await dai.balanceOf(ownerAddress)).to.equal(ownerBal.add(ethers.utils.parseEther("80")));
   });
-  it("Should refund feePaid to first claim filer", async function () {
-    expect(await dai.balanceOf(ownerAddress)).to.equal(
-      ethers.utils.parseEther("4470")
-    );
-  });
-  it("Should remove auditor", async function () {
-    await management.setAuditor(ZERO_ADDR);
-    expect(await management.isAuditorVoting()).to.equal(false);
-    expect(await management.auditor()).to.equal(ZERO_ADDR);
-  });
+
   it("Should file new claims under nonce = 1", async function () {
-    await management.fileClaim(coverPool.address, BINANCE_PROTOCOL, timestamp);
+    await management.fileClaim(coverPool.address, consts.POOL_2, timestamp);
     expect(await management.coverPoolClaims(coverPool.address, 1, 0)).to.exist;
   });
-  it("Should throw if owner tries to validateClaim when auditor is not voting", async function () {
-    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 1, 0, true)).to.be
-      .reverted;
+  
+  it("Should NOT validateClaim when auditor is not voting", async function () {
+    await management.setAuditor(consts.ADDRESS_ZERO);
+    expect(await management.isAuditorVoting()).to.equal(false);
+    expect(await management.auditor()).to.equal(consts.ADDRESS_ZERO);
+    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 1, 0, true)).to.be.reverted;
   });
-  it("Should throw if payoutNumerator != 0 when denying claim", async function () {
-    await expect(
-      management
-        .connect(ownerAccount)
-        .decideClaim(coverPool.address, 1, 0, false, 1, 100)
-    ).to.be.reverted;
+
+  it("Should NOT decideClaim throw if payoutNumerator != 0 when denying claim", async function () {
+    await expect(management.connect(ownerAccount).decideClaim(coverPool.address, 1, 0, false, 1, 100)).to.be.reverted;
   });
+
   // claim denied
   it("Should deny claim", async function () {
-    await management
-      .connect(governanceAccount)
-      .decideClaim(coverPool.address, 1, 0, false, 0, 100);
-  });
-  it("Should be in denied state", async function () {
+    await management.connect(governanceAccount).decideClaim(coverPool.address, 1, 0, false, 0, 100);
     const claim = await management.coverPoolClaims(coverPool.address, 1, 0);
     expect(claim.state).to.equal(state.denied);
-  });
-  it("Should have payoutNumerator = 0 and payoutDenominator = 1", async function () {
-    const claim = await management.coverPoolClaims(coverPool.address, 1, 0);
     expect(claim.payoutNumerator).to.equal(0);
     expect(claim.payoutDenominator).to.equal(1);
   });
 
   // edge cases
   it("Should file 2 new claims", async function () {
-    await management.fileClaim(
-      coverPool.address,
-      BINANCE_PROTOCOL,
-      timestamp
-    );
-    await management.fileClaim(
-      coverPool.address,
-      BINANCE_PROTOCOL,
-      timestamp
-    );
-    await time.increaseTo(TIMESTAMPS[1]);
+    await management.fileClaim(coverPool.address,consts.POOL_2,timestamp);
+    await management.fileClaim(coverPool.address,consts.POOL_2,timestamp);
+    await time.increaseTo(consts.TIMESTAMPS[1]);
     await time.advanceBlock();
   });
 
   it("Should revert if try to validate claim with payoutNumerator > 0 after window passed", async function () {
     await expect(management.connect(governanceAccount).decideClaim(coverPool.address, 1, 1, true, 1, 1)).to.be.reverted;
   });
+
   it("Should deny claim if window passed and claimIsAccepted = false", async function () {
     await management.connect(governanceAccount).decideClaim(coverPool.address, 1, 1, false, 0, 1);
-  });
-  it("Should have correct claim values", async function () {
     const claim = await management.coverPoolClaims(coverPool.address, 1, 1);
     expect(claim.state).to.equal(state.denied);
     expect(claim.decidedTimestamp).to.greaterThan(0);
     expect(claim.payoutNumerator).to.equal(0);
   });
+
   it("Should deny claim if window passed even if pass in true for claimIsAccepted", async function () {
     await management.connect(governanceAccount).decideClaim(coverPool.address, 1, 2, true, 0, 1);
   });
