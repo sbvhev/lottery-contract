@@ -17,7 +17,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   using SafeMath for uint256;
 
   // coverPool => nonce => Claim[]
-  mapping(address => mapping(uint256 => Claim[])) public override coverPoolClaims;
+  mapping(address => mapping(uint256 => Claim[])) private coverPoolClaims;
 
   modifier onlyApprovedDecider() {
     if (isAuditorVoting()) {
@@ -33,14 +33,6 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     _;
   }
 
-  /**
-   * @notice Initialize governance and treasury addresses
-   * @dev Governance address cannot be set to owner address; `_auditor` can be 0.
-   * @param _governance address: address of the governance account
-   * @param _auditor address: address of the auditor account
-   * @param _treasury address: address of the treasury account
-   * @param _coverPoolFactory address: address of the coverPool factory
-   */
   constructor(address _governance, address _auditor, address _treasury, address _coverPoolFactory) {
     require(
       _governance != msg.sender && _governance != address(0), 
@@ -56,20 +48,24 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     initializeOwner();
   }
 
+  function getCoverPoolClaims(address _coverPool, uint256 _nonce, uint256 _index) external view override returns (Claim memory) {
+    return coverPoolClaims[_coverPool][_nonce][_index];
+  }
+
   /**
    * @notice File a claim for a COVER-supported contract `_coverPool` 
    * by paying the `coverPoolClaimFee[_coverPool]` fee
-   * @dev `_incidentTimestamp` must be within the past 14 days
-   * @param _coverPool address: contract address of the coverPool that COVER supports
-   * @param _coverPoolName bytes32: coverPool name for `_coverPool`
-   * @param _incidentTimestamp uint48: timestamp of the claim incident
+   * @dev `_incidentTimestamp` must be within the past 3 days
    * 
-   * Emits ClaimFiled
+   * Emits ClaimUpdated
    */ 
-  function fileClaim(address _coverPool, bytes32 _coverPoolName, uint48 _incidentTimestamp) 
-    external 
-    override 
-  {
+  function fileClaim(
+    address _coverPool,
+    bytes32 _coverPoolName,
+    bytes32[] calldata _exploitAssets,
+    uint48 _incidentTimestamp,
+    string calldata _description
+  ) external override {
     require(_coverPool != address(0), "COVER_CM: coverPool cannot be 0");
     require(
       _coverPool == getAddressFromFactory(_coverPoolName), 
@@ -84,42 +80,40 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     coverPoolClaims[_coverPool][nonce].push(Claim({
       state: ClaimState.Filed,
       filedBy: msg.sender,
-      payoutNumerator: 0,
+      payoutAssetList: _exploitAssets,
+      payoutNumerators: new uint256[](_exploitAssets.length),
       payoutDenominator: 1,
       filedTimestamp: uint48(block.timestamp),
       incidentTimestamp: _incidentTimestamp,
       decidedTimestamp: 0,
-      feePaid: claimFee
+      feePaid: claimFee,
+      description: _description
     }));
     feeCurrency.safeTransferFrom(msg.sender, address(this), claimFee);
     _updateCoverPoolClaimFee(_coverPool);
-    emit ClaimFiled({
-      isForced: false,
-      filedBy: msg.sender,
+    emit ClaimUpdate({
       coverPool: _coverPool,
-      incidentTimestamp: _incidentTimestamp,
+      state: ClaimState.Filed,
       nonce: nonce,
-      index: coverPoolClaims[_coverPool][nonce].length - 1,
-      feePaid: claimFee
+      index: coverPoolClaims[_coverPool][nonce].length - 1
     });
   }
 
   /**
    * @notice Force file a claim for a COVER-supported contract `_coverPool`
    * that bypasses validateClaim by paying the `forceClaimFee` fee
-   * @dev `_incidentTimestamp` must be within the past 14 days. 
+   * @dev `_incidentTimestamp` must be within the past 3 days. 
    * Only callable when isAuditorVoting is true
-   * @param _coverPool address: contract address of the coverPool that COVER supports
-   * @param _coverPoolName bytes32: coverPool name for `_coverPool`
-   * @param _incidentTimestamp uint48: timestamp of the claim incident
    * 
-   * Emits ClaimFiled
+   * Emits ClaimUpdated
    */
-  function forceFileClaim(address _coverPool, bytes32 _coverPoolName, uint48 _incidentTimestamp)
-    external 
-    override 
-    onlyWhenAuditorVoting 
-  {
+  function forceFileClaim(
+    address _coverPool,
+    bytes32 _coverPoolName,
+    bytes32[] calldata _exploitAssets,
+    uint48 _incidentTimestamp,
+    string calldata _description
+  ) external override onlyWhenAuditorVoting {
     require(_coverPool != address(0), "COVER_CM: coverPool cannot be 0");
     require(
       _coverPool == getAddressFromFactory(_coverPoolName), 
@@ -133,22 +127,21 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     coverPoolClaims[_coverPool][nonce].push(Claim({
       state: ClaimState.ForceFiled,
       filedBy: msg.sender,
-      payoutNumerator: 0,
+      payoutAssetList: _exploitAssets,
+      payoutNumerators: new uint256[](_exploitAssets.length),
       payoutDenominator: 1,
       filedTimestamp: uint48(block.timestamp),
       incidentTimestamp: _incidentTimestamp,
       decidedTimestamp: 0,
-      feePaid: forceClaimFee
+      feePaid: forceClaimFee,
+      description: _description
     }));
     feeCurrency.safeTransferFrom(msg.sender, address(this), forceClaimFee);
-    emit ClaimFiled({
-      isForced: true,
-      filedBy: msg.sender,
+    emit ClaimUpdate({
       coverPool: _coverPool,
-      incidentTimestamp: _incidentTimestamp,
+      state: ClaimState.ForceFiled,
       nonce: nonce,
-      index: coverPoolClaims[_coverPool][nonce].length - 1,
-      feePaid: forceClaimFee
+      index: coverPoolClaims[_coverPool][nonce].length - 1
     });
   }
 
@@ -162,12 +155,12 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
    *   
    * Emits ClaimValidated
    */
-  function validateClaim(address _coverPool, uint256 _nonce, uint256 _index, bool _claimIsValid)
-    external 
-    override 
-    onlyGov
-    onlyWhenAuditorVoting 
-  {
+  function validateClaim(
+    address _coverPool,
+    uint256 _nonce,
+    uint256 _index,
+    bool _claimIsValid
+  ) external override onlyGov onlyWhenAuditorVoting {
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
     require(
       _nonce == getCoverPoolNonce(_coverPool), 
@@ -182,9 +175,9 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       claim.decidedTimestamp = uint48(block.timestamp);
       feeCurrency.safeTransfer(treasury, claim.feePaid);
     }
-    emit ClaimValidated({
-      claimIsValid: _claimIsValid,
+    emit ClaimUpdate({
       coverPool: _coverPool,
+      state: claim.state,
       nonce: _nonce,
       index: _index
     });
@@ -193,94 +186,49 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   /**
    * @notice Decide whether claim for a coverPool should be accepted(will payout) or denied
    * @dev Only callable by approvedDecider
-   * @param _coverPool address: contract address of the coverPool that COVER supports
-   * @param _nonce uint256: nonce of the coverPool
-   * @param _index uint256: index of the claim
-   * @param _claimIsAccepted bool: true if claim is accepted and will payout, otherwise false
-   * @param _payoutNumerator uint256: numerator of percent payout, 0 if _claimIsAccepted = false
-   * @param _payoutDenominator uint256: denominator of percent payout
    *
-   * Emits ClaimDecided
+   * Emits ClaimUpdated
    */
   function decideClaim(
-    address _coverPool, 
-    uint256 _nonce, 
-    uint256 _index, 
-    bool _claimIsAccepted, 
-    uint16 _payoutNumerator, 
-    uint16 _payoutDenominator
-  )   
-    external
-    override 
-    onlyApprovedDecider
-  {
-    require(
-      _nonce == getCoverPoolNonce(_coverPool), 
-      "COVER_CM: input nonce != coverPool nonce"
-    );
+    address _coverPool,
+    uint256 _nonce,
+    uint256 _index,
+    bool _claimIsAccepted,
+    bytes32[] calldata _exploitAssets,
+    uint256[] calldata _payoutNumerators,
+    uint256 _payoutDenominator
+  ) external override onlyApprovedDecider {
+    require( _nonce == getCoverPoolNonce(_coverPool), "COVER_CM: input nonce != coverPool nonce");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
-    if (isAuditorVoting()) {
-      require(
-        claim.state == ClaimState.Validated || 
-        claim.state == ClaimState.ForceFiled, 
-        "COVER_CM: claim not validated or forceFiled"
-      );
-    } else {
-      require(claim.state == ClaimState.Filed, "COVER_CM: claim not filed");
-    }
+    _validateClaimState(claim);
 
-    if (_isDecisionWindowPassed(claim)) {
-      // Max decision claim window passed, claim is default to Denied
-      _claimIsAccepted = false;
-    }
-    if (_claimIsAccepted) {
-      require(_payoutNumerator > 0, "COVER_CM: claim accepted, but payoutNumerator == 0");
-      if (allowPartialClaim) {
-        require(
-          _payoutNumerator <= _payoutDenominator, 
-          "COVER_CM: payoutNumerator > payoutDenominator"
-        );
-      } else {
-        require(
-          _payoutNumerator == _payoutDenominator, 
-          "COVER_CM: payoutNumerator != payoutDenominator"
-        );
-      }
+    // Max decision claim window passed, claim is default to Denied
+    if (_claimIsAccepted && !_isDecisionWindowPassed(claim)) {
+      _validatePayoutNums(_exploitAssets, _payoutNumerators, _payoutDenominator);
+
       claim.state = ClaimState.Accepted;
-      claim.payoutNumerator = _payoutNumerator;
+      claim.payoutNumerators = _payoutNumerators;
       claim.payoutDenominator = _payoutDenominator;
       feeCurrency.safeTransfer(claim.filedBy, claim.feePaid);
       _resetCoverPoolClaimFee(_coverPool);
-      // TODO use new enact claim on coverPool
-      // ICoverPool(_coverPool).enactClaim(_payoutNumerator, _payoutDenominator, claim.incidentTimestamp, _nonce);
+      ICoverPool(_coverPool).enactClaim(
+        _exploitAssets,
+        _payoutNumerators,
+        _payoutDenominator,
+        claim.incidentTimestamp,
+        _nonce
+      );
     } else {
-      require(_payoutNumerator == 0, "COVER_CM: claim denied (default if passed window), but payoutNumerator != 0");
       claim.state = ClaimState.Denied;
       feeCurrency.safeTransfer(treasury, claim.feePaid);
     }
     claim.decidedTimestamp = uint48(block.timestamp);
-    emit ClaimDecided({
-      claimIsAccepted: _claimIsAccepted, 
-      coverPool: _coverPool, 
-      nonce: _nonce, 
-      index: _index, 
-      payoutNumerator: _payoutNumerator, 
-      payoutDenominator: _payoutDenominator
-    });
+    emit ClaimUpdate(_coverPool, claim.state, _nonce, _index);
   }
 
-  /**
-   * @notice Get all claims for coverPool `_coverPool` and nonce `_nonce` in state `_state`
-   * @param _coverPool address: contract address of the coverPool that COVER supports
-   * @param _nonce uint256: nonce of the coverPool
-   * @param _state ClaimState: state of claim
-   * @return all claims for coverPool and nonce in given state
-   */
+  /// @notice Get all claims for coverPool `_coverPool` and nonce `_nonce` in state `_state`
   function getAllClaimsByState(address _coverPool, uint256 _nonce, ClaimState _state)
-    external 
-    view 
-    override 
-    returns (Claim[] memory) 
+    external view override returns (Claim[] memory) 
   {
     Claim[] memory allClaims = coverPoolClaims[_coverPool][_nonce];
     uint256 count;
@@ -298,12 +246,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     return claimsByState;
   }
 
-  /**
-   * @notice Get all claims for coverPool `_coverPool` and nonce `_nonce`
-   * @param _coverPool address: contract address of the coverPool that COVER supports
-   * @param _nonce uint256: nonce of the coverPool
-   * @return all claims for coverPool and nonce
-   */
+  /// @notice Get all claims for coverPool `_coverPool` and nonce `_nonce`
   function getAllClaimsByNonce(address _coverPool, uint256 _nonce) 
     external 
     view 
@@ -313,11 +256,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     return coverPoolClaims[_coverPool][_nonce];
   }
 
-  /**
-   * @notice Get the coverPool address from the coverPool factory
-   * @param _coverPoolName bytes32: coverPool name
-   * @return address corresponding to the coverPool name `_coverPoolName`
-   */
+  /// @notice Get the coverPool address from the coverPool factory
   function getAddressFromFactory(bytes32 _coverPoolName) public view override returns (address) {
     return ICoverPoolFactory(coverPoolFactory).coverPools(_coverPoolName);
   }
@@ -336,5 +275,31 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
    */
   function _isDecisionWindowPassed(Claim memory claim) private view returns (bool) {
     return block.timestamp.sub(claim.filedTimestamp) > maxClaimDecisionWindow.sub(1 hours);
+  }
+
+  function _validatePayoutNums(
+    bytes32[] calldata _payoutAssetList,
+    uint256[] calldata _payoutNumerators,
+    uint256 _payoutDenominator
+  ) private view {
+    require(_payoutAssetList.length > _payoutNumerators.length, "CoverPool: payout assets len don't match");
+    uint256 totalNum;
+    for (uint256 i = 0; i < _payoutAssetList.length; i++) {
+      totalNum = totalNum.add(_payoutNumerators[i]);
+    }
+    require(totalNum > 0, "CoverPool: claim accepted, but payoutNumerator == 0");
+    require(allowPartialClaim ? totalNum <= _payoutDenominator : totalNum == _payoutDenominator, "CoverPool: payout % is not in (0%, 100%]");
+  }
+
+  function _validateClaimState(Claim memory claim) private view {
+    if (isAuditorVoting()) {
+      require(
+        claim.state == ClaimState.Validated || 
+        claim.state == ClaimState.ForceFiled, 
+        "COVER_CM: claim not validated or forceFiled"
+      );
+    } else {
+      require(claim.state == ClaimState.Filed, "COVER_CM: claim state not filed");
+    }
   }
 } 

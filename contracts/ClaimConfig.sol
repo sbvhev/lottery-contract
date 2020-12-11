@@ -14,7 +14,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
   using SafeMath for uint256;
   
   bool public override allowPartialClaim = true;
-
+  IERC20 public override feeCurrency = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
   address public override auditor;
   address public override governance;
   address public override treasury;
@@ -28,8 +28,6 @@ contract ClaimConfig is IClaimConfig, Ownable {
 
   // coverPool => claim fee
   mapping(address => uint256) private coverPoolClaimFee;
-
-  IERC20 public override feeCurrency = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
 
   modifier onlyGov() {
     require(msg.sender == governance, "COVER_CC: !governance");
