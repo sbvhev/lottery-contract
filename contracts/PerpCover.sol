@@ -39,6 +39,13 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   string public override name;
   uint256 public override claimNonce;
   uint256 public override rolloverPeriod;
+  uint256 public constant BASE = 10**18;
+  uint256 private feeFactor;
+  uint256 private baseFeeFactor;
+  uint256 private feePeriodCounts;
+  uint256 private lastFeeNum;
+  uint256 private lastFeeDen;
+
   ICoverERC20[] public override claimCovTokens;
   mapping(bytes32 => ICoverERC20) public claimCovTokenMap;
 
@@ -72,6 +79,11 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     }
 
     noclaimCovToken = _createCovToken("NOCLAIM");
+
+    (lastFeeNum,, lastFeeDen,) = ICoverPool(owner()).getRedeemFees();
+    baseFeeFactor = lastFeeDen.mul(BASE).div(lastFeeDen.sub(lastFeeNum)); // > 1
+    feeFactor = BASE;
+    feePeriodCounts = 1;
   }
 
   function getCoverDetails()
@@ -81,8 +93,8 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   }
   
   /// @notice multiplier = 1 + math.floor(timepassed / rolloverPeriod)
-  function getMultiplier() public view returns (uint256) {
-    return uint256(block.timestamp.add(rolloverPeriod).sub(createdAt)) / rolloverPeriod;
+  function getPassedPeriodCount(uint256 _timestamp) public view returns (uint256) {
+    return uint256(_timestamp.add(rolloverPeriod).sub(createdAt)) / rolloverPeriod;
   }
 
   function viewClaimable() external view returns (uint256 totalAmount) {
@@ -100,15 +112,43 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     }
   }
 
+  function updateFeeFactor() public {
+    (uint256 redeemFeePerpNumerator,, uint256 redeemFeeDenominator, uint256 _updatedAt) = ICoverPool(owner()).getRedeemFees();
+
+    // update factor till last updatedAt with last fee rates    
+    uint256 updatePassed = getPassedPeriodCount(_updatedAt);
+    uint256 netUpdatePassed = updatePassed <= feePeriodCounts ? 0 : updatePassed.sub(feePeriodCounts);
+    for (uint256 i = 0; i < netUpdatePassed; i++) {
+      feeFactor = feeFactor.mul(lastFeeDen).div(lastFeeDen.sub(lastFeeNum));
+    }
+
+    // update fee rates to new rate
+    if (redeemFeePerpNumerator != lastFeeNum || redeemFeeDenominator != lastFeeDen) {
+      lastFeeNum = redeemFeePerpNumerator;
+      lastFeeDen = redeemFeeDenominator;
+      if (netUpdatePassed == 0 && feePeriodCounts == 1) {
+        // when fees changed before even 1 rollover Period passed, update base fee factor
+        baseFeeFactor = lastFeeDen.mul(BASE).div(lastFeeDen.sub(lastFeeNum));
+      }
+    }
+
+    // update factor till now with latest fee rates   
+    uint256 currentPassed = getPassedPeriodCount(block.timestamp);
+    uint256 netCurrentPassed = currentPassed.sub(feePeriodCounts.add(netUpdatePassed));
+    for (uint256 j = 0; j < netCurrentPassed; j++) {
+      feeFactor = feeFactor.mul(lastFeeDen).div(lastFeeDen.sub(lastFeeNum));
+    }
+    feePeriodCounts = currentPassed;
+  }
+
   /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
   function mint(uint256 _amount, address _receiver) external override onlyOwner {
     _noClaimAcceptedCheck(); // save gas than modifier
     ICoverERC20[] memory claimCovTokensCopy = claimCovTokens;
-    (uint256 redeemFeePerpNumerator,, uint256 redeemFeeDenominator) = ICoverPool(owner()).getRedeemFees();
-    uint256 multiplier = getMultiplier();
+    updateFeeFactor();
     // every passed rolloverPeriod, the amount mint for each collateral will = (1 - fee%) / (1 - mulitplier * fee%)
     // this is to compensate the later minters as if they redeem, they will have to pay (1 - mulitplier * fee%) fees
-    uint256 adjustedAmount = _amount.mul(redeemFeeDenominator.sub(redeemFeePerpNumerator)).div(redeemFeeDenominator.sub(multiplier.mul(redeemFeePerpNumerator)));
+    uint256 adjustedAmount = _amount.mul(feeFactor).div(BASE);
 
     for (uint i = 0; i < claimCovTokensCopy.length; i++) {
       claimCovTokensCopy[i].mint(_receiver, adjustedAmount);
@@ -130,7 +170,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
       require(_amount <= claimCovTokensCopy[i].balanceOf(msg.sender), "PerpCover: low CLAIM balance");
       claimCovTokensCopy[i].burnByCover(msg.sender, _amount);
     }
-
+    updateFeeFactor();
     _payShare(msg.sender, _amount);
     _sendAccuFeesToTreasury(_noclaimCovToken.totalSupply());
   }
@@ -162,7 +202,9 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
       uint256 totalNoclaimDebt = noclaimCovToken.totalSupply().mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
       totalDebt = totalDebt.add(totalNoclaimDebt);
     }
+    require(totalAmount > 0, "PerpCover: amount is 0");
 
+    updateFeeFactor();
     _payShare(msg.sender, totalAmount);
     _sendAccuFeesToTreasury(totalDebt);
   }
@@ -183,13 +225,8 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   }
 
   function _payShare(address _receiver, uint256 _amount) private {
-    (uint256 redeemFeePerpNumerator,, uint256 redeemFeeDenominator) = ICoverPool(owner()).getRedeemFees();
     IERC20 collateralToken = IERC20(collateral);
-
-    uint256 multiplier = getMultiplier();
-    uint256 fee = _amount.mul(redeemFeePerpNumerator).div(redeemFeeDenominator).mul(multiplier);
-
-    collateralToken.safeTransfer(_receiver, _amount.sub(fee));
+    collateralToken.safeTransfer(_receiver, _amount.mul(BASE).div(baseFeeFactor).mul(BASE).div(feeFactor));
   }
 
   function _sendAccuFeesToTreasury(uint256 _debtTotal) private {
@@ -200,11 +237,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     if (_debtTotal == 0) {
       collateralToken.safeTransfer(treasury, collateralToken.balanceOf(address(this)));
     } else {
-      (uint256 redeemFeePerpNumerator,, uint256 redeemFeeDenominator) = ICoverPool(owner()).getRedeemFees();
-
-      uint256 multiplier = getMultiplier();
-      uint256 fee = _debtTotal.mul(redeemFeePerpNumerator).mul(multiplier).div(redeemFeeDenominator);
-      uint256 accuFees = collateralToken.balanceOf(address(this)).sub(_debtTotal.sub(fee));
+      uint256 accuFees = collateralToken.balanceOf(address(this)).sub(_debtTotal.mul(BASE).div(baseFeeFactor).mul(BASE).div(feeFactor));
       if (accuFees > 0.001 ether) {
         // add a buffer to avoid error caused by + dust to users
         collateralToken.safeTransfer(treasury, accuFees.mul(999).div(1000));

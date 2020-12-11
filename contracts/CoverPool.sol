@@ -30,6 +30,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   uint16 private redeemFeePerpNumerator;
   uint16 private redeemFeeNumerator;
   uint16 private redeemFeeDenominator;
+  uint256 private feeUpdatedAt;
 
   /// @notice only active (true) coverPool allows adding more covers
   bool public override isActive;
@@ -115,13 +116,14 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     redeemFeePerpNumerator = 10; // fee per rollover period for perp cover
     redeemFeeNumerator = 20; // 0 to 65,535
     redeemFeeDenominator = 10000; // 0 to 65,535
+    feeUpdatedAt = block.timestamp;
     rolloverPeriod = 30 days;
 
     initializeOwner();
   }
 
-  function getRedeemFees() external view override returns (uint16 _perpNumerator, uint16 _numerator, uint16 _denominator) {
-    return (redeemFeePerpNumerator, redeemFeeNumerator, redeemFeeDenominator);
+  function getRedeemFees() external view override returns (uint16 _perpNumerator, uint16 _numerator, uint16 _denominator, uint256 _updatedAt) {
+    return (redeemFeePerpNumerator, redeemFeeNumerator, redeemFeeDenominator, feeUpdatedAt);
   }
 
   function getClaimDetails(uint256 _nonce) external view override returns (ClaimDetails memory) {
@@ -282,6 +284,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     redeemFeePerpNumerator = _redeemFeePerpNumerator;
     redeemFeeNumerator = _redeemFeeNumerator;
     redeemFeeDenominator = _redeemFeeDenominator;
+    feeUpdatedAt = block.timestamp;
   }
 
   /**

@@ -183,7 +183,7 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
   /// @notice transfer collateral (amount - fee) from this contract to recevier, transfer fee to COVER treasury
   function _payCollateral(address _receiver, uint256 _amount) private {
     ICoverPoolFactory factory = ICoverPoolFactory(_factory());
-    (,uint256 redeemFeeNumerator, uint256 redeemFeeDenominator) = ICoverPool(owner()).getRedeemFees();
+    (,uint256 redeemFeeNumerator, uint256 redeemFeeDenominator,) = ICoverPool(owner()).getRedeemFees();
     uint256 fee = _amount.mul(redeemFeeNumerator).div(redeemFeeDenominator);
     address treasury = factory.treasury();
     IERC20 collateralToken = IERC20(collateral);
