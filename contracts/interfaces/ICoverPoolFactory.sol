@@ -19,7 +19,6 @@ interface ICoverPoolFactory {
   function claimManager() external view returns (address);
   function coverPools(bytes32 _coverPoolName) external view returns (address);
 
-  function getCoverPoolsLength() external view returns (uint256);
   /// @notice return contract address, the contract may not be deployed yet
   function getCoverPoolAddress(bytes32 _name) external view returns (address);
   function getCoverAddress(bytes32 _coverPoolName, uint48 _timestamp, address _collateral, uint256 _claimNonce) external view returns (address);

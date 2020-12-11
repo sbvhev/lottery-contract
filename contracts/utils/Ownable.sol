@@ -20,18 +20,17 @@ import "./Initializable.sol";
  */
 contract Ownable is Initializable {
     address private _owner;
-    address private _newOwner;
 
-    event OwnershipTransferInitiated(address indexed previousOwner, address indexed newOwner);
-    event OwnershipTransferCompleted(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     /**
      * @dev COVER: Initializes the contract setting the deployer as the initial owner.
      */
     function initializeOwner() internal initializer {
         _owner = msg.sender;
-        emit OwnershipTransferCompleted(address(0), _owner);
+        emit OwnershipTransferred(address(0), _owner);
     }
+
 
     /**
      * @dev Returns the address of the current owner.
@@ -49,22 +48,24 @@ contract Ownable is Initializable {
     }
 
     /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
+     * @dev Leaves the contract without owner. It will not be possible to call
+     * `onlyOwner` functions anymore. Can only be called by the current owner.
+     *
+     * NOTE: Renouncing ownership will leave the contract without an owner,
+     * thereby removing any functionality that is only available to the owner.
      */
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipTransferInitiated(_owner, newOwner);
-        _newOwner = newOwner;
+    function renounceOwnership() public virtual onlyOwner {
+        emit OwnershipTransferred(_owner, address(0));
+        _owner = address(0);
     }
 
     /**
      * @dev Transfers ownership of the contract to a new account (`newOwner`).
      * Can only be called by the current owner.
      */
-    function claimOwnership() public virtual {
-        require(_newOwner == msg.sender, "Ownable: caller is not the owner");
-        emit OwnershipTransferCompleted(_owner, _newOwner);
-        _owner = _newOwner;
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
     }
 }

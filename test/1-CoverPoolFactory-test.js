@@ -62,7 +62,7 @@ describe('CoverPoolFactory', () => {
     expect(await coverPoolFactory
       .createCoverPool(consts.POOL_2, [consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES)
       ).to.not.equal(consts.ADDRESS_ZERO);
-    expect(await coverPoolFactory.getCoverPoolsLength()).to.equal(2);
+    expect((await coverPoolFactory.getCoverPoolAddresses()).length).to.equal(2);
 
     const coverPoolAddr1 = await coverPoolFactory.coverPools(consts.PROTOCOL_NAME);
     expect(await CoverPool.attach(coverPoolAddr1).name()).to.equal(consts.PROTOCOL_NAME);

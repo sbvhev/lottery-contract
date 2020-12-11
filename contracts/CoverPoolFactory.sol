@@ -62,10 +62,6 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     return coverPoolAddresses;
   }
 
-  function getCoverPoolsLength() external view override returns (uint256) {
-    return coverPoolNames.length;
-  }
-
   /// @notice return coverPool contract address, the contract may not be deployed yet
   function getCoverPoolAddress(bytes32 _name) public view override returns (address) {
     return _computeAddress(keccak256(abi.encodePacked(_name)), address(this));
@@ -77,9 +73,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     uint48 _timestamp,
     address _collateral,
     uint256 _claimNonce
-  )
-   public view override returns (address)
-  {
+  ) public view override returns (address) {
     return _computeAddress(
       keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce)),
       getCoverPoolAddress(_coverPoolName)
@@ -91,9 +85,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     bytes32 _coverPoolName,
     address _collateral,
     uint256 _claimNonce
-  )
-   public view override returns (address)
-  {
+  ) public view override returns (address) {
     return _computeAddress(
       keccak256(abi.encodePacked(_coverPoolName, _collateral, _claimNonce)),
       getCoverPoolAddress(_coverPoolName)
@@ -107,18 +99,10 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     uint48 _timestamp,
     address _collateral,
     uint256 _claimNonce,
-    string memory _prefix // "CLAIM_POOL2_CURVE" or "NOCLAIM_POOL2"
-  )
-   external view override returns (address) 
-  {
+    string memory _prefix // "CLAIM_CURVE_POOL2" or "NOCLAIM_POOL2"
+  ) external view override returns (address) {
     return _computeAddress(
-      keccak256(abi.encodePacked(
-        _coverPoolName,
-        _timestamp,
-        _collateral,
-        _claimNonce,
-        _prefix)
-      ),
+      keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce, _prefix)),
       getCoverAddress(_coverPoolName, _timestamp, _collateral, _claimNonce)
     );
   }
@@ -130,17 +114,9 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     address _collateral,
     uint256 _claimNonce,
     string memory _prefix // "CLAIM_POOL2_CURVE" or "NOCLAIM_POOL2"
-  )
-   external view override returns (address)
-  {
+  ) external view override returns (address) {
     return _computeAddress(
-      keccak256(abi.encodePacked(
-        _coverPoolName,
-        _createdAt,
-        _collateral,
-        _claimNonce,
-        _prefix)
-      ),
+      keccak256(abi.encodePacked(_coverPoolName, _createdAt, _collateral, _claimNonce, _prefix)),
       getPerpCoverAddress(_coverPoolName, _collateral, _claimNonce)
     );
   }
@@ -152,9 +128,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     address _collateral,
     uint48[] calldata _timestamps,
     bytes32[] calldata _timestampNames
-  )
-    external override onlyOwner returns (address)
-  {
+  ) external override onlyOwner returns (address) {
     require(coverPools[_name] == address(0), "CoverPoolFactory: coverPool exists");
     require(_assetList.length > 0, "CoverPoolFactory: no asset passed for pool");
     require(_timestamps.length == _timestampNames.length, "CoverPoolFactory: timestamp lengths don't match");
@@ -197,9 +171,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     coverERC20Impl = _newImpl;
   }
 
-  function updateClaimManager(address _address)
-   external override onlyOwner
-  {
+  function updateClaimManager(address _address) external override onlyOwner {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
     claimManager = _address;
   }
