@@ -6,7 +6,7 @@ import "./IERC20.sol";
 
 /**
  * @title CoverERC20 contract interface, implements {IERC20}. See {CoverERC20}.
- * @author crypto-pumpkin@github
+ * @author crypto-pumpkin
  */
 interface ICoverERC20 is IERC20 {
     function burn(uint256 _amount) external returns (bool);

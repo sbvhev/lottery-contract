@@ -7,7 +7,7 @@ import "./ICoverERC20.sol";
 
 /**
  * @title Perpetual Cover contract interface. See {PerpCover}.
- * @author crypto-pumpkin@github
+ * @author crypto-pumpkin
  */
 interface IPerpCover is ICover {
   function createdAt() external view returns (uint256);

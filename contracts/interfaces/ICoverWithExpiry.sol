@@ -7,7 +7,7 @@ import "./ICoverERC20.sol";
 
 /**
  * @title Cover with expiry contract interface. See {CoverWithExpiry}.
- * @author crypto-pumpkin@github
+ * @author crypto-pumpkin
  */
 interface ICoverWithExpiry is ICover {
   function expiry() external view returns (uint48);

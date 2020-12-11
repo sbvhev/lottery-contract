@@ -4,7 +4,7 @@ pragma solidity ^0.7.5;
 
 /**
  * @dev CoverPoolFactory contract interface. See {CoverPoolFactory}.
- * @author crypto-pumpkin@github
+ * @author crypto-pumpkin
  */
 interface ICoverPoolFactory {
   event CoverPoolCreation(address coverPoolAddress);

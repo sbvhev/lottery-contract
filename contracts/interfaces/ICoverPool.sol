@@ -5,7 +5,7 @@ pragma abicoder v2;
 
 /**
  * @dev CoverPool contract interface. See {CoverPool}.
- * @author crypto-pumpkin@github
+ * @author crypto-pumpkin
  */
 interface ICoverPool {
   /// @notice emit when a claim against the coverPool is accepted

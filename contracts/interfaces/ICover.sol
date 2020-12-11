@@ -6,7 +6,7 @@ import "./ICoverERC20.sol";
 
 /**
  * @title Cover interface. See {PerpCover} or {CoverWithExpiry}.
- * @author crypto-pumpkin@github
+ * @author crypto-pumpkin
  */
 interface ICover {
   event NewCovTokenCreation(address);
