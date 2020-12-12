@@ -28,9 +28,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   bytes4 private constant COVERWITHEXPIRY_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],uint48,address,uint256)"));
   bytes4 private constant PERPCOVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint256,bytes32[],address,uint256)"));
-  uint16 private perpFeeNum;
-  uint16 private expiryFeeNum;
-  uint16 private feeDenominator;
+  uint256 private perpFeeNum;
+  uint256 private expiryFeeNum;
+  uint256 private feeDenominator;
   uint256 private feeUpdatedAt;
 
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
@@ -131,7 +131,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   function getRedeemFees()
     external view override
-    returns (uint16 _perpNumerator, uint16 _numerator, uint16 _denominator, uint256 _updatedAt) 
+    returns (uint256 _perpNumerator, uint256 _numerator, uint256 _denominator, uint256 _updatedAt) 
   {
     return (perpFeeNum, expiryFeeNum, feeDenominator, feeUpdatedAt);
   }
@@ -211,7 +211,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     _addCover(collateral, addr, _amount);
   }
 
-  function updateFees(uint16 _perpFeeNum, uint16 _expiryFeeNum, uint16 _feeDenominator) external override onlyGov {
+  function updateFees(uint256 _perpFeeNum, uint256 _expiryFeeNum, uint256 _feeDenominator) external override onlyGov {
     require(_feeDenominator > 0, "CoverPool: denominator cannot be 0");
     require(_feeDenominator > _perpFeeNum && _feeDenominator > _expiryFeeNum, "CoverPool: must < 100%");
     perpFeeNum = _perpFeeNum;
