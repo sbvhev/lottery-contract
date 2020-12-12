@@ -198,7 +198,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     uint256[] calldata _payoutNumerators,
     uint256 _payoutDenominator
   ) external override onlyApprovedDecider {
-    require( _nonce == getCoverPoolNonce(_coverPool), "COVER_CM: input nonce != coverPool nonce");
+    require(_nonce == getCoverPoolNonce(_coverPool), "COVER_CM: input nonce != coverPool nonce");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
     _validateClaimState(claim);
 
@@ -207,23 +207,23 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       _validatePayoutNums(_exploitAssets, _payoutNumerators, _payoutDenominator);
 
       claim.state = ClaimState.Accepted;
+      claim.payoutAssetList = _exploitAssets;
       claim.payoutNumerators = _payoutNumerators;
       claim.payoutDenominator = _payoutDenominator;
       feeCurrency.safeTransfer(claim.filedBy, claim.feePaid);
       _resetCoverPoolClaimFee(_coverPool);
-      ICoverPool(_coverPool).enactClaim(
-        _exploitAssets,
-        _payoutNumerators,
-        _payoutDenominator,
-        claim.incidentTimestamp,
-        _nonce
-      );
+      _enactClaim(_coverPool, _nonce, claim);
     } else {
+      require(_getTotalNum(_payoutNumerators) == 0, "COVER_CM: claim denied (default if passed window), but payoutNumerator != 0");
       claim.state = ClaimState.Denied;
       feeCurrency.safeTransfer(treasury, claim.feePaid);
     }
     claim.decidedTimestamp = uint48(block.timestamp);
     emit ClaimUpdate(_coverPool, claim.state, _nonce, _index);
+  }
+
+  function _enactClaim(address _coverPool, uint256 _nonce, Claim memory claim) private {
+    ICoverPool(_coverPool).enactClaim(claim.payoutAssetList, claim.payoutNumerators, claim.payoutDenominator, claim.incidentTimestamp, _nonce);
   }
 
   /// @notice Get all claims for coverPool `_coverPool` and nonce `_nonce` in state `_state`
@@ -282,13 +282,21 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     uint256[] calldata _payoutNumerators,
     uint256 _payoutDenominator
   ) private view {
-    require(_payoutAssetList.length > _payoutNumerators.length, "CoverPool: payout assets len don't match");
-    uint256 totalNum;
-    for (uint256 i = 0; i < _payoutAssetList.length; i++) {
-      totalNum = totalNum.add(_payoutNumerators[i]);
-    }
+    require(_payoutAssetList.length == _payoutNumerators.length, "CoverPool: payout assets len don't match");
+    uint256 totalNum = _getTotalNum(_payoutNumerators);
+
     require(totalNum > 0, "CoverPool: claim accepted, but payoutNumerator == 0");
-    require(allowPartialClaim ? totalNum <= _payoutDenominator : totalNum == _payoutDenominator, "CoverPool: payout % is not in (0%, 100%]");
+    if (allowPartialClaim) {
+      require(totalNum <= _payoutDenominator, "CoverPool: payout % is not in (0%, 100%]");
+    } else {
+      require(totalNum == _payoutDenominator, "CoverPool: no partial payout % is not in 100%");
+    }
+  }
+
+  function _getTotalNum(uint256[] calldata _payoutNumerators) private pure returns (uint256 _totalNum) {
+    for (uint256 i = 0; i < _payoutNumerators.length; i++) {
+      _totalNum = _totalNum.add(_payoutNumerators[i]);
+    }
   }
 
   function _validateClaimState(Claim memory claim) private view {
