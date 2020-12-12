@@ -81,17 +81,17 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
     return (name, expiry, collateral, claimNonce, claimCovTokens, noclaimCovToken);
   }
 
-  function viewClaimable() external view override returns (uint256 totalAmount) {
+  function viewClaimable() external view override returns (uint256 eligibleAmount) {
     ICoverPool.ClaimDetails memory claim = _claimDetails();
     for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
       uint256 amount = covToken.balanceOf(msg.sender);
-      totalAmount = totalAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
+      eligibleAmount = eligibleAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
     }
     if (claim.payoutTotalNum < claim.payoutDenominator) {
       uint256 amount = noclaimCovToken.balanceOf(msg.sender);
       uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
-      totalAmount = totalAmount.add(payoutAmount);
+      eligibleAmount = eligibleAmount.add(payoutAmount);
     }
   }
 
@@ -114,23 +114,23 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
     require(claim.incidentTimestamp <= expiry, "CoverWithExpiry: not eligible, redeem collateral instead");
     require(block.timestamp >= uint256(claim.claimEnactedTimestamp).add(coverPool.claimRedeemDelay()), "CoverWithExpiry: not ready");
 
-    uint256 totalAmount;
+    uint256 eligibleAmount;
     for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
       uint256 amount = covToken.balanceOf(msg.sender);
-      totalAmount = totalAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
+      eligibleAmount = eligibleAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
       covToken.burnByCover(msg.sender, amount);
     }
 
     if (claim.payoutTotalNum < claim.payoutDenominator) {
       uint256 amount = noclaimCovToken.balanceOf(msg.sender);
       uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
-      totalAmount = totalAmount.add(payoutAmount);
+      eligibleAmount = eligibleAmount.add(payoutAmount);
       noclaimCovToken.burnByCover(msg.sender, amount);
     }
 
-    require(totalAmount > 0, "CoverWithExpiry: low covToken balance");
-    _payCollateral(msg.sender, totalAmount);
+    require(eligibleAmount > 0, "CoverWithExpiry: low covToken balance");
+    _payCollateral(msg.sender, eligibleAmount);
   }
 
   /// @notice redeem collateral, only when no claim accepted. If expired (with or withour claim), _amount is not respected

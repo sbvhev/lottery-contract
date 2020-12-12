@@ -93,17 +93,17 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     return (name, rolloverPeriod, createdAt, collateral, claimNonce, claimCovTokens, noclaimCovToken);
   }
 
-  function viewClaimable() external view override returns (uint256 totalAmount) {
+  function viewClaimable() external view override returns (uint256 eligibleAmount) {
     ICoverPool.ClaimDetails memory claim = _claimDetails();
     for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
       uint256 amount = covToken.balanceOf(msg.sender);
-      totalAmount = totalAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
+      eligibleAmount = eligibleAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
     }
     if (claim.payoutTotalNum < claim.payoutDenominator) {
       uint256 amount = noclaimCovToken.balanceOf(msg.sender);
       uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
-      totalAmount = totalAmount.add(payoutAmount);
+      eligibleAmount = eligibleAmount.add(payoutAmount);
     }
   }
 
@@ -190,12 +190,12 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     ICoverPool.ClaimDetails memory claim = _claimDetails();
     require(block.timestamp >= uint256(claim.claimEnactedTimestamp).add(coverPool.claimRedeemDelay()), "PerpCover: not ready");
 
-    uint256 totalAmount;
+    uint256 eligibleAmount;
     uint256 totalDebt;
     for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
       uint256 amount = covToken.balanceOf(msg.sender);
-      totalAmount = totalAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
+      eligibleAmount = eligibleAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
       covToken.burnByCover(msg.sender, amount);
       uint256 remSupply = covToken.totalSupply();
       totalDebt = totalDebt.add(remSupply.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
@@ -205,14 +205,14 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
       uint256 amount = noclaimCovToken.balanceOf(msg.sender);
       uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
       noclaimCovToken.burnByCover(msg.sender, amount);
-      totalAmount = totalAmount.add(payoutAmount);
+      eligibleAmount = eligibleAmount.add(payoutAmount);
       uint256 totalNoclaimDebt = noclaimCovToken.totalSupply().mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
       totalDebt = totalDebt.add(totalNoclaimDebt);
     }
-    require(totalAmount > 0, "PerpCover: amount is 0");
+    require(eligibleAmount > 0, "PerpCover: amount is 0");
 
     updateFeeFactor();
-    _payAmount(msg.sender, totalAmount);
+    _payAmount(msg.sender, eligibleAmount);
     _sendAccuFeesToTreasury(totalDebt);
   }
 
