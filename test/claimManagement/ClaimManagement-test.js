@@ -242,15 +242,12 @@ describe("ClaimManagement", function () {
     await expect(management.connect(governanceAccount).decideClaim(coverPool.address, 1, 1, true, EXPLOIT_ASSETS, [1], 1)).to.be.reverted;
   });
 
-  it("Should deny claim if window passed and claimIsAccepted = false", async function () {
+  it("Should deny claim if window passed", async function () {
     await management.connect(governanceAccount).decideClaim(coverPool.address, 1, 1, false, EXPLOIT_ASSETS, [0], 1);
     const claim = await management.getCoverPoolClaims(coverPool.address, 1, 1);
     expect(claim.state).to.equal(state.denied);
     expect(claim.decidedTimestamp).to.greaterThan(0);
     expect(claim.payoutNumerators[0]).to.equal(0);
-  });
-
-  it("Should deny claim if window passed even if pass in true for claimIsAccepted", async function () {
     await management.connect(governanceAccount).decideClaim(coverPool.address, 1, 2, true, EXPLOIT_ASSETS, [0], 1);
   });
 });
