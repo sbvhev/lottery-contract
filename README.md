@@ -8,4 +8,3 @@
 * Run `npx hardhat node` to setup a local blockchain emulator in one terminal.
 * `npx hardhat test --network localhost` run tests in a new terminal.
  **`npx hardhat node` restart required after full test run.** As the blockchain timestamp has changed.
-* To test `ClaimManagement`, comment out tests 3, 4, 5.

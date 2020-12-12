@@ -8,9 +8,7 @@ describe("ClaimManagement", function () {
   const EXPLOIT_ASSETS = [consts.PROTOCOL_NAME];
   const DESC = "Binance is hacked.";
 
-  const timestamp = Math.round(new Date().getTime() / 1000);
-  // allowed timestamps: [1/1/2020, 31/12/2050, 1/1/2100] UTC
-  const TIMESTAMPS = [1580515200000, 2556057600000, 4105123200000];
+  let timestamp;
   const state = {
     filed: 0,
     forceFiled: 1,
@@ -25,6 +23,7 @@ describe("ClaimManagement", function () {
   let management, coverPool, dai, coverPoolFactory;
 
   before(async () => {
+    timestamp = (await time.latest()).toNumber();
     ({ownerAccount, ownerAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress, auditorAccount, auditorAddress} = await getAccounts());
     ({CoverPoolFactory, CoverPool, perpCoverImpl, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
 
@@ -38,7 +37,7 @@ describe("ClaimManagement", function () {
     COLLATERAL = dai.address;
 
     // add coverPool through coverPool factory
-    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, [consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], COLLATERAL, TIMESTAMPS, consts.ALLOWED_EXPIRY_NAMES);
+    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, [consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], COLLATERAL, consts.CM_TIMESTAMPS, consts.ALLOWED_EXPIRY_NAMES);
     await tx;
     coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_2));
 
@@ -237,7 +236,7 @@ describe("ClaimManagement", function () {
   });
   
   it("Should revert if try to validate claim with payoutNumerator > 0 after window passed", async function () {
-    await time.increaseTo(TIMESTAMPS[1]);
+    await time.increaseTo(consts.CM_TIMESTAMPS[1]);
     await time.advanceBlock();
     await expect(management.connect(governanceAccount).decideClaim(coverPool.address, 1, 1, true, EXPLOIT_ASSETS, [1], 1)).to.be.reverted;
   });
