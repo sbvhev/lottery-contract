@@ -102,16 +102,16 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     }
   }
 
-  /**********************************************************************************
-  // @notice Fee factor is the multiplier (for minting) for any given time period. //
-  // e.g. if fee never change (f), feeFactor = 1 / (1 - f)^M                       //
-  //                   __                                                          //
-  //                   ||              /      fee numerator at i     \             //
-  //   feeFactor = 1 / ||             | 1 - ------------------------  |            //
-  //                   ||(i in [0-M])  \      fee denominator at i   /             //
-  //                   --                                                          //
-  // M = seconds passed since creation                                             //
-  **********************************************************************************/
+  /*******************************************************************************************
+  // @notice Fee factor is the compounding fee multiplier for any given time period.        //
+  // e.g. if fee never change (f), feeFactor = 1 / (1 - f)^M                                //
+  //                   __                                                                   //
+  //                   ||              /      fee numerator at i     \                      //
+  //   feeFactor = 1 / ||             | 1 - ------------------------  |                     //
+  //                   ||(i in [0-M])  \      fee denominator at i   /                      //
+  //                   --                                                                   //
+  // M = seconds passed since creation                                                      //
+  *******************************************************************************************/
   function updateFeeFactor() public {
     (uint256 feeNumerator,, uint256 poolFeeDenominator, uint256 _poolUpdatedAt) = ICoverPool(owner()).getRedeemFees();
 
