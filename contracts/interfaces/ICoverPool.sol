@@ -44,6 +44,7 @@ interface ICoverPool {
   function perpCoverMap(address _collateral) external view returns (address);
 
   // extra view
+  function getAssetList() external view returns (bytes32[] memory _assetList);
   function getCoverPoolDetails()
     external view returns (
       bytes32 _name,
