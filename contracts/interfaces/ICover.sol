@@ -16,7 +16,7 @@ interface ICover {
   function noclaimCovToken() external view returns (ICoverERC20);
   function name() external view returns (string memory);
   function claimNonce() external view returns (uint256);
-  function viewClaimable() external view returns (uint256 _eligibleAmount);
+  function viewClaimable(address _account) external view returns (uint256 _eligibleAmount);
 
   // user action
   /// @notice redeem func when there is a claim on the cover, aka. the cover is affected

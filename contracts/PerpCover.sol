@@ -90,15 +90,15 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     return (name, createdAt, collateral, claimNonce, claimCovTokens, noclaimCovToken);
   }
 
-  function viewClaimable() external view override returns (uint256 eligibleAmount) {
+  function viewClaimable(address _account) external view override returns (uint256 eligibleAmount) {
     ICoverPool.ClaimDetails memory claim = _claimDetails();
     for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
-      uint256 amount = covToken.balanceOf(msg.sender);
+      uint256 amount = covToken.balanceOf(_account);
       eligibleAmount = eligibleAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
     }
     if (claim.payoutTotalNum < claim.payoutDenominator) {
-      uint256 amount = noclaimCovToken.balanceOf(msg.sender);
+      uint256 amount = noclaimCovToken.balanceOf(_account);
       uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
       eligibleAmount = eligibleAmount.add(payoutAmount);
     }

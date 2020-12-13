@@ -37,6 +37,7 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
   address public override collateral;
   ICoverERC20 public override noclaimCovToken;
   uint256 public override claimNonce;
+  uint256 public duration;
   ICoverERC20[] public override claimCovTokens;
   mapping(bytes32 => ICoverERC20) public claimCovTokenMap;
 
@@ -44,15 +45,16 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
   function initialize (
     string calldata _name,
     bytes32[] calldata _assetList,
-    uint48 _timestamp,
+    uint48 _expiry,
     address _collateral,
     uint256 _claimNonce
   ) public initializer {
     initializeOwner();
     name = _name;
-    expiry = _timestamp;
+    expiry = _expiry;
     collateral = _collateral;
     claimNonce = _claimNonce;
+    duration = uint256(_expiry).sub(block.timestamp);
 
     for (uint i = 0; i < _assetList.length; i++) {
       ICoverERC20 claimToken;
@@ -81,15 +83,15 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
     return (name, expiry, collateral, claimNonce, claimCovTokens, noclaimCovToken);
   }
 
-  function viewClaimable() external view override returns (uint256 eligibleAmount) {
+  function viewClaimable(address _account) external view override returns (uint256 eligibleAmount) {
     ICoverPool.ClaimDetails memory claim = _claimDetails();
     for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
-      uint256 amount = covToken.balanceOf(msg.sender);
+      uint256 amount = covToken.balanceOf(_account);
       eligibleAmount = eligibleAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
     }
     if (claim.payoutTotalNum < claim.payoutDenominator) {
-      uint256 amount = noclaimCovToken.balanceOf(msg.sender);
+      uint256 amount = noclaimCovToken.balanceOf(_account);
       uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
       eligibleAmount = eligibleAmount.add(payoutAmount);
     }
@@ -184,7 +186,7 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
   function _payCollateral(address _receiver, uint256 _amount) private {
     ICoverPoolFactory factory = ICoverPoolFactory(_factory());
     (,uint256 expiryFeeNum, uint256 feeDenominator,) = ICoverPool(owner()).getRedeemFees();
-    uint256 fee = _amount.mul(expiryFeeNum).div(feeDenominator);
+    uint256 fee = _amount.mul(expiryFeeNum).div(feeDenominator).mul(duration).div(365 days);
     address treasury = factory.treasury();
     IERC20 collateralToken = IERC20(collateral);
 

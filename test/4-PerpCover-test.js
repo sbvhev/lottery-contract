@@ -184,7 +184,10 @@ describe('PerpCover', function() {
   });
 
   it('Should add perp cover for userB after 30 days and redeem correctly', async function() {
-    const monthInSec = 30 * 24 * 3600;
+    const [feeNum,, feeDen,] = await coverPool.getRedeemFees();
+    const feesPerDay = ETHER_UINT_1.mul(feeNum).div(feeDen).div(365);
+    const daysInSec = 24 * 60 * 60;
+    const monthInSec = 30 * daysInSec;
     const currentTime = await time.latest();
     await time.increaseTo(currentTime.toNumber() + monthInSec);
     await time.advanceBlock();
@@ -192,10 +195,12 @@ describe('PerpCover', function() {
     await expect(coverPool.connect(userBAccount).addPerpCover(COLLATERAL, ETHER_UINT_20)).to.emit(coverPool, 'CoverAdded');
 
     const noclaimCovToken = CoverERC20.attach(await cover.noclaimCovToken());
+    const extraNoClaimForBMin = ETHER_UINT_20.mul(feesPerDay).div(ETHER_UINT_1).mul(30);
+    const extraNoClaimForBMax = ETHER_UINT_20.mul(feesPerDay).div(ETHER_UINT_1).mul(31);
     const userBNoclaimBal = await noclaimCovToken.balanceOf(userBAddress);
     // user B should receive more covTokens than depositted amount to compensate the fees
-    expect(userBNoclaimBal).to.gt(ETHER_UINT_20.add(ETHER_UINT_20.mul(9).div(10000)));
-    expect(userBNoclaimBal).to.lt(ETHER_UINT_20.add(ETHER_UINT_20.mul(11).div(10000)));
+    expect(userBNoclaimBal).to.gt(ETHER_UINT_20.add(extraNoClaimForBMin));
+    expect(userBNoclaimBal).to.lt(ETHER_UINT_20.add(extraNoClaimForBMax));
 
     // user A redeem, A minted in period 0
     const treasuryDaiBal = await dai.balanceOf(treasuryAddress);
@@ -205,10 +210,10 @@ describe('PerpCover', function() {
     const userADaiBalAfterA = await dai.balanceOf(userAAddress);
     const treasuryDaiBalAfterA = await dai.balanceOf(treasuryAddress);
 
-    const feeFromUserAMin = ETHER_UINT_10.mul(9).div(10000);
-    const feeFromUserAMax = ETHER_UINT_10.mul(11).div(10000);
-    const feeFromUserBMin = ETHER_UINT_20.mul(10).div(10000).div(monthInSec);
-    const feeFromUserBMax = ETHER_UINT_20.mul(10).div(10000).div(monthInSec).mul(10);
+    const feeFromUserAMin = ETHER_UINT_10.mul(feesPerDay).div(ETHER_UINT_1).mul(29);
+    const feeFromUserAMax = ETHER_UINT_10.mul(feesPerDay).div(ETHER_UINT_1).mul(31);
+    const feeFromUserBMin = ETHER_UINT_20.mul(feesPerDay).div(ETHER_UINT_1).div(daysInSec);
+    const feeFromUserBMax = ETHER_UINT_20.mul(feesPerDay).div(ETHER_UINT_1);
 
     // User A will have no dust
     expect(userADaiBalAfterA.sub(userADaiBal)).to.gt(ETHER_UINT_10.sub(feeFromUserAMax));

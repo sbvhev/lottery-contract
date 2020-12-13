@@ -101,9 +101,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     // set default delay for redeem
     claimRedeemDelay = 2 days;
     noclaimRedeemDelay = 10 days;
-    perpFeeNum = 12; // fee per rollover period for perp cover, around 0.13% per month
-    expiryFeeNum = 12; // 0 to 65,535, 0.2% per expiry
-    feeDenominator = 1000; // 0 to 65,535
+    perpFeeNum = 60; // 0.6% yearly rate
+    expiryFeeNum = 60; // 0.6% yearly rate
+    feeDenominator = 10000; // 0 to 65,535
     feeUpdatedAt = block.timestamp;
     isActive = true;
   }
