@@ -11,11 +11,9 @@ import "./ICoverERC20.sol";
  */
 interface IPerpCover is ICover {
   function createdAt() external view returns (uint256);
-  function rolloverPeriod() external view returns (uint256);
   function getCoverDetails()
     external view returns (
       string memory _name,
-      uint256 _rolloverPeriod,
       uint256 _createdAt,
       address _collateral,
       uint256 _claimNonce,

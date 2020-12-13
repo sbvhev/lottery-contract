@@ -10,6 +10,7 @@ describe('PerpCover', function() {
   const ETHER_UINT_10 = ethers.utils.parseEther('10');
   const ETHER_UINT_6 = ethers.utils.parseEther('6');
   const ETHER_UINT_4 = ethers.utils.parseEther('4');
+  const ETHER_UINT_1 = ethers.utils.parseEther('1');
   const ETHER_UINT_DUST = ethers.utils.parseEther('0.0000000001');
 
   let startTimestamp, TIMESTAMP, TIMESTAMP_NAME, COLLATERAL;
@@ -58,9 +59,8 @@ describe('PerpCover', function() {
   });
 
   it('Should initialize correct state variables', async function() {
-    const [name, rolloverPeriod, createdAt, collateral, claimNonce, claimCovTokens, noclaimCovToken] = await cover.getCoverDetails();
+    const [name, createdAt, collateral, claimNonce, claimCovTokens, noclaimCovToken] = await cover.getCoverDetails();
     expect(name).to.equal(NAME);
-    expect(rolloverPeriod.toNumber()).to.equal(30 * 24 * 60 * 60); // 30 days
     expect(createdAt).to.gt(startTimestamp);
     expect(collateral).to.equal(COLLATERAL);
     expect(claimNonce).to.equal(0);
@@ -93,32 +93,32 @@ describe('PerpCover', function() {
     const collateralBalanceBefore = await dai.balanceOf(userAAddress);
     await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
 
-    const claimCovTokenAddress = await cover.claimCovTokens(0);
-    const noclaimCovTokenAddress = await cover.noclaimCovToken();
-    expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(0);
-    expect(await CoverERC20.attach(noclaimCovTokenAddress).totalSupply()).to.equal(0);
-    expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
-    expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
+    const claimCovToken = CoverERC20.attach(await cover.claimCovTokens(0));
+    const noclaimCovToken = CoverERC20.attach(await cover.noclaimCovToken());
+    expect(await claimCovToken.totalSupply()).to.equal(0);
+    expect(await noclaimCovToken.totalSupply()).to.equal(0);
+    expect(await claimCovToken.balanceOf(userAAddress)).to.equal(0);
+    expect(await noclaimCovToken.balanceOf(userAAddress)).to.equal(0);
     expect(await dai.balanceOf(cover.address)).to.equal(0);
-    const [num, , den, ] = await coverPool.getRedeemFees();
-    const fee = ETHER_UINT_10.mul(num).div(den);
+    const feeFactor = await cover.feeFactor();
+    const DECIMAL = await cover.DECIMAL();
+    const fee = ETHER_UINT_10.sub(ETHER_UINT_10.mul(DECIMAL).div(feeFactor));
     expect(await dai.balanceOf(treasuryAddress)).to.equal(fee);
     expect(await dai.balanceOf(userAAddress)).to.equal(collateralBalanceBefore.add(ETHER_UINT_10).sub(fee));
   });
 
   it('Should redeem collateral(0 fee) without accepted claim', async function() {
     await coverPool.connect(governanceAccount).updateFees(0, 0, 1);
-    const collateralBalanceBefore = await dai.balanceOf(userAAddress);
+    await coverPool.connect(userBAccount).addPerpCover(COLLATERAL, ETHER_UINT_10);
+    const collateralUserBBefore = await dai.balanceOf(userBAddress);
     const collateralTreasuryBefore = await dai.balanceOf(treasuryAddress);
-    await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
+    const claimCovToken = CoverERC20.attach(await cover.claimCovTokens(0));
+    const noclaimCovToken = CoverERC20.attach(await cover.noclaimCovToken());
+    await cover.connect(userBAccount).redeemCollateral(await claimCovToken.balanceOf(userBAddress));
 
-    const claimCovTokenAddress = await cover.claimCovTokens(0);
-    const noclaimCovTokenAddress = await cover.noclaimCovToken();
-    expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(0);
-    expect(await CoverERC20.attach(noclaimCovTokenAddress).totalSupply()).to.equal(0);
-    expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
-    expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
-    expect(await dai.balanceOf(userAAddress)).to.equal(collateralBalanceBefore.add(ETHER_UINT_10));
+    expect(await claimCovToken.balanceOf(userBAddress)).to.equal(0);
+    expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(0);
+    expect((await dai.balanceOf(userBAddress)).sub(collateralUserBBefore.add(ETHER_UINT_10))).to.lt(ETHER_UINT_DUST);
     expect(await dai.balanceOf(treasuryAddress)).to.equal(collateralTreasuryBefore);
   });
 
@@ -156,22 +156,24 @@ describe('PerpCover', function() {
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber());
     await time.advanceBlock();
 
-    const claimCovTokenAddress = await cover.claimCovTokenMap(consts.PROTOCOL_NAME);
-    const claimCovTokenAddress2 = await cover.claimCovTokenMap(consts.PROTOCOL_NAME_2);
-    const noclaimCovTokenAddress = await cover.noclaimCovToken();
+    const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.PROTOCOL_NAME));
+    const claimCovToken2 = CoverERC20.attach(await cover.claimCovTokenMap(consts.PROTOCOL_NAME_2));
+    const noclaimCovToken = CoverERC20.attach(await cover.noclaimCovToken());
     const aDaiBalance = await dai.balanceOf(userAAddress);
     await cover.connect(userAAccount).redeemClaim();
 
-    expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(0);
-    expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
-    expect(await CoverERC20.attach(claimCovTokenAddress2).totalSupply()).to.equal(0);
-    expect(await CoverERC20.attach(claimCovTokenAddress2).balanceOf(userAAddress)).to.equal(0);
-    expect(await CoverERC20.attach(noclaimCovTokenAddress).totalSupply()).to.equal(0);
-    expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
+    expect(await claimCovToken.totalSupply()).to.equal(0);
+    expect(await claimCovToken.balanceOf(userAAddress)).to.equal(0);
+    expect(await claimCovToken2.totalSupply()).to.equal(0);
+    expect(await claimCovToken2.balanceOf(userAAddress)).to.equal(0);
+    expect(await noclaimCovToken.totalSupply()).to.equal(0);
+    expect(await noclaimCovToken.balanceOf(userAAddress)).to.equal(0);
     expect(await dai.balanceOf(cover.address)).to.equal(0);
 
-    const [num, , den] = await coverPool.getRedeemFees();
-    expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(ETHER_UINT_10).sub(ETHER_UINT_10.mul(num).div(den)));
+    const feeFactor = await cover.feeFactor();
+    const DECIMAL = await cover.DECIMAL();
+    const fee = ETHER_UINT_10.sub(ETHER_UINT_10.mul(DECIMAL).div(feeFactor));
+    expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(ETHER_UINT_10).sub(fee));
   });
 
   it('Should NOT redeemClaim after enact if does not have claim token', async function() {
@@ -181,108 +183,102 @@ describe('PerpCover', function() {
     await expect(cover.connect(userBAccount).redeemClaim()).to.be.reverted;
   });
 
-  it('Should add perp cover for userB after 2 rollover periods and redeem correctly', async function() {
+  it('Should add perp cover for userB after 30 days and redeem correctly', async function() {
+    const monthInSec = 30 * 24 * 3600;
     const currentTime = await time.latest();
-    const rolloverPeriod = await coverPool.rolloverPeriod();
-    await time.increaseTo(currentTime.toNumber() + 2 * rolloverPeriod.toNumber());
+    await time.increaseTo(currentTime.toNumber() + monthInSec);
     await time.advanceBlock();
 
     await expect(coverPool.connect(userBAccount).addPerpCover(COLLATERAL, ETHER_UINT_20)).to.emit(coverPool, 'CoverAdded');
-    
-    const noclaimCovTokenAddress = await cover.noclaimCovToken();
-    const [num, , den] = await coverPool.getRedeemFees();
-    const noclaimCovToken = CoverERC20.attach(noclaimCovTokenAddress);
+
+    const noclaimCovToken = CoverERC20.attach(await cover.noclaimCovToken());
     const userBNoclaimBal = await noclaimCovToken.balanceOf(userBAddress);
     // user B should receive more covTokens than depositted amount to compensate the fees
-    // check user B balance
-    const feeFactorPP = den / (den - num);
-    const nclaimdUserB = ETHER_UINT_20.mul(ethers.utils.parseEther((feeFactorPP**2).toString())).div(ethers.utils.parseEther('1'));
-    expect(userBNoclaimBal.sub(nclaimdUserB)).to.lt(ETHER_UINT_DUST);
+    expect(userBNoclaimBal).to.gt(ETHER_UINT_20.add(ETHER_UINT_20.mul(9).div(10000)));
+    expect(userBNoclaimBal).to.lt(ETHER_UINT_20.add(ETHER_UINT_20.mul(11).div(10000)));
 
     // user A redeem, A minted in period 0
     const treasuryDaiBal = await dai.balanceOf(treasuryAddress);
     const userADaiBal = await dai.balanceOf(userAAddress);
+    const userBDaiBal = await dai.balanceOf(userBAddress);
     await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
     const userADaiBalAfterA = await dai.balanceOf(userAAddress);
     const treasuryDaiBalAfterA = await dai.balanceOf(treasuryAddress);
 
-    const redeemedA = ETHER_UINT_10.mul(ethers.utils.parseEther('1')).div(ethers.utils.parseEther((feeFactorPP**3).toString()));
-    const feeFromUserA = ETHER_UINT_10.sub(redeemedA);
-    const redeemedB = ETHER_UINT_20.mul(ethers.utils.parseEther('1')).div(ethers.utils.parseEther((feeFactorPP).toString()));
-    const feeFromUserB = ETHER_UINT_20.sub(redeemedB);
+    const feeFromUserAMin = ETHER_UINT_10.mul(9).div(10000);
+    const feeFromUserAMax = ETHER_UINT_10.mul(11).div(10000);
+    const feeFromUserBMin = ETHER_UINT_20.mul(10).div(10000).div(monthInSec);
+    const feeFromUserBMax = ETHER_UINT_20.mul(10).div(10000).div(monthInSec).mul(10);
 
     // User A will have no dust
-    expect(userADaiBalAfterA.sub(userADaiBal).sub(redeemedA)).to.lt(ETHER_UINT_DUST);
+    expect(userADaiBalAfterA.sub(userADaiBal)).to.gt(ETHER_UINT_10.sub(feeFromUserAMax));
+    expect(userADaiBalAfterA.sub(userADaiBal)).to.lt(ETHER_UINT_10.sub(feeFromUserAMin));
     // fees received should be from both A and B, but less than total due to the buffer
-    expect(treasuryDaiBalAfterA.sub(treasuryDaiBal)).to.gt(feeFromUserA);
-    expect(treasuryDaiBalAfterA.sub(treasuryDaiBal)).to.lt(feeFromUserA.add(feeFromUserB));
+    expect(treasuryDaiBalAfterA.sub(treasuryDaiBal)).to.gt(feeFromUserAMin);
+    expect(treasuryDaiBalAfterA.sub(treasuryDaiBal)).to.lt(feeFromUserAMax);
 
-    // redeem half of balance User B
-    const userBDaiBal = await dai.balanceOf(userBAddress);
-    await cover.connect(userBAccount).redeemCollateral(userBNoclaimBal.div(2));
-    const userBDaiBalAfterB = await dai.balanceOf(userBAddress);
-    const treasuryDaiBalAfterB = await dai.balanceOf(treasuryAddress);
-    // since fees are sent from above redeem, no fees to send in this one
-    expect(treasuryDaiBalAfterB.sub(treasuryDaiBalAfterA)).to.equal(0);
-    // user B should receive half of deposit - one round of fee, there are some dust
-    expect(userBDaiBalAfterB.sub(userBDaiBal).sub(ETHER_UINT_10.sub(ETHER_UINT_10.mul(num).div(den)))).to.lt(ETHER_UINT_DUST);
+    // redeem for user B, cover is empty
+    await cover.connect(userBAccount).redeemCollateral(userBNoclaimBal);
+    const userBDaiBalAfter = await dai.balanceOf(userBAddress);
+    expect(userBDaiBalAfter.sub(userBDaiBal)).to.gt(ETHER_UINT_20.sub(feeFromUserBMax));
+    expect(userBDaiBalAfter.sub(userBDaiBal)).to.lt(ETHER_UINT_20.sub(feeFromUserBMin));
     
-    // redeem all left from user B, cover is empty
-    const userBNoclaimBal2 = await noclaimCovToken.balanceOf(userBAddress);
-    await cover.connect(userBAccount).redeemCollateral(userBNoclaimBal2);
-    const userBDaiBal2After = await dai.balanceOf(userBAddress);
-    expect(userBDaiBal2After.sub(userBDaiBal).sub(ETHER_UINT_20.sub(feeFromUserB))).to.lt(ETHER_UINT_DUST);
-    expect(await dai.balanceOf(cover.address)).to.equal(0);
     // last redeem, collect all to treasury
-    expect((await dai.balanceOf(treasuryAddress)).sub(treasuryDaiBalAfterB)).to.gt(0);
+    expect(await dai.balanceOf(cover.address)).to.equal(0);
+    expect((await dai.balanceOf(treasuryAddress)).sub(treasuryDaiBalAfterA)).to.gt(0);
   });
 
   it('Should allow redeem claim with multi-period mint users', async function() {
+    const [feeNum,, feeDen,] = await coverPool.getRedeemFees();
+    const feesPerDay = ETHER_UINT_1.mul(feeNum).div(feeDen).div(365);
+    const daysInSec = 24 * 60 * 60;
+
     const currentTime = await time.latest();
-    const rolloverPeriod = await coverPool.rolloverPeriod();
-    await time.increaseTo(currentTime.toNumber() + 3 * rolloverPeriod.toNumber());
+    await time.increaseTo(currentTime.toNumber() + 3 * daysInSec);
     await time.advanceBlock();
-
     await expect(coverPool.connect(userBAccount).addPerpCover(COLLATERAL, ETHER_UINT_20)).to.emit(coverPool, 'CoverAdded');
-    const [num, , den] = await coverPool.getRedeemFees();
-    const feeFactorPP = den / (den - num);
-    const redeemedA = ETHER_UINT_10.mul(ethers.utils.parseEther('1')).div(ethers.utils.parseEther((feeFactorPP**4).toString()));
-    const feeFromUserA = ETHER_UINT_10.sub(redeemedA);
-    const redeemedB = ETHER_UINT_20.mul(ethers.utils.parseEther('1')).div(ethers.utils.parseEther((feeFactorPP).toString()));
-    const feeFromUserB = ETHER_UINT_20.sub(redeemedB);
-    const treaBal = await dai.balanceOf(treasuryAddress);
-
     const txA = await coverPool.connect(claimManager).enactClaim([consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], [40, 20], 100, startTimestamp, 0);
     await txA.wait();
-
     const [,,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
     const delay = await coverPool.claimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber());
     await time.advanceBlock();
+    
+    const feeFromUserAMin = ETHER_UINT_10.mul(feesPerDay).div(ETHER_UINT_1).mul(4); // 5 days fees
+    const feeFromUserAMax = ETHER_UINT_10.mul(feesPerDay).div(ETHER_UINT_1).mul(6); // 5 days fees
+    const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.PROTOCOL_NAME));
+    const claimCovToken2 = CoverERC20.attach(await cover.claimCovTokenMap(consts.PROTOCOL_NAME_2));
+    const noclaimCovToken = CoverERC20.attach(await cover.noclaimCovToken());
+    const treaBal = await dai.balanceOf(treasuryAddress);
 
-    const claimCovTokenAddress = await cover.claimCovTokenMap(consts.PROTOCOL_NAME);
-    const claimCovTokenAddress2 = await cover.claimCovTokenMap(consts.PROTOCOL_NAME_2);
-    const noclaimCovTokenAddress = await cover.noclaimCovToken();
+    // verify redeem User A
     const aDaiBalance = await dai.balanceOf(userAAddress);
     await cover.connect(userAAccount).redeemClaim();
+    const aDaiBalanceAfter = await dai.balanceOf(userAAddress);
+    expect(await claimCovToken.balanceOf(userAAddress)).to.equal(0);
+    expect(await claimCovToken2.balanceOf(userAAddress)).to.equal(0);
+    expect(await noclaimCovToken.balanceOf(userAAddress)).to.equal(0);
+    expect(aDaiBalanceAfter.sub(aDaiBalance)).to.gt(ETHER_UINT_10.sub(feeFromUserAMax));
+    expect(aDaiBalanceAfter.sub(aDaiBalance)).to.lt(ETHER_UINT_10.sub(feeFromUserAMin));
     
-    expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
-    expect(await CoverERC20.attach(claimCovTokenAddress2).balanceOf(userAAddress)).to.equal(0);
-    expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
-    expect((await dai.balanceOf(userAAddress)).sub(aDaiBalance.add(ETHER_UINT_10).sub(feeFromUserA))).to.lt(ETHER_UINT_DUST);
-    
+    // verify redeem User B
+    const feeFromUserBMin = ETHER_UINT_20.mul(feesPerDay).div(ETHER_UINT_1).mul(1); // 2 days fees
+    const feeFromUserBMax = ETHER_UINT_20.mul(feesPerDay).div(ETHER_UINT_1).mul(3); // 2 days fees
     const bDaiBalance = await dai.balanceOf(userBAddress);
     await cover.connect(userBAccount).redeemClaim();
-    expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userBAddress)).to.equal(0);
-    expect(await CoverERC20.attach(claimCovTokenAddress2).balanceOf(userBAddress)).to.equal(0);
-    expect(await CoverERC20.attach(noclaimCovTokenAddress).balanceOf(userBAddress)).to.equal(0);
-    expect((await dai.balanceOf(userBAddress)).sub(bDaiBalance.add(ETHER_UINT_20).sub(feeFromUserB))).to.lt(ETHER_UINT_DUST);
+    const bDaiBalanceAfter = await dai.balanceOf(userBAddress);
+    expect(await claimCovToken.balanceOf(userBAddress)).to.equal(0);
+    expect(await claimCovToken2.balanceOf(userBAddress)).to.equal(0);
+    expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(0);
+    expect(bDaiBalanceAfter.sub(bDaiBalance)).to.gt(ETHER_UINT_20.sub(feeFromUserBMax));
+    expect(bDaiBalanceAfter.sub(bDaiBalance)).to.lt(ETHER_UINT_20.sub(feeFromUserBMin));
 
     // verify vaults and treasury
-    expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(0);
-    expect(await CoverERC20.attach(claimCovTokenAddress2).totalSupply()).to.equal(0);
-    expect(await CoverERC20.attach(noclaimCovTokenAddress).totalSupply()).to.equal(0);
+    expect(await claimCovToken.totalSupply()).to.equal(0);
+    expect(await claimCovToken2.totalSupply()).to.equal(0);
+    expect(await noclaimCovToken.totalSupply()).to.equal(0);
     expect(await dai.balanceOf(cover.address)).to.equal(0);
-    expect((await dai.balanceOf(treasuryAddress)).sub(treaBal).sub(feeFromUserB.add(feeFromUserA))).to.lt(ETHER_UINT_DUST);
+    expect((await dai.balanceOf(treasuryAddress)).sub(treaBal)).to.gt(feeFromUserBMin.add(feeFromUserAMin));
+    expect((await dai.balanceOf(treasuryAddress)).sub(treaBal)).to.lt(feeFromUserBMax.add(feeFromUserAMax));
   });
 });

@@ -27,7 +27,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
 
   bytes4 private constant COVERWITHEXPIRY_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],uint48,address,uint256)"));
-  bytes4 private constant PERPCOVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint256,bytes32[],address,uint256)"));
+  bytes4 private constant PERPCOVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],address,uint256)"));
   uint256 private perpFeeNum;
   uint256 private expiryFeeNum;
   uint256 private feeDenominator;
@@ -42,8 +42,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   uint256 public override claimRedeemDelay;
   // CoverWithExpiry type only, redeemCollateral is not affected
   uint256 public override noclaimRedeemDelay;
-  // PerpCover only
-  uint256 public override rolloverPeriod;
 
   // only active covers, once there is an accepted claim (enactClaim called successfully), this sets to [].
   address[] public override activeCovers;
@@ -103,11 +101,10 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     // set default delay for redeem
     claimRedeemDelay = 2 days;
     noclaimRedeemDelay = 10 days;
-    perpFeeNum = 10; // fee per rollover period for perp cover
-    expiryFeeNum = 20; // 0 to 65,535
-    feeDenominator = 10000; // 0 to 65,535
+    perpFeeNum = 12; // fee per rollover period for perp cover, around 0.13% per month
+    expiryFeeNum = 12; // 0 to 65,535, 0.2% per expiry
+    feeDenominator = 1000; // 0 to 65,535
     feeUpdatedAt = block.timestamp;
-    rolloverPeriod = 30 days; // default to 30 days
     isActive = true;
   }
 
@@ -120,13 +117,12 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       uint256 _claimNonce,
       uint256 _claimRedeemDelay,
       uint256 _noclaimRedeemDelay,
-      uint256 _rolloverPeriod,
       address[] memory _collaterals,
       uint48[] memory _expiries,
       address[] memory _allCovers,
       address[] memory _allActiveCovers)
   {
-    return (name, isActive, assetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, rolloverPeriod, collaterals, expiries, allCovers, activeCovers);
+    return (name, isActive, assetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, activeCovers);
   }
 
   function getRedeemFees()
@@ -161,7 +157,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       bytes32 salt = keccak256(abi.encodePacked(name, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);
 
-      bytes memory initData = abi.encodeWithSelector(PERPCOVER_INIT_SIGNITURE, coverName, rolloverPeriod, assetList, _collateral, claimNonce);
+      bytes memory initData = abi.encodeWithSelector(PERPCOVER_INIT_SIGNITURE, coverName, assetList, _collateral, claimNonce);
       address perpCoverImpl = ICoverPoolFactory(owner()).perpCoverImpl();
       InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
         perpCoverImpl,
@@ -218,11 +214,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     expiryFeeNum = _expiryFeeNum;
     feeDenominator = _feeDenominator;
     feeUpdatedAt = block.timestamp;
-  }
-
-  function updateRolloverPeriod(uint256 _rolloverPeriod) external override onlyDev {
-    require(_rolloverPeriod > 0, "CoverPool: _rolloverPeriod cannot be 0");
-    rolloverPeriod = _rolloverPeriod;
   }
 
   /// @notice update status or add new collateral
