@@ -89,6 +89,13 @@ describe('CoverPool', () => {
     await expect(coverPool.connect(ownerAccount).updateClaimRedeemDelay(10 * 24 * 60 * 60)).to.be.reverted;
   });
 
+  it('Should delete asset from pool', async () => {
+    await expect(coverPool.deleteAsset(consts.PROTOCOL_NAME)).to.emit(coverPool, 'AssetUpdated')
+    const [assetList, deletedAssetList] = await coverPool.getAssetLists();
+    expect(assetList).to.deep.equal([consts.PROTOCOL_NAME_2]);
+    expect(deletedAssetList).to.deep.equal([consts.PROTOCOL_NAME]);
+  });
+
   it('Should add cover for userA and emit event', async () => {
     await expect(coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10)).to.emit(coverPool, 'CoverAdded')
     const coverAddress = await coverPool.coverWithExpiryMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);

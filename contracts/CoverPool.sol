@@ -50,6 +50,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   uint48[] public override expiries;
   /// @notice list of assets in cover pool
   bytes32[] public override assetList;
+  bytes32[] public override deletedAssetList;
   /// @notice list of every supported collateral, all may not be active.
   address[] public override collaterals;
   // [claimNonce] => accepted ClaimDetails
@@ -132,8 +133,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return (perpFeeNum, expiryFeeNum, feeDenominator, feeUpdatedAt);
   }
 
-  function getAssetList() external view override returns (bytes32[] memory _assetList) {
-    return assetList;
+  function getAssetLists() external view override returns (bytes32[] memory _assetList, bytes32[] memory _deletedAssetList) {
+    return (assetList, deletedAssetList);
   }
 
   function getClaimDetails(uint256 _nonce) external view override returns (ClaimDetails memory) {
@@ -218,6 +219,21 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     expiryFeeNum = _expiryFeeNum;
     feeDenominator = _feeDenominator;
     feeUpdatedAt = block.timestamp;
+  }
+
+  /// @notice delete asset from pool
+  function deleteAsset(bytes32 _asset) external override onlyDev {
+    bytes32[] memory assetListCopy = assetList; //save gas
+    bytes32[] memory newAssetList = new bytes32[](assetListCopy.length - 1);
+    for (uint i = 0; i < assetListCopy.length; i++) {
+      if (_asset != assetListCopy[i]) {
+        newAssetList[newAssetList.length - 1] = assetListCopy[i];
+      } else {
+        deletedAssetList.push(_asset);
+        emit AssetUpdated(_asset, false);
+      }
+    }
+    assetList = newAssetList;
   }
 
   /// @notice update status or add new collateral

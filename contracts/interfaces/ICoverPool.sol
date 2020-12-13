@@ -11,6 +11,8 @@ interface ICoverPool {
   /// @notice emit when a claim against the coverPool is accepted
   event ClaimAccepted(uint256 _claimNonce);
   event CoverAdded(address indexed _cover, uint256 _amount);
+  /// @notice either delete or add asset
+  event AssetUpdated(bytes32 _asset, bool _isAdd);
 
   struct ExpiryInfo {
     bytes32 name;
@@ -35,6 +37,7 @@ interface ICoverPool {
   /// @notice only used by cover with expiry, redeemCollateral is not affected
   function noclaimRedeemDelay() external view returns (uint256);
   function assetList(uint256 _index) external view returns (bytes32);
+  function deletedAssetList(uint256 _index) external view returns (bytes32);
   function activeCovers(uint256 _index) external view returns (address);
   function collaterals(uint256 _index) external view returns (address);
   function expiries(uint256 _index) external view returns (uint48);
@@ -44,7 +47,7 @@ interface ICoverPool {
   function perpCoverMap(address _collateral) external view returns (address);
 
   // extra view
-  function getAssetList() external view returns (bytes32[] memory _assetList);
+  function getAssetLists() external view returns (bytes32[] memory _assetList, bytes32[] memory _deletedAssetList);
   function getCoverPoolDetails()
     external view returns (
       bytes32 _name,
@@ -78,6 +81,7 @@ interface ICoverPool {
   function setActive(bool _active) external;
   function updateExpiry(uint48 _expiry, bytes32 _expiryName, uint8 _status) external;
   function updateCollateral(address _collateral, uint8 _status) external;
+  function deleteAsset(bytes32 _asset) external;
 
   // access restriction - governance
   function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external;
