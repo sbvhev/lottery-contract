@@ -58,12 +58,8 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
 
     for (uint i = 0; i < _assetList.length; i++) {
       ICoverERC20 claimToken;
-      if (_assetList.length > 1) {
-        string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
-        claimToken = _createCovToken(string(abi.encodePacked("CLAIM_", assetName)));
-      } else {
-        claimToken = _createCovToken("CLAIM");
-      }
+      string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
+      claimToken = _createCovToken(string(abi.encodePacked("CLAIM_", assetName)));
       claimCovTokens.push(claimToken);
       claimCovTokenMap[_assetList[i]] = claimToken;
     }
