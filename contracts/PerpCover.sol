@@ -236,16 +236,21 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     collateralToken.safeTransfer(_receiver, _amount.mul(1e18).div(feeFactor));
   }
 
-  /// @notice 99.9% of (vault Value - debt owed) is send to treasury if > 0.001 ether unit
+  /**
+   * @notice 99.9% of (vault Value - debt owed) is send to treasury if > 0.001 ether unit
+   * debtTotal is 0 when all redeemable covTokens are redeemed.
+   */
   function _sendAccuFeesToTreasury(uint256 _debtTotal) private {
     IERC20 collateralToken = IERC20(collateral);
     ICoverPoolFactory factory = ICoverPoolFactory(_factory());
     address treasury = factory.treasury();
     
+    uint256 vaultWorth = collateralToken.balanceOf(address(this));
     if (_debtTotal == 0) {
-      collateralToken.safeTransfer(treasury, collateralToken.balanceOf(address(this)));
+      collateralToken.safeTransfer(treasury, vaultWorth);
     } else {
-      uint256 accuFees = collateralToken.balanceOf(address(this)).sub(_debtTotal.mul(1e18).div(feeFactor));
+      // accuFees = cover vault worth - debt to be paid
+      uint256 accuFees = vaultWorth.sub(_debtTotal.mul(1e18).div(feeFactor));
       if (accuFees > 0.001 ether) {
         // add a buffer to avoid error caused by + dust to users
         collateralToken.safeTransfer(treasury, accuFees.mul(999).div(1000));
