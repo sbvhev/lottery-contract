@@ -153,10 +153,11 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
         require(_amount <= _noclaimCovToken.balanceOf(msg.sender), "CoverWithExpiry: low NOCLAIM balance");
         _noclaimCovToken.burnByCover(msg.sender, _amount);
 
-        ICoverERC20[] memory claimCovTokensCopy = claimCovTokens; // save gas
-        for (uint i = 0; i < claimCovTokensCopy.length; i++) {
-          require(_amount <= claimCovTokensCopy[i].balanceOf(msg.sender), "CoverWithExpiry: low CLAIM balance");
-          claimCovTokensCopy[i].burnByCover(msg.sender, _amount);
+        (bytes32[] memory assetList,) = coverPool.getAssetLists();
+        for (uint i = 0; i < assetList.length; i++) {
+          ICoverERC20 claimToken = claimCovTokenMap[assetList[i]];
+          require(_amount <= claimToken.balanceOf(msg.sender), "CoverWithExpiry: low CLAIM balance");
+          claimToken.burnByCover(msg.sender, _amount);
         }
         _payCollateral(msg.sender, _amount);
       } else {

@@ -175,8 +175,9 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     ICoverPool coverPool = ICoverPool(owner());
     (bytes32[] memory assetList,) = coverPool.getAssetLists();
     for (uint i = 0; i < assetList.length; i++) {
-      require(_amount <= claimCovTokenMap[assetList[i]].balanceOf(msg.sender), "PerpCover: low CLAIM balance");
-      claimCovTokenMap[assetList[i]].burnByCover(msg.sender, _amount);
+      ICoverERC20 claimToken = claimCovTokenMap[assetList[i]];
+      require(_amount <= claimToken.balanceOf(msg.sender), "PerpCover: low CLAIM balance");
+      claimToken.burnByCover(msg.sender, _amount);
     }
     updateFeeFactor();
     _payAmount(msg.sender, _amount);
