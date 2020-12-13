@@ -159,27 +159,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     IERC20 collateral = IERC20(_collateral);
     require(collateral.balanceOf(msg.sender) >= _amount, "CoverPool: amount > collateral balance");
 
-    address addr = perpCoverMap[_collateral];
+    address addr = _getOrDeployPerpCover(_collateral);
 
-    // Deploy new cover contract if not exist or if claim accepted
-    if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
-      string memory coverName = _getCoverName(collateral.symbol());
-
-      bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
-      bytes32 salt = keccak256(abi.encodePacked(name, _collateral, claimNonce));
-      addr = Create2.deploy(0, salt, bytecode);
-
-      bytes memory initData = abi.encodeWithSelector(PERPCOVER_INIT_SIGNITURE, coverName, assetList, _collateral, claimNonce);
-      address perpCoverImpl = ICoverPoolFactory(owner()).perpCoverImpl();
-      InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
-        perpCoverImpl,
-        IOwnable(owner()).owner(),
-        initData
-      );
-      activeCovers.push(addr);
-      allCovers.push(addr);
-      perpCoverMap[_collateral] = addr;
-    }
     _addCover(collateral, addr, _amount);
   }
 
@@ -195,27 +176,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     IERC20 collateral = IERC20(_collateral);
     require(collateral.balanceOf(msg.sender) >= _amount, "CoverPool: amount > collateral balance");
 
-    address addr = coverWithExpiryMap[_collateral][_expiry];
-
-    // Deploy new cover contract if not exist or if claim accepted
-    if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
-      string memory coverName = _getCoverNameWithTimestamp(_expiry, collateral.symbol());
-
-      bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
-      bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
-      addr = Create2.deploy(0, salt, bytecode);
-
-      bytes memory initData = abi.encodeWithSelector(COVERWITHEXPIRY_INIT_SIGNITURE, coverName, assetList, _expiry, _collateral, claimNonce);
-      address coverImpl = ICoverPoolFactory(owner()).coverImpl();
-      InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
-        coverImpl,
-        IOwnable(owner()).owner(),
-        initData
-      );
-      activeCovers.push(addr);
-      allCovers.push(addr);
-      coverWithExpiryMap[_collateral][_expiry] = addr;
-    }
+    address addr = _getOrDeployCoverWithExpiry(_collateral, _expiry);
     _addCover(collateral, addr, _amount);
   }
 
@@ -346,6 +307,52 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       "_",
       _collateralSymbol
     ));
+  }
+
+  function _getOrDeployCoverWithExpiry(address _collateral, uint48 _expiry) private returns (address addr) {
+    addr = coverWithExpiryMap[_collateral][_expiry];
+
+    // Deploy new cover contract if not exist or if claim accepted
+    if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
+      string memory coverName = _getCoverNameWithTimestamp(_expiry, IERC20(_collateral).symbol());
+
+      bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
+      bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
+      addr = Create2.deploy(0, salt, bytecode);
+
+      bytes memory initData = abi.encodeWithSelector(COVERWITHEXPIRY_INIT_SIGNITURE, coverName, assetList, _expiry, _collateral, claimNonce);
+      address coverImpl = ICoverPoolFactory(owner()).coverImpl();
+      InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
+        coverImpl,
+        IOwnable(owner()).owner(),
+        initData
+      );
+      activeCovers.push(addr);
+      allCovers.push(addr);
+      coverWithExpiryMap[_collateral][_expiry] = addr;
+    }
+  }
+
+  function _getOrDeployPerpCover(address _collateral) private returns (address addr) {
+    addr = perpCoverMap[_collateral];
+    if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
+      string memory coverName = _getCoverName(IERC20(_collateral).symbol());
+
+      bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
+      bytes32 salt = keccak256(abi.encodePacked(name, _collateral, claimNonce));
+      addr = Create2.deploy(0, salt, bytecode);
+
+      bytes memory initData = abi.encodeWithSelector(PERPCOVER_INIT_SIGNITURE, coverName, assetList, _collateral, claimNonce);
+      address perpCoverImpl = ICoverPoolFactory(owner()).perpCoverImpl();
+      InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
+        perpCoverImpl,
+        IOwnable(owner()).owner(),
+        initData
+      );
+      activeCovers.push(addr);
+      allCovers.push(addr);
+      perpCoverMap[_collateral] = addr;
+    }
   }
 
   function _addCover(IERC20 _collateral, address _cover, uint256 _amount) private {
