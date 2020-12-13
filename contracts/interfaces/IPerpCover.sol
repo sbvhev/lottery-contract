@@ -11,6 +11,8 @@ import "./ICoverERC20.sol";
  */
 interface IPerpCover is ICover {
   function createdAt() external view returns (uint256);
+  function feeFactor() external view returns (uint256);
+  function lastUpdatedAt() external view returns (uint256);
   function getCoverDetails()
     external view returns (
       string memory _name,

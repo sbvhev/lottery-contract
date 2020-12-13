@@ -35,9 +35,8 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   ICoverERC20 public override noclaimCovToken;
   string public override name;
   uint256 public override claimNonce;
-  uint256 public DECIMAL;
-  uint256 public feeFactor;
-  uint256 public lastUpdatedAt;
+  uint256 public override feeFactor; // 18 decimal
+  uint256 public override lastUpdatedAt;
   uint256 private lastFeeNum;
   uint256 private lastFeeDen;
 
@@ -72,8 +71,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
 
     uint256 updatedAt;
     (lastFeeNum,, lastFeeDen, updatedAt) = ICoverPool(owner()).getRedeemFees();
-    DECIMAL = 1e18;
-    feeFactor = DECIMAL;
+    feeFactor = 1e18;
     lastUpdatedAt = block.timestamp;
   }
 
@@ -124,14 +122,12 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     // update factor till last updatedAt with last fee rates
     if (_poolUpdatedAt > _lastUpdatedAt) {
       _feeFactor = _getNewFactor(_feeFactor, _lastFeeNum, _lastFeeDen, _poolUpdatedAt.sub(_lastUpdatedAt));
-      require(_feeFactor > feeFactor, "1 <=");
       _lastUpdatedAt = _poolUpdatedAt;
     }
 
     // update factor till now with latest fee rates
     if (block.timestamp > _lastUpdatedAt) {
       _feeFactor = _getNewFactor(_feeFactor, feeNumerator, poolFeeDenominator, block.timestamp.sub(_lastUpdatedAt));
-      // require(_feeFactor > feeFactor, "2 <=");
       lastUpdatedAt = block.timestamp;
     }
     _updateFees(feeNumerator, poolFeeDenominator);
@@ -143,7 +139,6 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     uint256 ratePerSecondInRay = _feeNumerator.mul(WadRayMath.ray()).div(year);
     uint256 denominatorInRay = _feeDenominator.mul(WadRayMath.ray());
     uint256 newFactorBase = denominatorInRay.rayDiv(denominatorInRay.sub(ratePerSecondInRay));
-    // uint256 newFactorBase = WadRayMath.ray().sub(ratePerSecondInRay).rayPow(_secondsPassed).rayToWad();
     return _feeFactor.rayMul(newFactorBase.rayPow(_secondsPassed));
   }
 
@@ -160,7 +155,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   function mint(uint256 _amount, address _receiver) external override onlyOwner {
     _noClaimAcceptedCheck(); // save gas than modifier
     updateFeeFactor();
-    uint256 adjustedAmount = _amount.mul(feeFactor).div(DECIMAL);
+    uint256 adjustedAmount = _amount.mul(feeFactor).div(1e18);
 
     ICoverERC20[] memory claimCovTokensCopy = claimCovTokens;
     for (uint i = 0; i < claimCovTokensCopy.length; i++) {
@@ -238,7 +233,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
   /// @notice Payable amount is discounted based on the current feeFactor
   function _payAmount(address _receiver, uint256 _amount) private {
     IERC20 collateralToken = IERC20(collateral);
-    collateralToken.safeTransfer(_receiver, _amount.mul(DECIMAL).div(feeFactor));
+    collateralToken.safeTransfer(_receiver, _amount.mul(1e18).div(feeFactor));
   }
 
   /// @notice 99.9% of (vault Value - debt owed) is send to treasury if > 0.001 ether unit
@@ -250,8 +245,7 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     if (_debtTotal == 0) {
       collateralToken.safeTransfer(treasury, collateralToken.balanceOf(address(this)));
     } else {
-      require(feeFactor > 0, "_sendAccuFeesToTreasury 0 ");
-      uint256 accuFees = collateralToken.balanceOf(address(this)).sub(_debtTotal.mul(DECIMAL).div(feeFactor));
+      uint256 accuFees = collateralToken.balanceOf(address(this)).sub(_debtTotal.mul(1e18).div(feeFactor));
       if (accuFees > 0.001 ether) {
         // add a buffer to avoid error caused by + dust to users
         collateralToken.safeTransfer(treasury, accuFees.mul(999).div(1000));

@@ -101,8 +101,7 @@ describe('PerpCover', function() {
     expect(await noclaimCovToken.balanceOf(userAAddress)).to.equal(0);
     expect(await dai.balanceOf(cover.address)).to.equal(0);
     const feeFactor = await cover.feeFactor();
-    const DECIMAL = await cover.DECIMAL();
-    const fee = ETHER_UINT_10.sub(ETHER_UINT_10.mul(DECIMAL).div(feeFactor));
+    const fee = ETHER_UINT_10.sub(ETHER_UINT_10.mul(ETHER_UINT_1).div(feeFactor));
     expect(await dai.balanceOf(treasuryAddress)).to.equal(fee);
     expect(await dai.balanceOf(userAAddress)).to.equal(collateralBalanceBefore.add(ETHER_UINT_10).sub(fee));
   });
@@ -171,8 +170,7 @@ describe('PerpCover', function() {
     expect(await dai.balanceOf(cover.address)).to.equal(0);
 
     const feeFactor = await cover.feeFactor();
-    const DECIMAL = await cover.DECIMAL();
-    const fee = ETHER_UINT_10.sub(ETHER_UINT_10.mul(DECIMAL).div(feeFactor));
+    const fee = ETHER_UINT_10.sub(ETHER_UINT_10.mul(ETHER_UINT_1).div(feeFactor));
     expect(await dai.balanceOf(userAAddress)).to.equal(aDaiBalance.add(ETHER_UINT_10).sub(fee));
   });
 

@@ -37,7 +37,7 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
   address public override collateral;
   ICoverERC20 public override noclaimCovToken;
   uint256 public override claimNonce;
-  uint256 public duration;
+  uint256 public override duration;
   ICoverERC20[] public override claimCovTokens;
   mapping(bytes32 => ICoverERC20) public claimCovTokenMap;
 

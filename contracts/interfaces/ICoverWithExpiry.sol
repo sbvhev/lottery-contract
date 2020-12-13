@@ -11,6 +11,7 @@ import "./ICoverERC20.sol";
  */
 interface ICoverWithExpiry is ICover {
   function expiry() external view returns (uint48);
+  function duration() external view returns (uint256);
   function getCoverDetails()
     external view returns (
       string memory _name,
