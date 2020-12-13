@@ -2,6 +2,7 @@ module.exports = {
   consts: {
     PROTOCOL_NAME: ethers.utils.formatBytes32String('Binance'),
     PROTOCOL_NAME_2: ethers.utils.formatBytes32String('Curve'),
+    PROTOCOL_NAME_3: ethers.utils.formatBytes32String('Aave'),
     POOL_2: ethers.utils.formatBytes32String('Pool2'),
     ADDRESS_ZERO: ethers.constants.AddressZero,
     ALLOWED_EXPIRYS: [Math.floor(Date.now()) + 30 * 24 * 60 * 60, Math.floor(Date.now()) + 60 * 24 * 60 * 60, Math.floor(Date.now()) + 90 * 24 * 60 * 60],

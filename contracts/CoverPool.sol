@@ -55,6 +55,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   address[] public override collaterals;
   // [claimNonce] => accepted ClaimDetails
   ClaimDetails[] private claimDetails;
+  // @notice assetName => status. 0 never added; 1 active, 2 inactive/deleted
+  mapping(bytes32 => uint8) private assetsMap;
   // @notice collateral => status. 0 never set; 1 active, 2 inactive
   mapping(address => uint8) public override collateralStatusMap;
   // CoverWithExpiry type only
@@ -93,10 +95,14 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     collaterals.push(_collateral);
     expiries = _expiries;
     collateralStatusMap[_collateral] = 1;
-    for (uint i = 0; i < _expiries.length; i++) {
+    for (uint256 i = 0; i < _expiries.length; i++) {
       if (block.timestamp < _expiries[i]) {
         expiryInfoMap[_expiries[i]] = ExpiryInfo(_expiryNames[i], 1);
       }
+    }
+
+    for (uint256 j = 0; j < _assetList.length; j++) {
+      assetsMap[_assetList[j]] = 1;
     }
 
     // set default delay for redeem
@@ -115,6 +121,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       bytes32 _name,
       bool _isActive,
       bytes32[] memory _assetList,
+      bytes32[] memory _deletedAssetList,
       uint256 _claimNonce,
       uint256 _claimRedeemDelay,
       uint256 _noclaimRedeemDelay,
@@ -123,7 +130,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       address[] memory _allCovers,
       address[] memory _allActiveCovers)
   {
-    return (name, isActive, assetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, activeCovers);
+    return (name, isActive, assetList, deletedAssetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, activeCovers);
   }
 
   function getRedeemFees()
@@ -223,12 +230,14 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   /// @notice delete asset from pool
   function deleteAsset(bytes32 _asset) external override onlyDev {
+    require(assetsMap[_asset] == 1, "CoverPool: not active asset");
     bytes32[] memory assetListCopy = assetList; //save gas
     bytes32[] memory newAssetList = new bytes32[](assetListCopy.length - 1);
     for (uint i = 0; i < assetListCopy.length; i++) {
       if (_asset != assetListCopy[i]) {
         newAssetList[newAssetList.length - 1] = assetListCopy[i];
       } else {
+        assetsMap[_asset] = 2;
         deletedAssetList.push(_asset);
         emit AssetUpdated(_asset, false);
       }
@@ -281,6 +290,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
     uint256 totalNum;
     for (uint256 i = 0; i < _payoutAssetList.length; i++) {
+      require(assetsMap[_payoutAssetList[i]] == 1, "CoverPool: has non active asset");
       totalNum = totalNum.add(_payoutNumerators[i]);
     }
     require(totalNum <= _payoutDenominator && totalNum > 0, "CoverPool: payout % is not in (0%, 100%]");

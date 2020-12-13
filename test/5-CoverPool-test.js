@@ -43,7 +43,7 @@ describe('CoverPool', () => {
   });
 
   it('Should initialize correct state variables', async () => {
-    const [name, isActive, assetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, allActiveCovers] = await coverPool.getCoverPoolDetails();
+    const [name, isActive, assetList,, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, allActiveCovers] = await coverPool.getCoverPoolDetails();
 
     expect(name).to.equal(consts.POOL_2);
     expect(isActive).to.equal(true);
@@ -190,6 +190,10 @@ describe('CoverPool', () => {
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce + 1);
 
     await expect(coverPool.connect(userAAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
+  });
+
+  it('Should NOT enactClaim if have non active asset', async () => {
+    await expectRevert(coverPool.enactClaim([consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_3], [20, 40], 100, INCIDENT_TIMESTAMP, 0), "CoverPool: has non active asset");
   });
   
   it('Should NOT enactClaim if called by non-claimManager', async () => {

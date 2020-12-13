@@ -53,6 +53,7 @@ interface ICoverPool {
       bytes32 _name,
       bool _active,
       bytes32[] memory _assetList,
+      bytes32[] memory _deletedAssetList,
       uint256 _claimNonce,
       uint256 _claimRedeemDelay,
       uint256 _noclaimRedeemDelay,
