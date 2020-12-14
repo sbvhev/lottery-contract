@@ -3,7 +3,7 @@
 pragma solidity ^0.7.5;
 pragma abicoder v2;
 
-import "./proxy/InitializableAdminUpgradeabilityProxy.sol";
+import "./proxy/BasicProxyLib.sol";
 import "./utils/Create2.sol";
 import "./utils/Initializable.sol";
 import "./utils/Ownable.sol";
@@ -17,6 +17,7 @@ import "./interfaces/IERC20.sol";
 import "./interfaces/IOwnable.sol";
 import "./interfaces/ICoverPool.sol";
 import "./interfaces/ICoverPoolFactory.sol";
+import "./interfaces/ICovTokenProxy.sol";
 
 /**
  * @title CoverWithExpiry contract
@@ -207,17 +208,10 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
 
   /// @dev Emits NewCovTokenCreation
   function _createCovToken(string memory _prefix) private returns (ICoverERC20) {
-    bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
-    bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), expiry, collateral, claimNonce, _prefix));
-    address payable proxyAddr = Create2.deploy(0, salt, bytecode);
-
-    bytes memory initData = abi.encodeWithSelector(COVERERC20_INIT_SIGNITURE, string(abi.encodePacked(_prefix, "_", name)));
     address coverERC20Impl = ICoverPoolFactory(_factory()).coverERC20Impl();
-    InitializableAdminUpgradeabilityProxy(proxyAddr).initialize(
-      coverERC20Impl,
-      IOwnable(_factory()).owner(),
-      initData
-    );
+    bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), expiry, collateral, claimNonce, _prefix));
+    address proxyAddr = BasicProxyLib.deployProxy(coverERC20Impl, salt);
+    ICovTokenProxy(proxyAddr).initialize(string(abi.encodePacked(_prefix, "_", name)));
 
     emit NewCovTokenCreation(proxyAddr);
     return ICoverERC20(proxyAddr);

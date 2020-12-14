@@ -3,6 +3,7 @@
 pragma solidity ^0.7.5;
 
 import "./proxy/InitializableAdminUpgradeabilityProxy.sol";
+import "./proxy/BasicProxyLib.sol";
 import "./utils/Address.sol";
 import "./utils/Create2.sol";
 import "./utils/Ownable.sol";
@@ -101,10 +102,9 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     uint256 _claimNonce,
     string memory _prefix // "CLAIM_CURVE_POOL2" or "NOCLAIM_POOL2"
   ) external view override returns (address) {
-    return _computeAddress(
-      keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce, _prefix)),
-      getCoverAddress(_coverPoolName, _timestamp, _collateral, _claimNonce)
-    );
+    bytes32 salt = keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce, _prefix));
+    address deployer = getCoverAddress(_coverPoolName, _timestamp, _collateral, _claimNonce);
+    return BasicProxyLib.computeProxyAddress(coverERC20Impl, salt, deployer);
   }
 
   /// @notice return covToken contract address, the contract may not be deployed yet
@@ -115,10 +115,9 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     uint256 _claimNonce,
     string memory _prefix // "CLAIM_POOL2_CURVE" or "NOCLAIM_POOL2"
   ) external view override returns (address) {
-    return _computeAddress(
-      keccak256(abi.encodePacked(_coverPoolName, _createdAt, _collateral, _claimNonce, _prefix)),
-      getPerpCoverAddress(_coverPoolName, _collateral, _claimNonce)
-    );
+    bytes32 salt = keccak256(abi.encodePacked(_coverPoolName, _createdAt, _collateral, _claimNonce, _prefix));
+    address deployer = getPerpCoverAddress(_coverPoolName, _collateral, _claimNonce);
+    return BasicProxyLib.computeProxyAddress(coverERC20Impl, salt, deployer);
   }
 
   /// @dev Emits CoverPoolCreation, add a supported coverPool in COVER
