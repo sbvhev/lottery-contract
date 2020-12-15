@@ -121,6 +121,28 @@ describe('PerpCover', function() {
     expect(await dai.balanceOf(treasuryAddress)).to.equal(collateralTreasuryBefore);
   });
 
+  it('Should delete asset, mint, and redeem with active tokens only', async function() {
+    await coverPool.deleteAsset(consts.PROTOCOL_NAME_2);
+    await coverPool.connect(governanceAccount).updateFees(0, 0, 1);
+
+    await coverPool.connect(userBAccount).addPerpCover(COLLATERAL, ETHER_UINT_20);
+    const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.PROTOCOL_NAME));
+    const deletedClaimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.PROTOCOL_NAME_2));
+    const noclaimCovToken = CoverERC20.attach(await cover.noclaimCovToken());
+    expect(await claimCovToken.balanceOf(userBAddress)).to.gt(ETHER_UINT_20);
+    expect(await deletedClaimCovToken.balanceOf(userBAddress)).to.equal(0);
+    const userBNoclaimBal = await noclaimCovToken.balanceOf(userBAddress);
+    expect(userBNoclaimBal).to.gt(ETHER_UINT_20);
+
+    const userBBal = await dai.balanceOf(userBAddress);
+    await cover.connect(userBAccount).redeemCollateral(userBNoclaimBal);
+    expect(await claimCovToken.balanceOf(userBAddress)).to.equal(0);
+    expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(0);
+    const feeFactor = await cover.feeFactor();
+    const fee = ETHER_UINT_20.sub(ETHER_UINT_20.mul(ETHER_UINT_1).div(feeFactor));
+    expect(await dai.balanceOf(userAAddress)).to.equal(userBBal.add(ETHER_UINT_20).sub(fee));
+  });
+
   it('Should NOT redeem collateral with accepted claim', async function() {
     const txA = await coverPool.connect(claimManager).enactClaim([consts.PROTOCOL_NAME], [100], 100, startTimestamp, 0);
     await txA.wait();

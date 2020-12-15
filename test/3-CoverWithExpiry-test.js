@@ -88,7 +88,28 @@ describe('CoverWithExpiry', function() {
     expect(noclaimCovTokenAddress).to.equal(computedNoclaimCovTokenAddress);
   });
 
+  it('Should delete asset, mint, and redeem with active tokens only', async function() {
+    await coverPool.deleteAsset(consts.PROTOCOL_NAME_2);
+
+    await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
+    const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.PROTOCOL_NAME));
+    const deletedClaimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.PROTOCOL_NAME_2));
+    const noclaimCovToken = CoverERC20.attach(await cover.noclaimCovToken());
+    expect(await claimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20);
+    expect(await deletedClaimCovToken.balanceOf(userBAddress)).to.equal(0);
+    expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20);
+
+    const userABal = await dai.balanceOf(userAAddress);
+    await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
+    expect(await claimCovToken.balanceOf(userAAddress)).to.equal(0);
+    expect(await deletedClaimCovToken.balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
+    expect(await noclaimCovToken.balanceOf(userAAddress)).to.equal(0);
+    const fees = await calFees(ETHER_UINT_10);
+    expect(await dai.balanceOf(userAAddress)).to.equal(userABal.add(ETHER_UINT_10).sub(fees));
+  });
+
   it('Should redeem collateral without accepted claim', async function() {
+    const treasuryBalBefore = await dai.balanceOf(treasuryAddress);
     await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
 
     const claimCovTokenAddress = await cover.claimCovTokens(0);
@@ -101,7 +122,7 @@ describe('CoverWithExpiry', function() {
 
     const treasuryBal = await dai.balanceOf(treasuryAddress);
     const fees = await calFees(ETHER_UINT_10);
-    expect(treasuryBal).to.equal(fees);
+    expect(treasuryBal.sub(treasuryBalBefore)).to.equal(fees);
   });
 
   it('Should redeem collateral(0 fee) without accepted claim', async function() {
