@@ -102,6 +102,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     }
 
     for (uint256 j = 0; j < _assetList.length; j++) {
+      require(assetsMap[_assetList[j]] == 0, "CoverPool: duplicated assets");
       assetsMap[_assetList[j]] = 1;
     }
 
