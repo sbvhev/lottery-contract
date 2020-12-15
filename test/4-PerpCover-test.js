@@ -138,9 +138,7 @@ describe('PerpCover', function() {
     await cover.connect(userBAccount).redeemCollateral(userBNoclaimBal);
     expect(await claimCovToken.balanceOf(userBAddress)).to.equal(0);
     expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(0);
-    const feeFactor = await cover.feeFactor();
-    const fee = ETHER_UINT_20.sub(ETHER_UINT_20.mul(ETHER_UINT_1).div(feeFactor));
-    expect(await dai.balanceOf(userAAddress)).to.equal(userBBal.add(ETHER_UINT_20).sub(fee));
+    expect(await dai.balanceOf(userBAddress)).to.equal(userBBal.add(ETHER_UINT_20));
   });
 
   it('Should NOT redeem collateral with accepted claim', async function() {
@@ -157,8 +155,6 @@ describe('PerpCover', function() {
   it('Should NOT redeemClaim after enact claim before redeemDelay ends', async function() {
     const txA = await coverPool.connect(claimManager).enactClaim([consts.PROTOCOL_NAME], [100], 100, startTimestamp, 0);
     await txA.wait();
-
-    const aDaiBalance = await dai.balanceOf(userAAddress);
     await expect(cover.connect(userBAccount).redeemClaim()).to.be.reverted;
 
     expect(await dai.balanceOf(cover.address)).to.equal(ETHER_UINT_10);
