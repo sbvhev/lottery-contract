@@ -22,4 +22,10 @@ interface IPerpCover is ICover {
       ICoverERC20[] memory _claimCovTokens,
       ICoverERC20 _noclaimCovToken
     );
+  
+  // user action
+  /// @notice redeem func when there is a claim on the cover, aka. the cover is affected
+  function redeemClaim() external;
+  /// @notice redeem func when the cover is not affected by any accepted claim, _amount is respected only when when no claim accepted before expiry (for cover with expiry)
+  function redeemCollateral(uint256 _amount) external;
 }

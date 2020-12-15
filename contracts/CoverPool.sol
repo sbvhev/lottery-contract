@@ -26,8 +26,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
-  bytes4 private constant COVERWITHEXPIRY_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],uint48,address,uint256)"));
-  bytes4 private constant PERPCOVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],address,uint256)"));
+  bytes4 private constant COVERWITHEXPIRY_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint48,address,uint256)"));
+  bytes4 private constant PERPCOVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,address,uint256)"));
   uint256 private perpFeeNum;
   uint256 private expiryFeeNum;
   uint256 private feeDenominator;
@@ -320,7 +320,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);
 
-      bytes memory initData = abi.encodeWithSelector(COVERWITHEXPIRY_INIT_SIGNITURE, coverName, assetList, _expiry, _collateral, claimNonce);
+      bytes memory initData = abi.encodeWithSelector(COVERWITHEXPIRY_INIT_SIGNITURE, coverName, _expiry, _collateral, claimNonce);
       address coverImpl = ICoverPoolFactory(owner()).coverImpl();
       InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
         coverImpl,
@@ -342,7 +342,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       bytes32 salt = keccak256(abi.encodePacked(name, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);
 
-      bytes memory initData = abi.encodeWithSelector(PERPCOVER_INIT_SIGNITURE, coverName, assetList, _collateral, claimNonce);
+      bytes memory initData = abi.encodeWithSelector(PERPCOVER_INIT_SIGNITURE, coverName, _collateral, claimNonce);
       address perpCoverImpl = ICoverPoolFactory(owner()).perpCoverImpl();
       InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
         perpCoverImpl,

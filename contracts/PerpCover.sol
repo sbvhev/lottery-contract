@@ -6,7 +6,6 @@ pragma abicoder v2;
 import "./proxy/BasicProxyLib.sol";
 import "./utils/Create2.sol";
 import "./utils/Initializable.sol";
-import "./utils/Ownable.sol";
 import "./utils/ReentrancyGuard.sol";
 import "./utils/SafeMath.sol";
 import "./utils/WadRayMath.sol";
@@ -16,38 +15,29 @@ import "./interfaces/IPerpCover.sol";
 import "./interfaces/ICovTokenProxy.sol";
 import "./interfaces/ICoverERC20.sol";
 import "./interfaces/IERC20.sol";
-import "./interfaces/IOwnable.sol";
 import "./interfaces/ICoverPool.sol";
 import "./interfaces/ICoverPoolFactory.sol";
+import "./Cover.sol";
 
 /**
- * @title Cover contract
+ * @title PerpCover contract
  * @author crypto-pumpkin
  * @notice When a claim is accepted, all PerpCover will payout based on the decision
  */
-contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
+contract PerpCover is IPerpCover, Initializable, ReentrancyGuard, Cover {
   using SafeMath for uint256;
   using WadRayMath for uint256;
   using SafeERC20 for IERC20;
 
-  bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string)"));
   uint256 public override createdAt;
-  address public override collateral;
-  ICoverERC20 public override noclaimCovToken;
-  string public override name;
-  uint256 public override claimNonce;
   uint256 public override feeFactor; // 18 decimal
   uint256 public override lastUpdatedAt;
   uint256 private lastFeeNum;
   uint256 private lastFeeDen;
 
-  ICoverERC20[] public override claimCovTokens;
-  mapping(bytes32 => ICoverERC20) public claimCovTokenMap;
-
   /// @dev Initialize, called once
   function initialize (
     string calldata _name,
-    bytes32[] calldata _assetList,
     address _collateral,
     uint256 _claimNonce
   ) public initializer {
@@ -57,19 +47,29 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     collateral = _collateral;
     claimNonce = _claimNonce;
 
-    for (uint i = 0; i < _assetList.length; i++) {
-      ICoverERC20 claimToken;
-      string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
-      claimToken = _createCovToken(string(abi.encodePacked("CLAIM_", assetName)));
-      claimCovTokens.push(claimToken);
-      claimCovTokenMap[_assetList[i]] = claimToken;
-    }
-    noclaimCovToken = _createCovToken("NOCLAIM");
-
     uint256 updatedAt;
     (lastFeeNum,, lastFeeDen, updatedAt) = ICoverPool(owner()).getRedeemFees();
     feeFactor = 1e18;
     lastUpdatedAt = block.timestamp;
+
+    noclaimCovToken = _createCovToken("NOCLAIM");
+    isDeployed = false;
+    deploy();
+  }
+
+  function deploy() public {
+    require(!isDeployed, "PerpCover: deploy complete");
+    (bytes32[] memory _assetList,) = ICoverPool(owner()).getAssetLists();
+    for (uint i = 0; i < _assetList.length; i++) {
+      ICoverERC20 claimToken = claimCovTokenMap[_assetList[i]];
+      if (address(claimToken) == address(0)) {
+        string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
+        claimToken = _createCovToken(string(abi.encodePacked("CLAIM_", assetName)));
+        claimCovTokens.push(claimToken);
+        claimCovTokenMap[_assetList[i]] = claimToken;
+      }
+    }
+    isDeployed = true;
   }
 
   function getCoverDetails()
@@ -83,20 +83,6 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
       ICoverERC20 _noclaimCovToken)
   {
     return (name, createdAt, collateral, claimNonce, claimCovTokens, noclaimCovToken);
-  }
-
-  function viewClaimable(address _account) external view override returns (uint256 eligibleAmount) {
-    ICoverPool.ClaimDetails memory claim = _claimDetails();
-    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
-      ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
-      uint256 amount = covToken.balanceOf(_account);
-      eligibleAmount = eligibleAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
-    }
-    if (claim.payoutTotalNum < claim.payoutDenominator) {
-      uint256 amount = noclaimCovToken.balanceOf(_account);
-      uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
-      eligibleAmount = eligibleAmount.add(payoutAmount);
-    }
   }
 
   /*******************************************************************************************
@@ -150,13 +136,14 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
 
   /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
   function mint(uint256 _amount, address _receiver) external override onlyOwner {
+    require(isDeployed, "PerpCover: deploy incomplete");
     _noClaimAcceptedCheck(); // save gas than modifier
     updateFeeFactor();
     uint256 adjustedAmount = _amount.mul(feeFactor).div(1e18);
 
-    ICoverERC20[] memory claimCovTokensCopy = claimCovTokens;
-    for (uint i = 0; i < claimCovTokensCopy.length; i++) {
-      claimCovTokensCopy[i].mint(_receiver, adjustedAmount);
+    (bytes32[] memory _assetList,) = ICoverPool(owner()).getAssetLists();
+    for (uint i = 0; i < _assetList.length; i++) {
+      claimCovTokenMap[_assetList[i]].mint(_receiver, adjustedAmount);
     }
     noclaimCovToken.mint(_receiver, adjustedAmount);
   }
@@ -210,21 +197,6 @@ contract PerpCover is IPerpCover, Initializable, Ownable, ReentrancyGuard {
     updateFeeFactor();
     _payAmount(msg.sender, eligibleAmount);
     _sendAccuFeesToTreasury(totalDebt);
-  }
-
-  /// @notice the owner of this contract is CoverPool contract, the owner of CoverPool is CoverPoolFactory contract
-  function _factory() private view returns (address) {
-    return IOwnable(owner()).owner();
-  }
-
-  /// @notice make sure no claim is accepted
-  function _noClaimAcceptedCheck() private view {
-    require(ICoverPool(owner()).claimNonce() == claimNonce, "PerpCover: claim accepted");
-  }
-
-  // get the claim details for the corresponding nonce from coverPool contract
-  function _claimDetails() private view returns (ICoverPool.ClaimDetails memory) {
-    return ICoverPool(owner()).getClaimDetails(claimNonce);
   }
 
   /// @notice Payable amount is discounted based on the current feeFactor

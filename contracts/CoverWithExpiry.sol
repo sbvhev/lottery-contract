@@ -18,6 +18,7 @@ import "./interfaces/IOwnable.sol";
 import "./interfaces/ICoverPool.sol";
 import "./interfaces/ICoverPoolFactory.sol";
 import "./interfaces/ICovTokenProxy.sol";
+import "./Cover.sol";
 
 /**
  * @title CoverWithExpiry contract
@@ -28,24 +29,16 @@ import "./interfaces/ICovTokenProxy.sol";
  *  - Mints and burns CovTokens (CoverERC20)
  *  - Allows redeem from collateral pool with or without an accepted claim
  */
-contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, ReentrancyGuard {
+contract CoverWithExpiry is ICoverWithExpiry, Initializable, ReentrancyGuard, Cover {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
-  bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string)"));
-  string public override name;
   uint48 public override expiry;
-  address public override collateral;
-  ICoverERC20 public override noclaimCovToken;
-  uint256 public override claimNonce;
   uint256 public override duration;
-  ICoverERC20[] public override claimCovTokens;
-  mapping(bytes32 => ICoverERC20) public claimCovTokenMap;
 
   /// @dev Initialize, called once
   function initialize (
     string calldata _name,
-    bytes32[] calldata _assetList,
     uint48 _expiry,
     address _collateral,
     uint256 _claimNonce
@@ -57,14 +50,24 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
     claimNonce = _claimNonce;
     duration = uint256(_expiry).sub(block.timestamp);
 
-    for (uint i = 0; i < _assetList.length; i++) {
-      ICoverERC20 claimToken;
-      string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
-      claimToken = _createCovToken(string(abi.encodePacked("CLAIM_", assetName)));
-      claimCovTokens.push(claimToken);
-      claimCovTokenMap[_assetList[i]] = claimToken;
-    }
     noclaimCovToken = _createCovToken("NOCLAIM");
+    isDeployed = false;
+    deploy();
+  }
+
+  function deploy() public {
+    require(!isDeployed, "CoverWithExpiry: deploy complete");
+    (bytes32[] memory _assetList,) = ICoverPool(owner()).getAssetLists();
+    for (uint i = 0; i < _assetList.length; i++) {
+      ICoverERC20 claimToken = claimCovTokenMap[_assetList[i]];
+      if (address(claimToken) == address(0)) {
+        string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
+        claimToken = _createCovToken(string(abi.encodePacked("CLAIM_", assetName)));
+        claimCovTokens.push(claimToken);
+        claimCovTokenMap[_assetList[i]] = claimToken;
+      }
+    }
+    isDeployed = true;
   }
 
   function getCoverDetails()
@@ -80,26 +83,14 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
     return (name, expiry, collateral, claimNonce, claimCovTokens, noclaimCovToken);
   }
 
-  function viewClaimable(address _account) external view override returns (uint256 eligibleAmount) {
-    ICoverPool.ClaimDetails memory claim = _claimDetails();
-    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
-      ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
-      uint256 amount = covToken.balanceOf(_account);
-      eligibleAmount = eligibleAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
-    }
-    if (claim.payoutTotalNum < claim.payoutDenominator) {
-      uint256 amount = noclaimCovToken.balanceOf(_account);
-      uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
-      eligibleAmount = eligibleAmount.add(payoutAmount);
-    }
-  }
-
   /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
   function mint(uint256 _amount, address _receiver) external override onlyOwner {
+    require(isDeployed, "CoverWithExpiry: deploy incomplete");
     _noClaimAcceptedCheck(); // save gas than modifier
-    ICoverERC20[] memory claimCovTokensCopy = claimCovTokens;
-    for (uint i = 0; i < claimCovTokensCopy.length; i++) {
-      claimCovTokensCopy[i].mint(_receiver, _amount);
+
+    (bytes32[] memory _assetList,) = ICoverPool(owner()).getAssetLists();
+    for (uint i = 0; i < _assetList.length; i++) {
+      claimCovTokenMap[_assetList[i]].mint(_receiver, _amount);
     }
     noclaimCovToken.mint(_receiver, _amount);
   }
@@ -161,21 +152,6 @@ contract CoverWithExpiry is ICoverWithExpiry, Initializable, Ownable, Reentrancy
         _burnCovTokenAndPay(noclaimCovToken, 1, 1);
       }
     }
-  }
-
-  /// @notice the owner of this contract is CoverPool contract, the owner of CoverPool is CoverPoolFactory contract
-  function _factory() private view returns (address) {
-    return IOwnable(owner()).owner();
-  }
-
-  // get the claim details for the corresponding nonce from coverPool contract
-  function _claimDetails() private view returns (ICoverPool.ClaimDetails memory) {
-    return ICoverPool(owner()).getClaimDetails(claimNonce);
-  }
-
-  /// @notice make sure no claim is accepted
-  function _noClaimAcceptedCheck() private view {
-    require(ICoverPool(owner()).claimNonce() == claimNonce, "CoverWithExpiry: claim accepted");
   }
 
   /// @notice transfer collateral (amount - fee) from this contract to recevier, transfer fee to COVER treasury
