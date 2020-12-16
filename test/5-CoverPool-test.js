@@ -89,11 +89,14 @@ describe('CoverPool', () => {
     await expect(coverPool.connect(ownerAccount).updateClaimRedeemDelay(10 * 24 * 60 * 60)).to.be.reverted;
   });
 
-  it('Should delete asset from pool', async () => {
+  it('Should delete asset from pool correctly', async () => {
     await expect(coverPool.deleteAsset(consts.PROTOCOL_NAME)).to.emit(coverPool, 'AssetUpdated');
     const [assetList, deletedAssetList] = await coverPool.getAssetLists();
     expect(assetList).to.deep.equal([consts.PROTOCOL_NAME_2]);
     expect(deletedAssetList).to.deep.equal([consts.PROTOCOL_NAME]);
+
+    await expectRevert(coverPool.deleteAsset(consts.PROTOCOL_NAME), "CoverPool: not active asset");
+    await expectRevert(coverPool.deleteAsset(consts.PROTOCOL_NAME_2), "CoverPool: only 1 asset");
   });
 
   it('Should add cover for userA and emit event', async () => {

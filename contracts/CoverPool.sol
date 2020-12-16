@@ -194,6 +194,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   function deleteAsset(bytes32 _asset) external override onlyDev {
     require(assetsMap[_asset] == 1, "CoverPool: not active asset");
     bytes32[] memory assetListCopy = assetList; //save gas
+    require(assetListCopy.length > 1, "CoverPool: only 1 asset");
+
     bytes32[] memory newAssetList = new bytes32[](assetListCopy.length - 1);
     for (uint i = 0; i < assetListCopy.length; i++) {
       if (_asset != assetListCopy[i]) {
