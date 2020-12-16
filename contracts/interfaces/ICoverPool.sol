@@ -43,8 +43,7 @@ interface ICoverPool {
   function expiries(uint256 _index) external view returns (uint48);
   function collateralStatusMap(address _collateral) external view returns (uint8 _status);
   function expiryInfoMap(uint48 _expiry) external view returns (bytes32 _name, uint8 _status);
-  function coverWithExpiryMap(address _collateral, uint48 _expiry) external view returns (address);
-  function perpCoverMap(address _collateral) external view returns (address);
+  function coverMap(address _collateral, uint48 _expiry) external view returns (address);
 
   // extra view
   function getAssetLists() external view returns (bytes32[] memory _assetList, bytes32[] memory _deletedAssetList);
@@ -62,12 +61,11 @@ interface ICoverPool {
       address[] memory _allCovers,
       address[] memory _allActiveCovers
     );
-  function getRedeemFees() external view returns (uint256 _perpNumerator, uint256 _numerator, uint256 _denominator, uint256 _feeUpdatedAt);
+  function getRedeemFees() external view returns (uint256 _numerator, uint256 _denominator);
   function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
 
   // user action
-  function addCoverWithExpiry(address _collateral, uint48 _timestamp, uint256 _amount) external;
-  function addPerpCover(address _collateral, uint256 _amount) external;
+  function addCover(address _collateral, uint48 _timestamp, uint256 _amount) external;
 
   // access restriction - claimManager
   function enactClaim(
@@ -87,5 +85,5 @@ interface ICoverPool {
   // access restriction - governance
   function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external;
   function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external;
-  function updateFees(uint256 _perpFeeNum, uint256 _expiryFeeNum, uint256 _feeDenominator) external;
+  function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external;
 }

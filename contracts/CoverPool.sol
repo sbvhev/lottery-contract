@@ -20,18 +20,15 @@ import "./interfaces/ICoverPoolFactory.sol";
 /**
  * @title CoverPool contract
  * @author crypto-pumpkin
- * @notice Each CoverPool can have two types of coverages (cover with expiry like V1, or perpetual cover)
  */
 contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
-  bytes4 private constant COVERWITHEXPIRY_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint48,address,uint256)"));
+  bytes4 private constant COVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint48,address,uint256)"));
   bytes4 private constant PERPCOVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,address,uint256)"));
-  uint256 private perpFeeNum;
-  uint256 private expiryFeeNum;
+  uint256 private feeNumerator;
   uint256 private feeDenominator;
-  uint256 private feeUpdatedAt;
 
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   bool public override isActive;
@@ -40,13 +37,13 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   uint256 public override claimNonce;
   // delay # of seconds for redeem with accepted claim, redeemCollateral is not affected
   uint256 public override claimRedeemDelay;
-  // CoverWithExpiry type only, redeemCollateral is not affected
+  // Cover type only, redeemCollateral is not affected
   uint256 public override noclaimRedeemDelay;
 
   // only active covers, once there is an accepted claim (enactClaim called successfully), this sets to [].
   address[] public override activeCovers;
   address[] private allCovers;
-  /// @notice CoverWithExpiry type only, list of every supported expiry, all may not be active.
+  /// @notice Cover type only, list of every supported expiry, all may not be active.
   uint48[] public override expiries;
   /// @notice list of assets in cover pool
   bytes32[] public override assetList;
@@ -59,12 +56,10 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   mapping(bytes32 => uint8) private assetsMap;
   // @notice collateral => status. 0 never set; 1 active, 2 inactive
   mapping(address => uint8) public override collateralStatusMap;
-  // CoverWithExpiry type only
+  // Cover type only
   mapping(uint48 => ExpiryInfo) public override expiryInfoMap;
   // collateral => timestamp => coverAddress, most recent cover created for the collateral and timestamp combination
-  mapping(address => mapping(uint48 => address)) public override coverWithExpiryMap;
-  // collateral => coverAddress, most recent perpetual cover created for the collateral
-  mapping(address => address) public override perpCoverMap;
+  mapping(address => mapping(uint48 => address)) public override coverMap;
 
   modifier onlyActive() {
     require(isActive, "CoverPool: coverPool not active");
@@ -109,10 +104,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     // set default delay for redeem
     claimRedeemDelay = 2 days;
     noclaimRedeemDelay = 10 days;
-    perpFeeNum = 60; // 0.6% yearly rate
-    expiryFeeNum = 60; // 0.6% yearly rate
+    feeNumerator = 60; // 0.6% yearly rate
     feeDenominator = 10000; // 0 to 65,535
-    feeUpdatedAt = block.timestamp;
     isActive = true;
   }
 
@@ -136,9 +129,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   function getRedeemFees()
     external view override
-    returns (uint256 _perpNumerator, uint256 _numerator, uint256 _denominator, uint256 _updatedAt) 
+    returns (uint256 _numerator, uint256 _denominator) 
   {
-    return (perpFeeNum, expiryFeeNum, feeDenominator, feeUpdatedAt);
+    return (feeNumerator, feeDenominator);
   }
 
   function getAssetLists() external view override returns (bytes32[] memory _assetList, bytes32[] memory _deletedAssetList) {
@@ -149,24 +142,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return claimDetails[_nonce];
   }
 
-  /// @notice add perpetual coverage for sender
-  function addPerpCover(address _collateral, uint256 _amount)
-    external override onlyActive nonReentrant
-  {
-    require(_amount > 0, "CoverPool: amount <= 0");
-    require(collateralStatusMap[_collateral] == 1, "CoverPool: invalid collateral");
-
-    // Validate sender collateral balance is > amount
-    IERC20 collateral = IERC20(_collateral);
-    require(collateral.balanceOf(msg.sender) >= _amount, "CoverPool: amount > collateral balance");
-
-    address addr = _getOrDeployPerpCover(_collateral);
-
-    _addCover(collateral, addr, _amount);
-  }
-
   /// @notice add coverage (with expiry) for sender
-  function addCoverWithExpiry(address _collateral, uint48 _expiry, uint256 _amount)
+  function addCover(address _collateral, uint48 _expiry, uint256 _amount)
     external override onlyActive nonReentrant
   {
     require(_amount > 0, "CoverPool: amount <= 0");
@@ -177,17 +154,15 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     IERC20 collateral = IERC20(_collateral);
     require(collateral.balanceOf(msg.sender) >= _amount, "CoverPool: amount > collateral balance");
 
-    address addr = _getOrDeployCoverWithExpiry(_collateral, _expiry);
+    address addr = _getOrDeployCover(_collateral, _expiry);
     _addCover(collateral, addr, _amount);
   }
 
-  function updateFees(uint256 _perpFeeNum, uint256 _expiryFeeNum, uint256 _feeDenominator) external override onlyGov {
+  function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external override onlyGov {
     require(_feeDenominator > 0, "CoverPool: denominator cannot be 0");
-    require(_feeDenominator > _perpFeeNum && _feeDenominator > _expiryFeeNum, "CoverPool: must < 100%");
-    perpFeeNum = _perpFeeNum;
-    expiryFeeNum = _expiryFeeNum;
+    require(_feeDenominator > _feeNumerator, "CoverPool: must < 100%");
+    feeNumerator = _feeNumerator;
     feeDenominator = _feeDenominator;
-    feeUpdatedAt = block.timestamp;
   }
 
   /// @notice delete asset from pool
@@ -312,8 +287,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     ));
   }
 
-  function _getOrDeployCoverWithExpiry(address _collateral, uint48 _expiry) private returns (address addr) {
-    addr = coverWithExpiryMap[_collateral][_expiry];
+  function _getOrDeployCover(address _collateral, uint48 _expiry) private returns (address addr) {
+    addr = coverMap[_collateral][_expiry];
 
     // Deploy new cover contract if not exist or if claim accepted
     if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
@@ -323,7 +298,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);
 
-      bytes memory initData = abi.encodeWithSelector(COVERWITHEXPIRY_INIT_SIGNITURE, coverName, _expiry, _collateral, claimNonce);
+      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _expiry, _collateral, claimNonce);
       address coverImpl = ICoverPoolFactory(owner()).coverImpl();
       InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
         coverImpl,
@@ -332,29 +307,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       );
       activeCovers.push(addr);
       allCovers.push(addr);
-      coverWithExpiryMap[_collateral][_expiry] = addr;
-    }
-  }
-
-  function _getOrDeployPerpCover(address _collateral) private returns (address addr) {
-    addr = perpCoverMap[_collateral];
-    if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
-      string memory coverName = _getCoverName(IERC20(_collateral).symbol());
-
-      bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
-      bytes32 salt = keccak256(abi.encodePacked(name, _collateral, claimNonce));
-      addr = Create2.deploy(0, salt, bytecode);
-
-      bytes memory initData = abi.encodeWithSelector(PERPCOVER_INIT_SIGNITURE, coverName, _collateral, claimNonce);
-      address perpCoverImpl = ICoverPoolFactory(owner()).perpCoverImpl();
-      InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
-        perpCoverImpl,
-        IOwnable(owner()).owner(),
-        initData
-      );
-      activeCovers.push(addr);
-      allCovers.push(addr);
-      perpCoverMap[_collateral] = addr;
+      coverMap[_collateral][_expiry] = addr;
     }
   }
 

@@ -8,12 +8,12 @@ describe('CoverPool', () => {
   const INCIDENT_TIMESTAMP = 1580515200000;
 
   let ownerAddress, ownerAccount, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
-  let CoverPoolFactory, CoverPool, coverPoolImpl, perpCoverImpl, coverImpl, coverERC20Impl;
+  let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
   let COLLATERAL, NEW_COLLATERAL, coverPoolFactory, coverPool, dai, weth;
 
   before(async () => {
     ({ownerAccount, ownerAddress, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress} = await getAccounts());
-    ({CoverPoolFactory, CoverPool, coverPoolImpl, perpCoverImpl, coverImpl, coverERC20Impl} = await getImpls());
+    ({CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
 
     // deploy stablecoins to local blockchain emulator
     dai = await deployCoin(ethers, 'dai');
@@ -26,7 +26,7 @@ describe('CoverPool', () => {
   
   beforeEach(async () => {
     // deploy coverPool factory
-    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, perpCoverImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
+    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
     await coverPoolFactory.deployed();
     await coverPoolFactory.updateClaimManager(ownerAddress);
 
@@ -73,12 +73,11 @@ describe('CoverPool', () => {
     await coverPool.connect(governanceAccount).updateClaimRedeemDelay(newDelay);
     expect(await coverPool.claimRedeemDelay()).to.equal(newDelay);
 
-    await expect(coverPool.connect(governanceAccount).updateFees(0, 0, 0)).to.be.reverted;
+    await expect(coverPool.connect(governanceAccount).updateFees(0, 0)).to.be.reverted;
 
-    await coverPool.connect(governanceAccount).updateFees(0, 0, 1);
-    const [perpFeeNum, expiryFeeNum, feeDenominator] = await coverPool.getRedeemFees();
-    expect(perpFeeNum).to.equal(0);
-    expect(expiryFeeNum).to.equal(0);
+    await coverPool.connect(governanceAccount).updateFees(0, 1);
+    const [feeNumerator, feeDenominator] = await coverPool.getRedeemFees();
+    expect(feeNumerator).to.equal(0);
     expect(feeDenominator).to.equal(1);
   });
 
@@ -100,30 +99,16 @@ describe('CoverPool', () => {
   });
 
   it('Should add cover for userA and emit event', async () => {
-    await expect(coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10)).to.emit(coverPool, 'CoverAdded')
-    const coverAddress = await coverPool.coverWithExpiryMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
+    await expect(coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10)).to.emit(coverPool, 'CoverAdded')
+    const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
     expect(await dai.balanceOf(coverAddress)).to.equal(10);
-  });
-
-  it('Should add perp cover for userA and userB and emit event', async () => {
-    await expect(coverPool.connect(userAAccount).addPerpCover(COLLATERAL, 10)).to.emit(coverPool, 'CoverAdded')
-    const coverAddress = await coverPool.perpCoverMap(COLLATERAL);
-    expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
-    expect(await dai.balanceOf(coverAddress)).to.equal(10);
-
-    const currentTime = await time.latest();
-    await time.increaseTo(currentTime.toNumber() + 2 * 24 * 3600);
-    await time.advanceBlock();
-
-    await expect(coverPool.connect(userBAccount).addPerpCover(COLLATERAL, 100)).to.emit(coverPool, 'CoverAdded');
-    expect(await dai.balanceOf(coverAddress)).to.equal(110);
   });
 
   it('Should match cover with computed cover address', async () => {
-    const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
+    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txA.wait();
-    const coverAddress = await coverPool.coverWithExpiryMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
+    const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
 
     const claimNonce = await coverPool.claimNonce();
     const computedAddress = await coverPoolFactory.getCoverAddress(consts.POOL_2, consts.ALLOWED_EXPIRYS[1], COLLATERAL, claimNonce)
@@ -131,9 +116,9 @@ describe('CoverPool', () => {
   });
 
   it('Should create new cover contract for diffrent expiries', async () => {
-    const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
+    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txA.wait();
-    const txB = await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[2], 10);
+    const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[2], 10);
     await txB.wait();
 
     const lastActiveCover = await coverPool.activeCovers(1);
@@ -141,37 +126,37 @@ describe('CoverPool', () => {
   });
 
   it('Should add cover for userB on existing contract', async () => {
-    const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
+    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txA.wait();
 
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
 
-    const txB = await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
+    const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txB.wait();
 
     const lastActiveCover = await coverPool.activeCovers(0);
     expect(lastActiveCover).to.not.equal(consts.ADDRESS_ZERO);
 
-    const coverAddress = await coverPool.coverWithExpiryMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
+    const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
     expect(await dai.balanceOf(coverAddress)).to.equal(10);
   });
 
   it('Should create new cover for userB on existing contract when accepted claim', async () => {
-    const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
+    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txA.wait();
 
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
 
-    const txB = await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
+    const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txB.wait();
 
     const lastActiveCover = await coverPool.activeCovers(0);
     expect(lastActiveCover).to.not.equal(consts.ADDRESS_ZERO);
 
-    const coverAddress = await coverPool.coverWithExpiryMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
+    const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
     expect(await dai.balanceOf(coverAddress)).to.equal(10);
   });
@@ -210,6 +195,6 @@ describe('CoverPool', () => {
     await time.increaseTo(consts.ALLOWED_EXPIRYS[1]);
     await time.advanceBlock();
 
-    await expect(coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10)).to.be.reverted;
   });
 });

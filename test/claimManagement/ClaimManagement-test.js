@@ -19,16 +19,16 @@ describe("ClaimManagement", function () {
   };
   let COLLATERAL;
   let ownerAccount, ownerAddress, auditorAccount, auditorAddress, treasuryAccount, treasuryAddress, governanceAccount, governanceAddress;
-  let CoverPoolFactory, CoverPool, coverPoolImpl, perpCoverImpl, coverImpl, coverERC20Impl;
+  let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
   let management, coverPool, dai, coverPoolFactory;
 
   before(async () => {
     timestamp = (await time.latest()).toNumber();
     ({ownerAccount, ownerAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress, auditorAccount, auditorAddress} = await getAccounts());
-    ({CoverPoolFactory, CoverPool, perpCoverImpl, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
+    ({CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
 
     // deploy coverPool factory
-    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, perpCoverImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
+    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
     await coverPoolFactory.deployed();
 
     // deploy stablecoins to local blockchain emulator

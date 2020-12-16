@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { expectRevert, time, BN } = require('@openzeppelin/test-helpers');
 const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
-describe('CoverWithExpiry', function() {
+describe('Cover', function() {
   const NAME = 'Pool2_0_DAI_2020_12_31';
   const ETHER_UINT_10000 = ethers.utils.parseEther('10000');
   const ETHER_UINT_20 = ethers.utils.parseEther('20');
@@ -14,12 +14,12 @@ describe('CoverWithExpiry', function() {
   let startTimestamp, TIMESTAMP, TIMESTAMP_NAME, COLLATERAL;
 
   let ownerAddress, ownerAccount, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
-  let CoverPoolFactory, CoverPool, CoverWithExpiry, CoverERC20, coverPoolImpl, perpCoverImpl, coverImpl, coverERC20Impl;
+  let CoverPoolFactory, CoverPool, Cover, CoverERC20, coverPoolImpl, coverImpl, coverERC20Impl;
   let claimManager, cover, dai;
 
   before(async () => {
     ({ownerAccount, ownerAddress, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress} = await getAccounts());
-    ({CoverPoolFactory, CoverPool, CoverWithExpiry, CoverERC20, perpCoverImpl, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
+    ({CoverPoolFactory, CoverPool, Cover, CoverERC20, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
     claimManager = governanceAccount;
 
     // deploy stablecoins to local blockchain emulator
@@ -30,7 +30,7 @@ describe('CoverWithExpiry', function() {
 
   beforeEach(async () => {
     // deploy coverPool factory
-    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, perpCoverImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
+    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
     await coverPoolFactory.deployed();
     await coverPoolFactory.updateClaimManager(claimManager.getAddress());
     // await coverPoolFactory.updateTreasury(treasuryAddress);
@@ -52,10 +52,10 @@ describe('CoverWithExpiry', function() {
     await dai.connect(userBAccount).approve(coverPool.address, ETHER_UINT_10000);
 
     // add cover through coverPool
-    const txA = await coverPool.connect(userAAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMP, ETHER_UINT_10);
+    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10);
     await txA.wait();
-    const coverAddress = await coverPool.coverWithExpiryMap(COLLATERAL, TIMESTAMP);
-    cover = CoverWithExpiry.attach(coverAddress);
+    const coverAddress = await coverPool.coverMap(COLLATERAL, TIMESTAMP);
+    cover = Cover.attach(coverAddress);
   });
 
   it('Should initialize correct state variables', async function() {
@@ -91,7 +91,7 @@ describe('CoverWithExpiry', function() {
   it('Should delete asset, mint, and redeem with active tokens only', async function() {
     await coverPool.deleteAsset(consts.PROTOCOL_NAME_2);
 
-    await coverPool.connect(userBAccount).addCoverWithExpiry(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
+    await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
     const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.PROTOCOL_NAME));
     const deletedClaimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.PROTOCOL_NAME_2));
     const noclaimCovToken = CoverERC20.attach(await cover.noclaimCovToken());
@@ -126,7 +126,7 @@ describe('CoverWithExpiry', function() {
   });
 
   it('Should redeem collateral(0 fee) without accepted claim', async function() {
-    await coverPool.connect(governanceAccount).updateFees(0, 0, 1);
+    await coverPool.connect(governanceAccount).updateFees(0, 1);
     const collateralBalanceBefore = await dai.balanceOf(userAAddress);
     const collateralTreasuryBefore = await dai.balanceOf(treasuryAddress);
     await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
@@ -211,7 +211,7 @@ describe('CoverWithExpiry', function() {
   });
 
   async function calFees(amount) {
-    const [, num, den] = await coverPool.getRedeemFees();
+    const [num, den] = await coverPool.getRedeemFees();
     const duration = await cover.duration();
     return amount.mul(num).div(den).mul(duration).div(365 * 24 * 3600);
   }

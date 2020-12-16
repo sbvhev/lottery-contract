@@ -4,12 +4,12 @@ const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
 describe('CoverPoolFactory', () => {
   let ownerAccount, ownerAddress, userAAccount, userAAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
-  let CoverPoolFactory, CoverPool, coverPoolImpl, perpCoverImpl, coverImpl, coverERC20Impl;
+  let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
   let coverPoolFactory, dai, COLLATERAL;
 
   before(async () => {
     ({ownerAccount, ownerAddress, userAAccount, userAAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress} = await getAccounts());
-    ({CoverPoolFactory, CoverPool, perpCoverImpl, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
+    ({CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
 
     // deploy stablecoins to local blockchain emulator
     dai = await deployCoin(ethers, 'dai');
@@ -18,7 +18,7 @@ describe('CoverPoolFactory', () => {
   });
 
   beforeEach(async () => {
-    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, perpCoverImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
+    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
     await coverPoolFactory.deployed();
   });
 
