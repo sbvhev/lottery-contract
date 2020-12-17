@@ -109,6 +109,36 @@ describe('Cover', function() {
     expect(await dai.balanceOf(userAAddress)).to.equal(userABal.add(ETHER_UINT_10).sub(fees));
   });
 
+  it('Should mint, and redeem correctly for non 1 deposit ratio', async function() {
+    const ratio = 2;
+    const tx = await coverPoolFactory.createCoverPool(consts.POOL_3, consts.CAT, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO.mul(ratio), TIMESTAMP, TIMESTAMP_NAME);
+    await tx;
+    const coverPool2 = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_3));
+    await dai.connect(userBAccount).approve(coverPool2.address, ETHER_UINT_10000);
+    
+    await coverPool2.connect(userBAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
+    const coverAddress = await coverPool2.coverMap(COLLATERAL, TIMESTAMP);
+    const cover2 = Cover.attach(coverAddress);
+
+    const claimCovToken = CoverERC20.attach(await cover2.claimCovTokenMap(consts.ASSET_1));
+    const claimCovToken2 = CoverERC20.attach(await cover2.claimCovTokenMap(consts.ASSET_2));
+    const noclaimCovToken = CoverERC20.attach(await cover2.noclaimCovToken());
+    expect(await claimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20.mul(ratio));
+    expect(await claimCovToken2.balanceOf(userBAddress)).to.equal(ETHER_UINT_20.mul(ratio));
+    expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20.mul(ratio));
+
+    const userBBal = await dai.balanceOf(userBAddress);
+    await cover2.connect(userBAccount).redeemCollateral(ETHER_UINT_20);
+    expect(await claimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_10.mul(ratio));
+    expect(await claimCovToken2.balanceOf(userBAddress)).to.equal(ETHER_UINT_10.mul(ratio));
+    expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_10.mul(ratio));
+    
+    const [num, den] = await coverPool2.getRedeemFees();
+    const duration = await cover2.duration();
+    const fees = ETHER_UINT_10.mul(num).div(den).mul(duration).div(365 * 24 * 3600);
+    expect(await dai.balanceOf(userBAddress)).to.equal(userBBal.add(ETHER_UINT_10).sub(fees));
+  });
+
   it('Should redeem collateral without accepted claim', async function() {
     const treasuryBalBefore = await dai.balanceOf(treasuryAddress);
     await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);

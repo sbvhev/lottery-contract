@@ -97,7 +97,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
    * @param _category all caps, used identify the type of pool, DeFi, natural disaster
    * @param _assetList risk assets that are covered in this pool
    * @param _collateral the collateral of the pool
-   * @param _depositRatio e18, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
+   * @param _depositRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
    * @param _expiry expiration date supported for the pool
    * @param _expiryString YEAR_MONTH_DATE, used to create covToken symbols only
    * 
