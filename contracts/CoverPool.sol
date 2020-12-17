@@ -6,7 +6,6 @@ import "./proxy/InitializableAdminUpgradeabilityProxy.sol";
 import "./utils/Create2.sol";
 import "./utils/Initializable.sol";
 import "./utils/Ownable.sol";
-import "./utils/SafeMath.sol";
 import "./utils/SafeERC20.sol";
 import "./utils/ReentrancyGuard.sol";
 import "./utils/StringHelper.sol";
@@ -21,7 +20,6 @@ import "./interfaces/ICoverPoolFactory.sol";
  * @author crypto-pumpkin
  */
 contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
-  using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
   bytes4 private constant COVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint48,address,uint256)"));
@@ -224,7 +222,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint256 totalNum;
     for (uint256 i = 0; i < _payoutAssetList.length; i++) {
       require(assetsMap[_payoutAssetList[i]] == 1, "CoverPool: has non active asset");
-      totalNum = totalNum.add(_payoutNumerators[i]);
+      totalNum = totalNum + _payoutNumerators[i];
     }
     require(totalNum <= _payoutDenominator && totalNum > 0, "CoverPool: payout % is not in (0%, 100%]");
 
@@ -310,7 +308,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint256 coverBalanceAfter = _collateral.balanceOf(_cover);
     require(coverBalanceAfter > coverBalanceBefore, "CoverPool: collateral transfer failed");
 
-    emit CoverAdded(_cover, coverBalanceAfter.sub(coverBalanceBefore));
-    ICover(_cover).mint(coverBalanceAfter.sub(coverBalanceBefore), msg.sender);
+    emit CoverAdded(_cover, coverBalanceAfter - coverBalanceBefore);
+    ICover(_cover).mint(coverBalanceAfter - coverBalanceBefore, msg.sender);
   }
 }
