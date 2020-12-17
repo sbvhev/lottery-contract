@@ -28,7 +28,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   bool public override isActive;
-  bytes32 public override name;
+  string public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
   // delay # of seconds for redeem with accepted claim, redeemCollateral is not affected
@@ -74,7 +74,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   /// @dev Initialize, called once
   function initialize (
-    bytes32 _coverPoolName,
+    string calldata _coverPoolName,
     bytes32[] calldata _assetList,
     address _collateral,
     uint48 _expiry,
@@ -104,7 +104,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   function getCoverPoolDetails()
     external view override
     returns (
-      bytes32 _name,
+      string memory _name,
       bool _isActive,
       bytes32[] memory _assetList,
       bytes32[] memory _deletedAssetList,
@@ -271,7 +271,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   /// @dev generate the cover name. Example: 3POOL_0_DAI
   function _getCoverName(string memory _collateralSymbol) internal view returns (string memory) {
     return string(abi.encodePacked(
-      StringHelper.bytes32ToString(name),
+      name,
       "_",
       StringHelper.uintToString(claimNonce),
       "_",

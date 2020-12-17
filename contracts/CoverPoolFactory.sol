@@ -15,7 +15,7 @@ import "./interfaces/ICoverPoolFactory.sol";
  */
 contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
-  bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(bytes32,bytes32[],address,uint48,string)"));
+  bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],address,uint48,string)"));
 
   address public override coverPoolImpl;
   address public override coverImpl;
@@ -26,9 +26,9 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   address public override claimManager;
 
   // not all coverPools are active
-  bytes32[] private coverPoolNames;
+  string[] private coverPoolNames;
 
-  mapping(bytes32 => address) public override coverPools;
+  mapping(string => address) public override coverPools;
 
   modifier onlyGov() {
     require(msg.sender == governance, "CoverPoolFactory: caller not governance");
@@ -52,7 +52,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   }
 
   function getCoverPoolAddresses() external view override returns (address[] memory) {
-    bytes32[] memory coverPoolNamesCopy = coverPoolNames;
+    string[] memory coverPoolNamesCopy = coverPoolNames;
     address[] memory coverPoolAddresses = new address[](coverPoolNamesCopy.length);
     for (uint i = 0; i < coverPoolNamesCopy.length; i++) {
       coverPoolAddresses[i] = coverPools[coverPoolNamesCopy[i]];
@@ -61,13 +61,13 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   }
 
   /// @notice return coverPool contract address, the contract may not be deployed yet
-  function getCoverPoolAddress(bytes32 _name) public view override returns (address) {
+  function getCoverPoolAddress(string calldata _name) public view override returns (address) {
     return _computeAddress(keccak256(abi.encodePacked(_name)), address(this));
   }
 
   /// @notice return cover contract address, the contract may not be deployed yet
   function getCoverAddress(
-    bytes32 _coverPoolName,
+    string calldata _coverPoolName,
     uint48 _timestamp,
     address _collateral,
     uint256 _claimNonce
@@ -78,14 +78,13 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     );
   }
 
-  /// @notice return covToken contract address, the contract may not be deployed yet
-  // TODO to be updated for each asset
+  /// @notice return covToken contract address, the contract may not be deployed yet, prefix should be "CLAIM_CURVE_POOL2" or "NOCLAIM_POOL2"
   function getCovTokenAddress(
-    bytes32 _coverPoolName,
+    string calldata _coverPoolName,
     uint48 _timestamp,
     address _collateral,
     uint256 _claimNonce,
-    string memory _prefix // "CLAIM_CURVE_POOL2" or "NOCLAIM_POOL2"
+    string memory _prefix
   ) external view override returns (address) {
     bytes32 salt = keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce, _prefix));
     address deployer = getCoverAddress(_coverPoolName, _timestamp, _collateral, _claimNonce);
@@ -94,7 +93,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
   /// @dev Emits CoverPoolCreation, add a supported coverPool in COVER
   function createCoverPool(
-    bytes32 _name,
+    string calldata _name,
     bytes32[] calldata _assetList,
     address _collateral,
     uint48 _expiry,

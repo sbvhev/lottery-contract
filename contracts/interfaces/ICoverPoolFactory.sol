@@ -16,13 +16,13 @@ interface ICoverPoolFactory {
   function treasury() external view returns (address);
   function governance() external view returns (address);
   function claimManager() external view returns (address);
-  function coverPools(bytes32 _coverPoolName) external view returns (address);
+  function coverPools(string calldata _coverPoolName) external view returns (address);
 
   /// @notice return contract address, the contract may not be deployed yet
-  function getCoverPoolAddress(bytes32 _name) external view returns (address);
-  function getCoverAddress(bytes32 _coverPoolName, uint48 _timestamp, address _collateral, uint256 _claimNonce) external view returns (address);
+  function getCoverPoolAddress(string calldata _name) external view returns (address);
+  function getCoverAddress(string calldata _coverPoolName, uint48 _timestamp, address _collateral, uint256 _claimNonce) external view returns (address);
   /// @notice _prefix example: "CLAIM_CURVE_POOL2" or "NOCLAIM_POOL2"
-  function getCovTokenAddress(bytes32 _coverPoolName, uint48 _expiry, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
+  function getCovTokenAddress(string calldata _coverPoolName, uint48 _expiry, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
 
   // access restriction - owner (dev)
   /// @dev update Impl will only affect contracts deployed after
@@ -30,7 +30,7 @@ interface ICoverPoolFactory {
   function updateCoverImpl(address _newImpl) external;
   function updateCoverERC20Impl(address _newImpl) external;
   function createCoverPool(
-    bytes32 _name,
+    string calldata _name,
     bytes32[] calldata _assetList,
     address _collateral,
     uint48 _expiry,

@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../utils/Create2.sol";
 
+/// @notice Used for CoverERC20 token only since it is a pretty standard impl of ERC20
 library BasicProxyLib {
   /**
   -- DELEGATECALL PROXY --

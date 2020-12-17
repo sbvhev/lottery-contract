@@ -59,7 +59,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
    */ 
   function fileClaim(
     address _coverPool,
-    bytes32 _coverPoolName,
+    string calldata _coverPoolName,
     bytes32[] calldata _exploitAssets,
     uint48 _incidentTimestamp,
     string calldata _description
@@ -89,11 +89,12 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     }));
     feeCurrency.safeTransferFrom(msg.sender, address(this), claimFee);
     _updateCoverPoolClaimFee(_coverPool);
+    uint256 index = coverPoolClaims[_coverPool][nonce].length - 1;
     emit ClaimUpdate({
       coverPool: _coverPool,
       state: ClaimState.Filed,
       nonce: nonce,
-      index: coverPoolClaims[_coverPool][nonce].length - 1
+      index: index
     });
   }
 
@@ -107,7 +108,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
    */
   function forceFileClaim(
     address _coverPool,
-    bytes32 _coverPoolName,
+    string calldata _coverPoolName,
     bytes32[] calldata _exploitAssets,
     uint48 _incidentTimestamp,
     string calldata _description
@@ -255,7 +256,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   }
 
   /// @notice Get the coverPool address from the coverPool factory
-  function getAddressFromFactory(bytes32 _coverPoolName) public view override returns (address) {
+  function getAddressFromFactory(string calldata _coverPoolName) public view override returns (address) {
     return ICoverPoolFactory(coverPoolFactory).coverPools(_coverPoolName);
   }
 
