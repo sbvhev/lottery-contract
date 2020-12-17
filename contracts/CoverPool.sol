@@ -22,7 +22,7 @@ import "./interfaces/ICoverPoolFactory.sol";
 contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
 
-  bytes4 private constant COVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint48,address,uint256)"));
+  bytes4 private constant COVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint48,address,uint256,uint256)"));
   uint256 private feeNumerator;
   uint256 private feeDenominator;
 
@@ -294,7 +294,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);
 
-      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _expiry, _collateral, claimNonce);
+      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _expiry, _collateral, collateralStatusMap[_collateral].depositRatio, claimNonce);
       address coverImpl = ICoverPoolFactory(owner()).coverImpl();
       InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
         coverImpl,

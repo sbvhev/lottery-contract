@@ -33,6 +33,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   bool public override isDeployed;
   uint48 public override expiry;
   address public override collateral;
+  /// @notice e18 created as initialization, cannot be changed, used to decided the collateral to covToken ratio
+  uint256 public override depositRatio;
   ICoverERC20 public override noclaimCovToken;
   string public override name;
   uint256 public override claimNonce;
@@ -46,12 +48,14 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     string calldata _name,
     uint48 _expiry,
     address _collateral,
+    uint256 _depositRatio,
     uint256 _claimNonce
   ) public initializer {
     initializeOwner();
     name = _name;
     expiry = _expiry;
     collateral = _collateral;
+    depositRatio = _depositRatio;
     claimNonce = _claimNonce;
     duration = uint256(_expiry) - block.timestamp;
 
@@ -95,11 +99,12 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       string memory _name,
       uint48 _expiry,
       address _collateral,
+      uint256 _depositRatio,
       uint256 _claimNonce,
       ICoverERC20[] memory _claimCovTokens,
       ICoverERC20 _noclaimCovToken)
   {
-    return (name, expiry, collateral, claimNonce, claimCovTokens, noclaimCovToken);
+    return (name, expiry, collateral, depositRatio, claimNonce, claimCovTokens, noclaimCovToken);
   }
 
   /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
@@ -108,10 +113,11 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     _noClaimAcceptedCheck(); // save gas than modifier
 
     (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
+    uint256 adjustedAmount = _amount * depositRatio / 1e18;
     for (uint i = 0; i < _assetList.length; i++) {
-      claimCovTokenMap[_assetList[i]].mint(_receiver, _amount);
+      claimCovTokenMap[_assetList[i]].mint(_receiver, adjustedAmount);
     }
-    noclaimCovToken.mint(_receiver, _amount);
+    noclaimCovToken.mint(_receiver, adjustedAmount);
   }
 
   /// @notice redeem when there is an accepted claim
@@ -190,13 +196,15 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   /// @notice transfer collateral (amount - fee) from this contract to recevier, transfer fee to COVER treasury
   function _payCollateral(address _receiver, uint256 _amount) private {
+    uint256 adjustedAmount = _amount * 1e18 / depositRatio;
+
     ICoverPoolFactory factory = ICoverPoolFactory(_factory());
     (uint256 feeNumerator, uint256 feeDenominator) = ICoverPool(owner()).getRedeemFees();
-    uint256 fee = _amount * feeNumerator * duration / (feeDenominator * 365 days);
+    uint256 fee = adjustedAmount * feeNumerator * duration / (feeDenominator * 365 days);
     address treasury = factory.treasury();
     IERC20 collateralToken = IERC20(collateral);
 
-    collateralToken.safeTransfer(_receiver, _amount - fee);
+    collateralToken.safeTransfer(_receiver, adjustedAmount - fee);
     collateralToken.safeTransfer(treasury, fee);
   }
 

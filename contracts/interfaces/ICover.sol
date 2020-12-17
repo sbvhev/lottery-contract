@@ -13,6 +13,8 @@ interface ICover {
 
   function isDeployed() external view returns (bool);
   function collateral() external view returns (address);
+  /// @notice created as initialization, cannot be changed
+  function depositRatio() external view returns (uint256);
   function claimCovTokens(uint256 _index) external view returns (ICoverERC20);
   function noclaimCovToken() external view returns (ICoverERC20);
   function name() external view returns (string memory);
@@ -25,6 +27,7 @@ interface ICover {
       string memory _name,
       uint48 _expiry,
       address _collateral,
+      uint256 _depositRatio,
       uint256 _claimNonce,
       ICoverERC20[] memory _claimCovTokens,
       ICoverERC20 _noclaimCovToken

@@ -59,10 +59,11 @@ describe('Cover', function() {
   });
 
   it('Should initialize correct state variables', async function() {
-    const [name, expiry, collateral, claimNonce, claimCovTokens, noclaimCovToken] = await cover.getCoverDetails();
+    const [name, expiry, collateral, depositRatio, claimNonce, claimCovTokens, noclaimCovToken] = await cover.getCoverDetails();
     expect(name).to.equal(NAME);
     expect(expiry).to.equal(TIMESTAMP);
     expect(collateral).to.equal(COLLATERAL);
+    expect(depositRatio).to.equal(consts.DEPOSIT_RATIO);
     expect(claimNonce).to.equal(0);
     expect(await CoverERC20.attach(claimCovTokens[0]).symbol()).to.equal('CLAIM_Binance_' + NAME);
     expect(await CoverERC20.attach(claimCovTokens[1]).symbol()).to.equal('CLAIM_Curve_' + NAME);
