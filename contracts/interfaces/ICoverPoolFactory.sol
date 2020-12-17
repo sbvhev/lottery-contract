@@ -31,8 +31,10 @@ interface ICoverPoolFactory {
   function updateCoverERC20Impl(address _newImpl) external;
   function createCoverPool(
     string calldata _name,
+    string calldata _category,
     bytes32[] calldata _assetList,
     address _collateral,
+    uint256 _depositRatio,
     uint48 _expiry,
     string calldata _expiryString
   ) external returns (address);

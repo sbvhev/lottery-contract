@@ -17,6 +17,10 @@ interface ICoverPool {
     string name;
     uint8 status; // 0 never set; 1 active, 2 inactive
   }
+  struct CollateralInfo {
+    uint256 depositRatio;
+    uint8 status; // 0 never set; 1 active, 2 inactive
+  }
   struct ClaimDetails {
     bytes32[] payoutAssetList;
     uint256[] payoutNumerators;
@@ -30,6 +34,7 @@ interface ICoverPool {
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   function isActive() external view returns (bool);
   function name() external view returns (string memory);
+  function category() external view returns (string memory);
   function claimNonce() external view returns (uint256);
   /// @notice delay # of seconds for redeem with accepted claim, redeemCollateral is not affected
   function claimRedeemDelay() external view returns (uint256);
@@ -40,7 +45,7 @@ interface ICoverPool {
   function activeCovers(uint256 _index) external view returns (address);
   function collaterals(uint256 _index) external view returns (address);
   function expiries(uint256 _index) external view returns (uint48);
-  function collateralStatusMap(address _collateral) external view returns (uint8 _status);
+  function collateralStatusMap(address _collateral) external view returns (uint256 _depositRatio, uint8 _status);
   function expiryInfoMap(uint48 _expiry) external view returns (string memory _name, uint8 _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);
 
@@ -49,6 +54,7 @@ interface ICoverPool {
   function getCoverPoolDetails()
     external view returns (
       string memory _name,
+      string memory _category,
       bool _active,
       bytes32[] memory _assetList,
       bytes32[] memory _deletedAssetList,
@@ -78,7 +84,7 @@ interface ICoverPool {
   // access restriction - dev
   function setActive(bool _active) external;
   function updateExpiry(uint48 _expiry, string calldata _expiryName, uint8 _status) external;
-  function updateCollateral(address _collateral, uint8 _status) external;
+  function updateCollateral(address _collateral, uint256 _depositRatio, uint8 _status) external;
   function deleteAsset(bytes32 _asset) external;
 
   // access restriction - governance

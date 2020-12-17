@@ -41,7 +41,7 @@ describe('Cover', function() {
     TIMESTAMP_NAME = '2020_12_31';
 
     // add coverPool through coverPool factory
-    const tx = await coverPoolFactory.createCoverPool(consts.POOL_2, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, TIMESTAMP, TIMESTAMP_NAME);
+    const tx = await coverPoolFactory.createCoverPool(consts.POOL_2, consts.CAT, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME);
     await tx;
     coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_2));
 

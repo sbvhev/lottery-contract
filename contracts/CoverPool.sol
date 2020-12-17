@@ -29,6 +29,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   bool public override isActive;
   string public override name;
+  string public override category;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
   // delay # of seconds for redeem with accepted claim, redeemCollateral is not affected
@@ -51,7 +52,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   // @notice assetName => status. 0 never added; 1 active, 2 inactive/deleted
   mapping(bytes32 => uint8) private assetsMap;
   // @notice collateral => status. 0 never set; 1 active, 2 inactive
-  mapping(address => uint8) public override collateralStatusMap;
+  mapping(address => CollateralInfo) public override collateralStatusMap;
   // Cover type only
   mapping(uint48 => ExpiryInfo) public override expiryInfoMap;
   // collateral => timestamp => coverAddress, most recent cover created for the collateral and timestamp combination
@@ -75,16 +76,19 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   /// @dev Initialize, called once
   function initialize (
     string calldata _coverPoolName,
+    string calldata _category,
     bytes32[] calldata _assetList,
     address _collateral,
+    uint256 _depositRatio,
     uint48 _expiry,
     string calldata _expiryString
   ) external initializer {
     initializeOwner();
     name = _coverPoolName;
+    category = _category;
     assetList = _assetList;
     collaterals.push(_collateral);
-    collateralStatusMap[_collateral] = 1;
+    collateralStatusMap[_collateral] = CollateralInfo(_depositRatio, 1);
     expiries.push(_expiry);
     expiryInfoMap[_expiry] = ExpiryInfo(_expiryString, 1);
 
@@ -105,6 +109,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     external view override
     returns (
       string memory _name,
+      string memory _category,
       bool _isActive,
       bytes32[] memory _assetList,
       bytes32[] memory _deletedAssetList,
@@ -116,7 +121,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       address[] memory _allCovers,
       address[] memory _allActiveCovers)
   {
-    return (name, isActive, assetList, deletedAssetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, activeCovers);
+    return (name, category, isActive, assetList, deletedAssetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, activeCovers);
   }
 
   function getRedeemFees()
@@ -139,7 +144,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     external override onlyActive nonReentrant
   {
     require(_amount > 0, "CoverPool: amount <= 0");
-    require(collateralStatusMap[_collateral] == 1, "CoverPool: invalid collateral");
+    require(collateralStatusMap[_collateral].status == 1, "CoverPool: invalid collateral");
     require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == 1, "CoverPool: invalid expiry");
 
     // Validate sender collateral balance is > amount
@@ -177,14 +182,14 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice update status or add new collateral
-  function updateCollateral(address _collateral, uint8 _status) external override onlyDev {
+  function updateCollateral(address _collateral, uint256 _depositRatio, uint8 _status) external override onlyDev {
     require(_collateral != address(0), "CoverPool: address cannot be 0");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
 
-    if (collateralStatusMap[_collateral] == 0) {
+    if (collateralStatusMap[_collateral].status == 0) {
       collaterals.push(_collateral);
     }
-    collateralStatusMap[_collateral] = _status;
+    collateralStatusMap[_collateral] = CollateralInfo(_depositRatio, _status);
   }
 
   /// @notice update status or add new expiry
