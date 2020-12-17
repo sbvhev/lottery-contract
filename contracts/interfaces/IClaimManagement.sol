@@ -54,6 +54,4 @@ interface IClaimManagement {
 
   function getAllClaimsByState(address _coverPool, uint256 _nonce, ClaimState _state) external view returns (Claim[] memory);
   function getAllClaimsByNonce(address _coverPool, uint256 _nonce) external view returns (Claim[] memory);
-  function getAddressFromFactory(string calldata _coverPoolName) external view returns (address);
-  function getCoverPoolNonce(address _coverPool) external view returns (uint256);
  }

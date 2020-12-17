@@ -50,6 +50,31 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     return coverPoolClaims[_coverPool][_nonce][_index];
   }
 
+  /// @notice Get all claims for coverPool `_coverPool` and nonce `_nonce` in state `_state`
+  function getAllClaimsByState(address _coverPool, uint256 _nonce, ClaimState _state)
+    external view override returns (Claim[] memory)
+  {
+    Claim[] memory allClaims = coverPoolClaims[_coverPool][_nonce];
+    uint256 count;
+    Claim[] memory temp = new Claim[](allClaims.length);
+    for (uint i = 0; i < allClaims.length; i++) {
+      if (allClaims[i].state == _state) {
+        temp[count] = allClaims[i];
+        count++;
+      }
+    }
+    Claim[] memory claimsByState = new Claim[](count);
+    for (uint i = 0; i < count; i++) {
+      claimsByState[i] = temp[i];
+    }
+    return claimsByState;
+  }
+
+  /// @notice Get all claims for coverPool `_coverPool` and nonce `_nonce`
+  function getAllClaimsByNonce(address _coverPool, uint256 _nonce) external view override returns (Claim[] memory) {
+    return coverPoolClaims[_coverPool][_nonce];
+  }
+
   /**
    * @notice File a claim for a Cover Pool
    * @dev `_incidentTimestamp` must be within the past 3 days
@@ -62,11 +87,11 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     uint48 _incidentTimestamp,
     string calldata _description
   ) external override {
-    address coverPool = getAddressFromFactory(_coverPoolName);
+    address coverPool = _getAddressFromFactory(_coverPoolName);
     require(coverPool != address(0), "COVER_CM: pool not found");
     require(block.timestamp - _incidentTimestamp <= getFileClaimWindow(coverPool), "COVER_CM: time passed window");
 
-    uint256 nonce = getCoverPoolNonce(coverPool);
+    uint256 nonce = _getCoverPoolNonce(coverPool);
     uint256 claimFee = getCoverPoolClaimFee(coverPool);
     coverPoolClaims[coverPool][nonce].push(Claim({
       state: ClaimState.Filed,
@@ -98,11 +123,11 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     uint48 _incidentTimestamp,
     string calldata _description
   ) external override onlyWhenAuditorVoting {
-    address coverPool = getAddressFromFactory(_coverPoolName);
+    address coverPool = _getAddressFromFactory(_coverPoolName);
     require(coverPool != address(0), "COVER_CM: pool not found");
     require(block.timestamp - _incidentTimestamp <= getFileClaimWindow(coverPool), "COVER_CM: time passed window");
 
-    uint256 nonce = getCoverPoolNonce(coverPool);
+    uint256 nonce = _getCoverPoolNonce(coverPool);
     coverPoolClaims[coverPool][nonce].push(Claim({
       state: ClaimState.ForceFiled,
       filedBy: msg.sender,
@@ -136,10 +161,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     bool _claimIsValid
   ) external override onlyGov onlyWhenAuditorVoting {
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
-    require(
-      _nonce == getCoverPoolNonce(_coverPool), 
-      "COVER_CM: input nonce != coverPool nonce"
-      );
+    require(_nonce == _getCoverPoolNonce(_coverPool), "COVER_CM: wrong nonce");
     require(claim.state == ClaimState.Filed, "COVER_CM: claim not filed");
     if (_claimIsValid) {
       claim.state = ClaimState.Validated;
@@ -172,7 +194,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     uint256[] calldata _payoutNumerators,
     uint256 _payoutDenominator
   ) external override onlyApprovedDecider {
-    require(_nonce == getCoverPoolNonce(_coverPool), "COVER_CM: input nonce != coverPool nonce");
+    require(_nonce == _getCoverPoolNonce(_coverPool), "COVER_CM: wrong nonce");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
     _validateClaimState(claim);
 
@@ -186,7 +208,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       claim.payoutDenominator = _payoutDenominator;
       feeCurrency.safeTransfer(claim.filedBy, claim.feePaid);
       _resetCoverPoolClaimFee(_coverPool);
-      _enactClaim(_coverPool, _nonce, claim);
+      // _enactClaim(_coverPool, _nonce, claim);
+      ICoverPool(_coverPool).enactClaim(claim.payoutAssetList, claim.payoutNumerators, claim.payoutDenominator, claim.incidentTimestamp, _nonce);
     } else {
       require(_getTotalNum(_payoutNumerators) == 0, "COVER_CM: claim denied (default if passed window), but payoutNumerator != 0");
       claim.state = ClaimState.Denied;
@@ -196,42 +219,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     emit ClaimUpdate(_coverPool, claim.state, _nonce, _index);
   }
 
-  function _enactClaim(address _coverPool, uint256 _nonce, Claim memory claim) private {
-    ICoverPool(_coverPool).enactClaim(claim.payoutAssetList, claim.payoutNumerators, claim.payoutDenominator, claim.incidentTimestamp, _nonce);
-  }
-
-  /// @notice Get all claims for coverPool `_coverPool` and nonce `_nonce` in state `_state`
-  function getAllClaimsByState(address _coverPool, uint256 _nonce, ClaimState _state)
-    external view override returns (Claim[] memory) 
-  {
-    Claim[] memory allClaims = coverPoolClaims[_coverPool][_nonce];
-    uint256 count;
-    Claim[] memory temp = new Claim[](allClaims.length);
-    for (uint i = 0; i < allClaims.length; i++) {
-      if (allClaims[i].state == _state) {
-        temp[count] = allClaims[i];
-        count++;
-      }
-    }
-    Claim[] memory claimsByState = new Claim[](count);
-    for (uint i = 0; i < count; i++) {
-      claimsByState[i] = temp[i];
-    }
-    return claimsByState;
-  }
-
-  /// @notice Get all claims for coverPool `_coverPool` and nonce `_nonce`
-  function getAllClaimsByNonce(address _coverPool, uint256 _nonce) 
-    external 
-    view 
-    override 
-    returns (Claim[] memory) 
-  {
-    return coverPoolClaims[_coverPool][_nonce];
-  }
-
   /// @notice Get the coverPool address from the coverPool factory
-  function getAddressFromFactory(string calldata _coverPoolName) public view override returns (address) {
+  function _getAddressFromFactory(string calldata _coverPoolName) private view returns (address) {
     return ICoverPoolFactory(coverPoolFactory).coverPools(_coverPoolName);
   }
 
@@ -240,7 +229,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
    * @param _coverPool address: contract address of the coverPool that COVER supports
    * @return the current nonce for coverPool `_coverPool`
    */
-  function getCoverPoolNonce(address _coverPool) public view override returns (uint256) {
+  function _getCoverPoolNonce(address _coverPool) private view returns (uint256) {
     return ICoverPool(_coverPool).claimNonce();
   }
 
