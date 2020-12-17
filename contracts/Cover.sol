@@ -226,7 +226,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   /// @dev Emits NewCovTokenCreation
   function _createCovToken(string memory _prefix) private returns (ICoverERC20) {
-    uint8 decimals = IERC20(collateral).decimals();
+    uint8 decimals = uint8(IERC20(collateral).decimals());
     if (decimals == 0) {
       decimals = 18;
     }
