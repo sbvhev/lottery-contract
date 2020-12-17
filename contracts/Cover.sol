@@ -29,7 +29,7 @@ import "./interfaces/ICovTokenProxy.sol";
 contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
 
-  bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string)"));
+  bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint8)"));
   bool public override isDeployed;
   uint48 public override expiry;
   address public override collateral;
@@ -226,10 +226,14 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   /// @dev Emits NewCovTokenCreation
   function _createCovToken(string memory _prefix) private returns (ICoverERC20) {
+    uint8 decimals = IERC20(collateral).decimals();
+    if (decimals == 0) {
+      decimals = 18;
+    }
     address coverERC20Impl = ICoverPoolFactory(_factory()).coverERC20Impl();
     bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), expiry, collateral, claimNonce, _prefix));
     address proxyAddr = BasicProxyLib.deployProxy(coverERC20Impl, salt);
-    ICovTokenProxy(proxyAddr).initialize(string(abi.encodePacked(_prefix, "_", name)));
+    ICovTokenProxy(proxyAddr).initialize(string(abi.encodePacked(_prefix, "_", name)), decimals);
 
     emit NewCovTokenCreation(proxyAddr);
     return ICoverERC20(proxyAddr);

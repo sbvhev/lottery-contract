@@ -16,19 +16,20 @@ import "./interfaces/ICoverERC20.sol";
  *  - Should only be created from Cover contract. See {Cover}
  */
 contract CoverERC20 is ICoverERC20, Initializable, Ownable {
-  uint8 public constant decimals = 18;
-  string public constant name = "covToken";
+  string public constant name = "Cover Protocol covToken";
 
   // The symbol of  the contract
   string public override symbol;
+  uint8 public override decimals;
   uint256 private _totalSupply;
 
   mapping(address => uint256) private balances;
   mapping(address => mapping (address => uint256)) private allowances;
 
   /// @notice Initialize, called once
-  function initialize (string calldata _symbol) external initializer {
+  function initialize (string calldata _symbol, uint8 _decimals) external initializer {
     symbol = _symbol;
+    decimals = _decimals;
     initializeOwner();
   }
 
