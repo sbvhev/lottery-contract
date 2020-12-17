@@ -37,9 +37,10 @@ describe("ClaimManagement", function () {
     COLLATERAL = dai.address;
 
     // add coverPool through coverPool factory
-    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, [consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], COLLATERAL, consts.CM_TIMESTAMPS, consts.ALLOWED_EXPIRY_NAMES);
+    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, [consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], COLLATERAL, consts.CM_TIMESTAMPS[0], consts.ALLOWED_EXPIRY_NAMES[0]);
     await tx;
     coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_2));
+    await coverPool.connect(ownerAccount).updateExpiry(consts.CM_TIMESTAMPS[1], consts.ALLOWED_EXPIRY_NAMES[1], 1);
 
     const ClaimManagement = await ethers.getContractFactory("ClaimManagement");
     management = await ClaimManagement.deploy(

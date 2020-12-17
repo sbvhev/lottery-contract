@@ -15,7 +15,7 @@ import "./interfaces/ICoverPoolFactory.sol";
  */
 contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
-  bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(bytes32,bytes32[],address,uint48[],bytes32[])"));
+  bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(bytes32,bytes32[],address,uint48,string)"));
 
   address public override coverPoolImpl;
   address public override coverImpl;
@@ -97,12 +97,12 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     bytes32 _name,
     bytes32[] calldata _assetList,
     address _collateral,
-    uint48[] calldata _timestamps,
-    bytes32[] calldata _timestampNames
+    uint48 _expiry,
+    string calldata _expiryString
   ) external override onlyOwner returns (address) {
     require(coverPools[_name] == address(0), "CoverPoolFactory: coverPool exists");
     require(_assetList.length > 0, "CoverPoolFactory: no asset passed for pool");
-    require(_timestamps.length == _timestampNames.length, "CoverPoolFactory: timestamp lengths don't match");
+    require(_expiry > block.timestamp, "CoverPoolFactory: expiry in the past");
     coverPoolNames.push(_name);
 
     bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
@@ -110,7 +110,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     address payable proxyAddr = Create2.deploy(0, keccak256(abi.encodePacked(_name)), bytecode);
     emit CoverPoolCreation(proxyAddr);
 
-    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _assetList, _collateral, _timestamps, _timestampNames);
+    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _assetList, _collateral, _expiry, _expiryString);
     InitializableAdminUpgradeabilityProxy(proxyAddr).initialize(coverPoolImpl, owner(), initData);
 
     coverPools[_name] = proxyAddr;

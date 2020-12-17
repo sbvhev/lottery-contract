@@ -79,20 +79,16 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     bytes32 _coverPoolName,
     bytes32[] calldata _assetList,
     address _collateral,
-    uint48[] calldata _expiries,
-    bytes32[] calldata _expiryNames
+    uint48 _expiry,
+    string calldata _expiryString
   ) external initializer {
     initializeOwner();
     name = _coverPoolName;
     assetList = _assetList;
     collaterals.push(_collateral);
-    expiries = _expiries;
     collateralStatusMap[_collateral] = 1;
-    for (uint256 i = 0; i < _expiries.length; i++) {
-      if (block.timestamp < _expiries[i]) {
-        expiryInfoMap[_expiries[i]] = ExpiryInfo(_expiryNames[i], 1);
-      }
-    }
+    expiries.push(_expiry);
+    expiryInfoMap[_expiry] = ExpiryInfo(_expiryString, 1);
 
     for (uint256 j = 0; j < _assetList.length; j++) {
       require(assetsMap[_assetList[j]] == 0, "CoverPool: duplicated assets");
@@ -194,16 +190,16 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice update status or add new expiry
-  function updateExpiry(uint48 _expiry, bytes32 _expiryName, uint8 _status)
+  function updateExpiry(uint48 _expiry, string calldata _expiryString, uint8 _status)
     external override onlyDev
   {
-    require(block.timestamp < _expiry, "CoverPool: invalid expiry");
+    require(block.timestamp < _expiry, "CoverPool: expiry in the past");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
 
     if (expiryInfoMap[_expiry].status == 0) {
       expiries.push(_expiry);
     }
-    expiryInfoMap[_expiry] = ExpiryInfo(_expiryName, _status);
+    expiryInfoMap[_expiry] = ExpiryInfo(_expiryString, _status);
   }
 
   /**
@@ -270,7 +266,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return string(abi.encodePacked(
       _getCoverName(_collateralSymbol),
       "_",
-      StringHelper.bytes32ToString(expiryInfoMap[_expiry].name)
+      expiryInfoMap[_expiry].name
     ));
   }
 

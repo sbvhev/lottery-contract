@@ -32,7 +32,7 @@ describe('CoverPoolFactory', () => {
 
   it('Should emit CoverPoolCreation event', async () => {
     await expect(coverPoolFactory.connect(ownerAccount)
-      .createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES)
+      .createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.emit(coverPoolFactory, 'CoverPoolCreation');
   });
 
@@ -57,10 +57,10 @@ describe('CoverPoolFactory', () => {
 
   it('Should add 2 new coverPools by owner', async () => {
     expect(await coverPoolFactory
-      .createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES)
+      .createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);  
     expect(await coverPoolFactory
-      .createCoverPool(consts.POOL_2, [consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES)
+      .createCoverPool(consts.POOL_2, [consts.PROTOCOL_NAME, consts.PROTOCOL_NAME_2], COLLATERAL, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);
     expect((await coverPoolFactory.getCoverPoolAddresses()).length).to.equal(2);
 
@@ -75,7 +75,7 @@ describe('CoverPoolFactory', () => {
 
   it('Should compute the same coverPool addresses', async () => {
     expect(await coverPoolFactory
-      .createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES)
+      .createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);  
 
     const coverPoolAddr1 = await coverPoolFactory.coverPools(consts.PROTOCOL_NAME);
@@ -88,7 +88,7 @@ describe('CoverPoolFactory', () => {
   it('Should NOT add new coverPool by userA', async () => {
     await expect(coverPoolFactory
       .connect(userAAccount)
-      .createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS, consts.ALLOWED_EXPIRY_NAMES)
+      .createCoverPool(consts.PROTOCOL_NAME, [consts.PROTOCOL_NAME], COLLATERAL, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.be.reverted;
   });
 });

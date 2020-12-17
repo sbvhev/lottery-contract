@@ -33,8 +33,8 @@ interface ICoverPoolFactory {
     bytes32 _name,
     bytes32[] calldata _assetList,
     address _collateral,
-    uint48[] calldata _timestamps,
-    bytes32[] calldata _timestampNames
+    uint48 _expiry,
+    string calldata _expiryString
   ) external returns (address);
   function updateTreasury(address _address) external;
   function updateClaimManager(address _address) external;

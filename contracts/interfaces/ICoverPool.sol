@@ -14,7 +14,7 @@ interface ICoverPool {
   event AssetUpdated(bytes32 _asset, bool _isAdd);
 
   struct ExpiryInfo {
-    bytes32 name;
+    string name;
     uint8 status; // 0 never set; 1 active, 2 inactive
   }
   struct ClaimDetails {
@@ -41,7 +41,7 @@ interface ICoverPool {
   function collaterals(uint256 _index) external view returns (address);
   function expiries(uint256 _index) external view returns (uint48);
   function collateralStatusMap(address _collateral) external view returns (uint8 _status);
-  function expiryInfoMap(uint48 _expiry) external view returns (bytes32 _name, uint8 _status);
+  function expiryInfoMap(uint48 _expiry) external view returns (string memory _name, uint8 _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);
 
   // extra view
@@ -77,7 +77,7 @@ interface ICoverPool {
 
   // access restriction - dev
   function setActive(bool _active) external;
-  function updateExpiry(uint48 _expiry, bytes32 _expiryName, uint8 _status) external;
+  function updateExpiry(uint48 _expiry, string calldata _expiryName, uint8 _status) external;
   function updateCollateral(address _collateral, uint8 _status) external;
   function deleteAsset(bytes32 _asset) external;
 
