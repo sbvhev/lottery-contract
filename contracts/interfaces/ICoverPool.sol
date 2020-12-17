@@ -45,7 +45,7 @@ interface ICoverPool {
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);
 
   // extra view
-  function getAssetLists() external view returns (bytes32[] memory _assetList, bytes32[] memory _deletedAssetList);
+  function getAssetList() external view returns (bytes32[] memory _assetList);
   function getCoverPoolDetails()
     external view returns (
       string memory _name,

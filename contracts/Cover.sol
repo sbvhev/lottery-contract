@@ -76,7 +76,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   function deploy() public {
     require(!isDeployed, "Cover: deploy complete");
-    (bytes32[] memory _assetList,) = ICoverPool(owner()).getAssetLists();
+    (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
     for (uint i = 0; i < _assetList.length; i++) {
       ICoverERC20 claimToken = claimCovTokenMap[_assetList[i]];
       if (address(claimToken) == address(0)) {
@@ -107,7 +107,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     require(isDeployed, "Cover: deploy incomplete");
     _noClaimAcceptedCheck(); // save gas than modifier
 
-    (bytes32[] memory _assetList,) = ICoverPool(owner()).getAssetLists();
+    (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
     for (uint i = 0; i < _assetList.length; i++) {
       claimCovTokenMap[_assetList[i]].mint(_receiver, _amount);
     }
@@ -159,7 +159,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
         ICoverERC20 _noclaimCovToken = noclaimCovToken; // save gas
         _noclaimCovToken.burnByCover(msg.sender, _amount);
 
-        (bytes32[] memory assetList,) = coverPool.getAssetLists();
+        (bytes32[] memory assetList) = coverPool.getAssetList();
         for (uint i = 0; i < assetList.length; i++) {
           ICoverERC20 claimToken = claimCovTokenMap[assetList[i]];
           claimToken.burnByCover(msg.sender, _amount);

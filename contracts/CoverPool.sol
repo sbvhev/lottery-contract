@@ -126,8 +126,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return (feeNumerator, feeDenominator);
   }
 
-  function getAssetLists() external view override returns (bytes32[] memory _assetList, bytes32[] memory _deletedAssetList) {
-    return (assetList, deletedAssetList);
+  function getAssetList() external view override returns (bytes32[] memory _assetList) {
+    return assetList;
   }
 
   function getClaimDetails(uint256 _nonce) external view override returns (ClaimDetails memory) {

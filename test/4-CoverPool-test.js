@@ -92,7 +92,7 @@ describe('CoverPool', () => {
 
   it('Should delete asset from pool correctly', async () => {
     await expect(coverPool.deleteAsset(consts.ASSET_1)).to.emit(coverPool, 'AssetUpdated');
-    const [assetList, deletedAssetList] = await coverPool.getAssetLists();
+    const [,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
     expect(assetList).to.deep.equal([consts.ASSET_2]);
     expect(deletedAssetList).to.deep.equal([consts.ASSET_1]);
 
