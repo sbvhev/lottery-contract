@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: No License
 
-pragma solidity ^0.7.5;
+pragma solidity ^0.8.0;
 
 import "./utils/Initializable.sol";
 import "./utils/Ownable.sol";

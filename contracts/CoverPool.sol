@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: No License
 
-pragma solidity ^0.7.5;
-pragma abicoder v2;
+pragma solidity ^0.8.0;
 
 import "./proxy/InitializableAdminUpgradeabilityProxy.sol";
 import "./utils/Create2.sol";
@@ -26,7 +25,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
 
   bytes4 private constant COVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint48,address,uint256)"));
-  bytes4 private constant PERPCOVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,address,uint256)"));
   uint256 private feeNumerator;
   uint256 private feeDenominator;
 
@@ -234,7 +232,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     }
     require(totalNum <= _payoutDenominator && totalNum > 0, "CoverPool: payout % is not in (0%, 100%]");
 
-    claimNonce = claimNonce.add(1);
+    claimNonce = claimNonce + 1;
     delete activeCovers;
     claimDetails.push(ClaimDetails(
       _payoutAssetList,
@@ -293,7 +291,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     // Deploy new cover contract if not exist or if claim accepted
     if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
       string memory coverName = _getCoverNameWithTimestamp(_expiry, IERC20(_collateral).symbol());
-
       bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
       bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);

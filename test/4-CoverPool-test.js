@@ -131,6 +131,9 @@ describe('CoverPool', () => {
 
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.PROTOCOL_NAME], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
+    
+    const poolNonce = await coverPool.claimNonce();
+    console.log('nonce after enact: ', poolNonce.toNumber());
 
     const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txB.wait();
