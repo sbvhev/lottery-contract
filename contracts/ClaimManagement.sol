@@ -13,7 +13,6 @@ import "./utils/SafeERC20.sol";
  */
 contract ClaimManagement is IClaimManagement, ClaimConfig {
   using SafeERC20 for IERC20;
-  using SafeMath for uint256;
 
   // coverPool => nonce => Claim[]
   mapping(address => mapping(uint256 => Claim[])) private coverPoolClaims;
@@ -71,7 +70,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       "COVER_CM: invalid coverPool address"
     );
     require(
-      block.timestamp.sub(_incidentTimestamp) <= getFileClaimWindow(_coverPool),
+      block.timestamp - _incidentTimestamp <= getFileClaimWindow(_coverPool),
       "COVER_CM: block.timestamp - incidentTimestamp > fileClaimWindow"
     );
     uint256 nonce = getCoverPoolNonce(_coverPool);
@@ -119,7 +118,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       "COVER_CM: invalid coverPool address"
     );  
     require(
-      block.timestamp.sub(_incidentTimestamp) <= getFileClaimWindow(_coverPool),
+      block.timestamp - _incidentTimestamp <= getFileClaimWindow(_coverPool),
       "COVER_CM: block.timestamp - incidentTimestamp > fileClaimWindow"
     );
     uint256 nonce = getCoverPoolNonce(_coverPool);
@@ -273,7 +272,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
    * The times passed since the claim was filed has to be less than the max claim decision window
    */
   function _isDecisionWindowPassed(Claim memory claim) private view returns (bool) {
-    return block.timestamp.sub(claim.filedTimestamp) > maxClaimDecisionWindow.sub(1 hours);
+    return block.timestamp - claim.filedTimestamp > maxClaimDecisionWindow - 1 hours;
   }
 
   function _validatePayoutNums(
@@ -294,7 +293,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
 
   function _getTotalNum(uint256[] calldata _payoutNumerators) private pure returns (uint256 _totalNum) {
     for (uint256 i = 0; i < _payoutNumerators.length; i++) {
-      _totalNum = _totalNum.add(_payoutNumerators[i]);
+      _totalNum = _totalNum + _payoutNumerators[i];
     }
   }
 

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./utils/SafeMath.sol";
 import "./utils/Ownable.sol";
 import "./interfaces/IClaimConfig.sol";
 import "./interfaces/ICoverPool.sol";
@@ -11,7 +10,6 @@ import "./interfaces/ICoverPool.sol";
  * @author Alan + crypto-pumpkin
  */
 contract ClaimConfig is IClaimConfig, Ownable {
-  using SafeMath for uint256;
   
   bool public override allowPartialClaim = true;
   IERC20 public override feeCurrency = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
@@ -125,7 +123,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
    */
   function getFileClaimWindow(address _coverPool) public view override returns (uint256) {
     uint256 noclaimRedeemDelay = ICoverPool(_coverPool).noclaimRedeemDelay();
-    return noclaimRedeemDelay.sub(maxClaimDecisionWindow).sub(1 hours);
+    return noclaimRedeemDelay - maxClaimDecisionWindow - 1 hours;
   }
 
   /**
@@ -133,7 +131,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
    * @dev coverPoolClaimFee[coverPool] cannot exceed `baseClaimFee`
    */
   function _updateCoverPoolClaimFee(address _coverPool) internal {
-    uint256 newFee = getCoverPoolClaimFee(_coverPool).mul(feeMultiplier);
+    uint256 newFee = getCoverPoolClaimFee(_coverPool) * feeMultiplier;
     if (newFee <= forceClaimFee) {
       coverPoolClaimFee[_coverPool] = newFee;
     }

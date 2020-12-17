@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 
 import "./utils/Initializable.sol";
 import "./utils/Ownable.sol";
-import "./utils/SafeMath.sol";
 import "./interfaces/ICoverERC20.sol";
 
 /**
@@ -17,8 +16,6 @@ import "./interfaces/ICoverERC20.sol";
  *  - Should only be created from Cover contract. See {Cover}
  */
 contract CoverERC20 is ICoverERC20, Initializable, Ownable {
-  using SafeMath for uint256;
-
   uint8 public constant decimals = 18;
   string public constant name = "covToken";
 
@@ -67,19 +64,19 @@ contract CoverERC20 is ICoverERC20, Initializable, Ownable {
     external virtual override returns (bool)
   {
     _transfer(sender, recipient, amount);
-    _approve(sender, msg.sender, allowances[sender][msg.sender].sub(amount, "CoverERC20: transfer amount exceeds allowance"));
+    _approve(sender, msg.sender, allowances[sender][msg.sender] - amount);
     return true;
   }
 
   /// @notice New ERC20 function
   function increaseAllowance(address spender, uint256 addedValue) public virtual override returns (bool) {
-    _approve(msg.sender, spender, allowances[msg.sender][spender].add(addedValue));
+    _approve(msg.sender, spender, allowances[msg.sender][spender] + addedValue);
     return true;
   }
 
   /// @notice New ERC20 function
   function decreaseAllowance(address spender, uint256 subtractedValue) public virtual override returns (bool) {
-    _approve(msg.sender, spender, allowances[msg.sender][spender].sub(subtractedValue, "ERC20: decreased allowance below zero"));
+    _approve(msg.sender, spender, allowances[msg.sender][spender] - subtractedValue);
     return true;
   }
 
@@ -89,8 +86,8 @@ contract CoverERC20 is ICoverERC20, Initializable, Ownable {
   {
     require(_account != address(0), "CoverERC20: mint to the zero address");
 
-    _totalSupply = _totalSupply.add(_amount);
-    balances[_account] = balances[_account].add(_amount);
+    _totalSupply = _totalSupply + _amount;
+    balances[_account] = balances[_account] + _amount;
     emit Transfer(address(0), _account, _amount);
     return true;
   }
@@ -119,16 +116,16 @@ contract CoverERC20 is ICoverERC20, Initializable, Ownable {
     require(sender != address(0), "CoverERC20: transfer from the zero address");
     require(recipient != address(0), "CoverERC20: transfer to the zero address");
 
-    balances[sender] = balances[sender].sub(amount, "CoverERC20: transfer amount exceeds balance");
-    balances[recipient] = balances[recipient].add(amount);
+    balances[sender] = balances[sender] - amount;
+    balances[recipient] = balances[recipient] + amount;
     emit Transfer(sender, recipient, amount);
   }
 
   function _burn(address account, uint256 amount) internal {
     require(account != address(0), "CoverERC20: burn from the zero address");
 
-    balances[account] = balances[account].sub(amount, "CoverERC20: burn amount exceeds balance");
-    _totalSupply = _totalSupply.sub(amount);
+    balances[account] = balances[account] - amount;
+    _totalSupply = _totalSupply - amount;
     emit Transfer(account, address(0), amount);
   }
 
