@@ -79,12 +79,11 @@ describe("ClaimManagement", function () {
   // fileClaim
   it("Should file a claim for incident correctly", async function () {
     expect(await management.getCoverPoolClaimFee(coverPool.address)).to.equal(ethers.utils.parseEther("40"));
-    await expect(management.fileClaim(coverPool.address, consts.POOL_2, EXPLOIT_ASSETS, timestamp + 5000), DESC).to.be.reverted;
-    await expect(management.fileClaim(coverPool.address, consts.POOL_2, EXPLOIT_ASSETS, timestamp - 10000000, DESC)).to.be.reverted;
-    await expect(management.fileClaim(consts.ADDRESS_ZERO, consts.POOL_2, EXPLOIT_ASSETS, timestamp), DESC).to.be.reverted;
-    await expect(management.fileClaim(coverPool.address, BOGEY_PROTOCOL, EXPLOIT_ASSETS, timestamp), DESC).to.be.reverted;
+    await expect(management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp + 5000), DESC).to.be.reverted;
+    await expect(management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp - 10000000, DESC)).to.be.reverted;
+    await expect(management.fileClaim(BOGEY_PROTOCOL, EXPLOIT_ASSETS, timestamp), DESC).to.be.reverted;
 
-    await management.fileClaim(coverPool.address, consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
     const claim = await management.getCoverPoolClaims(coverPool.address, 0, 0);
     expect(claim.state).to.equal(state.filed);
     expect(claim.filedBy).to.equal(ownerAddress);
@@ -97,7 +96,7 @@ describe("ClaimManagement", function () {
 
   it("Should cost 80 dai to file next claim", async function () {
     expect(await management.getCoverPoolClaimFee(coverPool.address)).to.equal(ethers.utils.parseEther("80"));
-    await management.fileClaim(coverPool.address, consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
     expect(await dai.balanceOf(ownerAddress)).to.equal(ethers.utils.parseEther("4880"));
     let filedClaims = await management.getAllClaimsByState(coverPool.address, 0, state.filed);
     expect(filedClaims.length).to.equal(2);
@@ -106,14 +105,14 @@ describe("ClaimManagement", function () {
   // forceFileClaim
   it("Should NOT allow force filing when condition not right", async function () {
     await management.setAuditor(consts.ADDRESS_ZERO);
-    await expect(management.forceFileClaim(coverPool.address, consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC)).to.be.reverted;
+    await expect(management.forceFileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC)).to.be.reverted;
     await management.setAuditor(auditorAddress);
-    await expect(management.forceFileClaim(consts.ADDRESS_ZERO, consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC)).to.be.reverted;
+    await expect(management.forceFileClaim("any", EXPLOIT_ASSETS, timestamp, DESC)).to.be.reverted;
   });
 
   it("Should file a forced claim", async function () {
     const userBal = await dai.balanceOf(ownerAddress);
-    await management.forceFileClaim(coverPool.address,consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.forceFileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
     expect(await dai.balanceOf(ownerAddress)).to.equal(userBal.sub(ethers.utils.parseEther("500")));
     const claim = await management.getCoverPoolClaims(coverPool.address, 0, 2);
     expect(claim.state).to.equal(state.forceFiled);
@@ -163,10 +162,10 @@ describe("ClaimManagement", function () {
   });
 
   it("Should file and validate more claims for further testing", async function () {
-    await management.fileClaim(coverPool.address, consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
     await management.connect(governanceAccount).validateClaim(coverPool.address, 0, 3, true);
 
-    await management.fileClaim(coverPool.address, consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
     await management.connect(governanceAccount).validateClaim(coverPool.address, 0, 4, true);
   });
   // decideClaim
@@ -206,7 +205,7 @@ describe("ClaimManagement", function () {
   });
 
   it("Should file new claims under nonce = 1", async function () {
-    await management.fileClaim(coverPool.address, consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
     expect(await management.getCoverPoolClaims(coverPool.address, 1, 0)).to.exist;
   });
   
@@ -232,8 +231,8 @@ describe("ClaimManagement", function () {
 
   // edge cases
   it("Should file 2 new claims", async function () {
-    await management.fileClaim(coverPool.address,consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
-    await management.fileClaim(coverPool.address,consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
   });
   
   it("Should revert if try to validate claim with payoutNumerator > 0 after window passed", async function () {

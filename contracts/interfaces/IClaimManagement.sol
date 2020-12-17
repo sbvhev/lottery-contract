@@ -26,14 +26,12 @@ interface IClaimManagement {
   function getCoverPoolClaims(address _coverPool, uint256 _nonce, uint256 _index) external view returns (Claim memory);
   
   function fileClaim(
-    address _coverPool,
     string calldata _coverPoolName,
     bytes32[] calldata _exploitAssets,
     uint48 _incidentTimestamp,
     string calldata _description
   ) external;
   function forceFileClaim(
-    address _coverPool,
     string calldata _coverPoolName,
     bytes32[] calldata _exploitAssets,
     uint48 _incidentTimestamp,

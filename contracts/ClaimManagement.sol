@@ -51,31 +51,24 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   }
 
   /**
-   * @notice File a claim for a COVER-supported contract `_coverPool` 
-   * by paying the `coverPoolClaimFee[_coverPool]` fee
+   * @notice File a claim for a Cover Pool
    * @dev `_incidentTimestamp` must be within the past 3 days
    * 
    * Emits ClaimUpdated
    */ 
   function fileClaim(
-    address _coverPool,
     string calldata _coverPoolName,
     bytes32[] calldata _exploitAssets,
     uint48 _incidentTimestamp,
     string calldata _description
   ) external override {
-    require(_coverPool != address(0), "COVER_CM: coverPool cannot be 0");
-    require(
-      _coverPool == getAddressFromFactory(_coverPoolName), 
-      "COVER_CM: invalid coverPool address"
-    );
-    require(
-      block.timestamp - _incidentTimestamp <= getFileClaimWindow(_coverPool),
-      "COVER_CM: block.timestamp - incidentTimestamp > fileClaimWindow"
-    );
-    uint256 nonce = getCoverPoolNonce(_coverPool);
-    uint256 claimFee = getCoverPoolClaimFee(_coverPool);
-    coverPoolClaims[_coverPool][nonce].push(Claim({
+    address coverPool = getAddressFromFactory(_coverPoolName);
+    require(coverPool != address(0), "COVER_CM: pool not found");
+    require(block.timestamp - _incidentTimestamp <= getFileClaimWindow(coverPool), "COVER_CM: time passed window");
+
+    uint256 nonce = getCoverPoolNonce(coverPool);
+    uint256 claimFee = getCoverPoolClaimFee(coverPool);
+    coverPoolClaims[coverPool][nonce].push(Claim({
       state: ClaimState.Filed,
       filedBy: msg.sender,
       payoutAssetList: _exploitAssets,
@@ -88,42 +81,29 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       description: _description
     }));
     feeCurrency.safeTransferFrom(msg.sender, address(this), claimFee);
-    _updateCoverPoolClaimFee(_coverPool);
-    uint256 index = coverPoolClaims[_coverPool][nonce].length - 1;
-    emit ClaimUpdate({
-      coverPool: _coverPool,
-      state: ClaimState.Filed,
-      nonce: nonce,
-      index: index
-    });
+    _updateCoverPoolClaimFee(coverPool);
+    emit ClaimUpdate(coverPool, ClaimState.Filed, nonce, coverPoolClaims[coverPool][nonce].length - 1);
   }
 
   /**
-   * @notice Force file a claim for a COVER-supported contract `_coverPool`
-   * that bypasses validateClaim by paying the `forceClaimFee` fee
+   * @notice Force file a claim for a Cover Pool
    * @dev `_incidentTimestamp` must be within the past 3 days. 
    * Only callable when isAuditorVoting is true
    * 
    * Emits ClaimUpdated
    */
   function forceFileClaim(
-    address _coverPool,
     string calldata _coverPoolName,
     bytes32[] calldata _exploitAssets,
     uint48 _incidentTimestamp,
     string calldata _description
   ) external override onlyWhenAuditorVoting {
-    require(_coverPool != address(0), "COVER_CM: coverPool cannot be 0");
-    require(
-      _coverPool == getAddressFromFactory(_coverPoolName), 
-      "COVER_CM: invalid coverPool address"
-    );  
-    require(
-      block.timestamp - _incidentTimestamp <= getFileClaimWindow(_coverPool),
-      "COVER_CM: block.timestamp - incidentTimestamp > fileClaimWindow"
-    );
-    uint256 nonce = getCoverPoolNonce(_coverPool);
-    coverPoolClaims[_coverPool][nonce].push(Claim({
+    address coverPool = getAddressFromFactory(_coverPoolName);
+    require(coverPool != address(0), "COVER_CM: pool not found");
+    require(block.timestamp - _incidentTimestamp <= getFileClaimWindow(coverPool), "COVER_CM: time passed window");
+
+    uint256 nonce = getCoverPoolNonce(coverPool);
+    coverPoolClaims[coverPool][nonce].push(Claim({
       state: ClaimState.ForceFiled,
       filedBy: msg.sender,
       payoutAssetList: _exploitAssets,
@@ -136,12 +116,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       description: _description
     }));
     feeCurrency.safeTransferFrom(msg.sender, address(this), forceClaimFee);
-    emit ClaimUpdate({
-      coverPool: _coverPool,
-      state: ClaimState.ForceFiled,
-      nonce: nonce,
-      index: coverPoolClaims[_coverPool][nonce].length - 1
-    });
+    emit ClaimUpdate(coverPool, ClaimState.ForceFiled, nonce, coverPoolClaims[coverPool][nonce].length - 1);
   }
 
   /**
