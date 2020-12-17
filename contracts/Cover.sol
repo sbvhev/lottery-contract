@@ -7,7 +7,6 @@ import "./utils/Create2.sol";
 import "./utils/Initializable.sol";
 import "./utils/Ownable.sol";
 import "./utils/ReentrancyGuard.sol";
-import "./utils/SafeMath.sol";
 import "./utils/SafeERC20.sol";
 import "./utils/StringHelper.sol";
 import "./interfaces/ICover.sol";
@@ -28,7 +27,6 @@ import "./interfaces/ICovTokenProxy.sol";
  *  - Allows redeem from collateral pool with or without an accepted claim
  */
 contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
-  using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
   bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string)"));
@@ -55,7 +53,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     expiry = _expiry;
     collateral = _collateral;
     claimNonce = _claimNonce;
-    duration = uint256(_expiry).sub(block.timestamp);
+    duration = uint256(_expiry) - block.timestamp;
 
     noclaimCovToken = _createCovToken("NOCLAIM");
     isDeployed = false;
@@ -67,12 +65,12 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
       uint256 amount = covToken.balanceOf(_account);
-      eligibleAmount = eligibleAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
+      eligibleAmount = eligibleAmount + amount * claim.payoutNumerators[i] / claim.payoutDenominator;
     }
     if (claim.payoutTotalNum < claim.payoutDenominator) {
       uint256 amount = noclaimCovToken.balanceOf(_account);
-      uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
-      eligibleAmount = eligibleAmount.add(payoutAmount);
+      uint256 payoutAmount = amount * (claim.payoutDenominator - claim.payoutTotalNum) / claim.payoutDenominator;
+      eligibleAmount = eligibleAmount + payoutAmount;
     }
   }
 
@@ -123,20 +121,20 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
     ICoverPool.ClaimDetails memory claim = _claimDetails();
     require(claim.incidentTimestamp <= expiry, "Cover: not eligible, redeem collateral instead");
-    require(block.timestamp >= uint256(claim.claimEnactedTimestamp).add(coverPool.claimRedeemDelay()), "Cover: not ready");
+    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "Cover: not ready");
 
     uint256 eligibleAmount;
     for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
       uint256 amount = covToken.balanceOf(msg.sender);
-      eligibleAmount = eligibleAmount.add(amount.mul(claim.payoutNumerators[i]).div(claim.payoutDenominator));
+      eligibleAmount = eligibleAmount + amount * claim.payoutNumerators[i] / claim.payoutDenominator;
       covToken.burnByCover(msg.sender, amount);
     }
 
     if (claim.payoutTotalNum < claim.payoutDenominator) {
       uint256 amount = noclaimCovToken.balanceOf(msg.sender);
-      uint256 payoutAmount = amount.mul(claim.payoutDenominator.sub(claim.payoutTotalNum)).div(claim.payoutDenominator);
-      eligibleAmount = eligibleAmount.add(payoutAmount);
+      uint256 payoutAmount = amount * (claim.payoutDenominator - claim.payoutTotalNum) / claim.payoutDenominator;
+      eligibleAmount = eligibleAmount + payoutAmount;
       noclaimCovToken.burnByCover(msg.sender, amount);
     }
 
@@ -151,7 +149,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       // there is an accepted claim, redeem back all if incident time must > expiry to redeem collateral
       ICoverPool.ClaimDetails memory claim = _claimDetails();
       require(claim.incidentTimestamp > expiry, "Cover: claimable covTokens cannot redeem collateral");
-      require(block.timestamp >= uint256(claim.claimEnactedTimestamp).add(coverPool.noclaimRedeemDelay()), "Cover: not ready");
+      require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.noclaimRedeemDelay(), "Cover: not ready");
       _burnCovTokenAndPay(noclaimCovToken, 1, 1);
     } else {
       require(_amount > 0, "Cover: amount is 0");
@@ -169,7 +167,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
         _payCollateral(msg.sender, _amount);
       } else {
         // there is NO accepted claim, expired, redeem back all
-        require(block.timestamp >= uint256(expiry).add(coverPool.noclaimRedeemDelay()), "Cover: not ready");
+        require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "Cover: not ready");
         _burnCovTokenAndPay(noclaimCovToken, 1, 1);
       }
     }
@@ -194,11 +192,11 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   function _payCollateral(address _receiver, uint256 _amount) private {
     ICoverPoolFactory factory = ICoverPoolFactory(_factory());
     (uint256 feeNumerator, uint256 feeDenominator) = ICoverPool(owner()).getRedeemFees();
-    uint256 fee = _amount.mul(feeNumerator).div(feeDenominator).mul(duration).div(365 days);
+    uint256 fee = _amount * feeNumerator * duration / (feeDenominator * 365 days);
     address treasury = factory.treasury();
     IERC20 collateralToken = IERC20(collateral);
 
-    collateralToken.safeTransfer(_receiver, _amount.sub(fee));
+    collateralToken.safeTransfer(_receiver, _amount - fee);
     collateralToken.safeTransfer(treasury, fee);
   }
 
@@ -214,7 +212,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     require(amount > 0, "Cover: low covToken balance");
 
     _covToken.burnByCover(msg.sender, amount);
-    uint256 payoutAmount = amount.mul(_payoutNumerator).div(_payoutDenominator);
+    uint256 payoutAmount = amount * _payoutNumerator / _payoutDenominator;
     _payCollateral(msg.sender, payoutAmount);
   }
 
