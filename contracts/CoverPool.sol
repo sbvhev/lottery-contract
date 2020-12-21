@@ -103,6 +103,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     feeNumerator = 60; // 0.6% yearly rate
     feeDenominator = 10000; // 0 to 65,535
     isActive = true;
+    _deployCover(_collateral, _expiry);
   }
 
   function getCoverPoolDetails()
@@ -151,7 +152,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     IERC20 collateral = IERC20(_collateral);
     require(collateral.balanceOf(msg.sender) >= _amount, "CoverPool: amount > collateral balance");
 
-    address addr = _getOrDeployCover(_collateral, _expiry);
+    address addr = coverMap[_collateral][_expiry];
+    require(ICover(addr).deployComplete(), "CoverPool: cover deploy incomplete");
+
     _addCover(collateral, addr, _amount);
   }
 
@@ -203,6 +206,12 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       expiries.push(_expiry);
     }
     expiryInfoMap[_expiry] = ExpiryInfo(_expiryString, _status);
+  }
+
+  function continueDeployCover(address _collateral, uint48 _expiry) external override {
+    address addr = coverMap[_collateral][_expiry];
+    require(!ICover(addr).deployComplete(), "CoverPool: cover deploy complete");
+    ICover(addr).deploy();
   }
 
   /**
@@ -284,7 +293,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     ));
   }
 
-  function _getOrDeployCover(address _collateral, uint48 _expiry) private returns (address addr) {
+  function _deployCover(address _collateral, uint48 _expiry) private returns (address addr) {
     addr = coverMap[_collateral][_expiry];
 
     // Deploy new cover contract if not exist or if claim accepted

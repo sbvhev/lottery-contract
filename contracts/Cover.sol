@@ -78,16 +78,24 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
   }
 
-  function deploy() public {
+  /**
+   * @dev multi-tx/block deployment solution. Only called (1+ times depend on size of pool) at creation.
+   * Deploy covTokens as many as possible till not enough gas left. 
+   */
+  function deploy() public override {
     require(!deployComplete, "Cover: deploy complete");
     (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
-    for (uint i = 0; i < _assetList.length; i++) {
+    uint256 startGas = gasleft();
+    for (uint256 i = 0; i < _assetList.length; i++) {
+      // with tests costs ~285k to deploy one, leave some space to update vars
+      if (startGas < 500000) return;
       ICoverERC20 claimToken = claimCovTokenMap[_assetList[i]];
       if (address(claimToken) == address(0)) {
         string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
         claimToken = _createCovToken(string(abi.encodePacked("CLAIM_", assetName)));
         claimCovTokens.push(claimToken);
         claimCovTokenMap[_assetList[i]] = claimToken;
+        startGas = gasleft();
       }
     }
     deployComplete = true;

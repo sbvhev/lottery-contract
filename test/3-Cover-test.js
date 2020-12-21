@@ -41,13 +41,13 @@ describe('Cover', function() {
     TIMESTAMP_NAME = '2020_12_31';
 
     // add coverPool through coverPool factory
-    const tx = await coverPoolFactory.createCoverPool(consts.POOL_2, consts.CAT, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME);
+    const tx = await coverPoolFactory.createCoverPool(consts.POOL_2, consts.CAT, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME);
     await tx;
     coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_2));
 
     // init test account balances
-    dai.mint(userAAddress, ETHER_UINT_10000);
-    dai.mint(userBAddress, ETHER_UINT_10000);
+    await dai.mint(userAAddress, ETHER_UINT_10000);
+    await dai.mint(userBAddress, ETHER_UINT_10000);
     await dai.connect(userAAccount).approve(coverPool.address, ETHER_UINT_10000);
     await dai.connect(userBAccount).approve(coverPool.address, ETHER_UINT_10000);
 
@@ -56,6 +56,18 @@ describe('Cover', function() {
     await txA.wait();
     const coverAddress = await coverPool.coverMap(COLLATERAL, TIMESTAMP);
     cover = Cover.attach(coverAddress);
+  });
+
+  it ('Should deploy Cover in two txs with CoverPool', async function() {
+    const tx = await coverPoolFactory.createCoverPool(consts.POOL_3, consts.CAT, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME, {gasLimit: 2122841});
+    await tx;
+    const coverPool2 = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_3));
+    await dai.connect(userAAccount).approve(coverPool2.address, ETHER_UINT_10000);
+
+    // revert cause deploy incomplete
+    await expectRevert(coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10, {gasLimit: 2012841}), 'CoverPool: cover deploy incomplete');
+    await coverPool2.continueDeployCover(COLLATERAL, TIMESTAMP);
+    await coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10)
   });
 
   it('Should initialize correct state variables', async function() {

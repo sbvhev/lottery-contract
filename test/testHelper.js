@@ -2,7 +2,7 @@ module.exports = {
   consts: {
     ASSET_1: ethers.utils.formatBytes32String('Binance'),
     ASSET_2: ethers.utils.formatBytes32String('Curve'),
-    ASSET_3: ethers.utils.formatBytes32String('Aave'),
+    ASSET_3: ethers.utils.formatBytes32String('AAVEAAVE'),
     POOL_1: 'Pool1',
     POOL_2: 'Pool2',
     POOL_3: 'Pool3',
