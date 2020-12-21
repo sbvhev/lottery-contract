@@ -71,7 +71,8 @@ interface ICoverPool {
 
   // user action
   function addCover(address _collateral, uint48 _expiry, uint256 _amount) external;
-  function continueDeployCover(address _collateral, uint48 _expiry) external;
+  /// @notice Will only deploy or complete existing deployment if necessary, safe to call
+  function deployCover(address _collateral, uint48 _expiry) external returns (address _coverAddress);
 
   // access restriction - claimManager
   function enactClaim(

@@ -103,7 +103,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     feeNumerator = 60; // 0.6% yearly rate
     feeDenominator = 10000; // 0 to 65,535
     isActive = true;
-    _deployCover(_collateral, _expiry);
+    deployCover(_collateral, _expiry);
   }
 
   function getCoverPoolDetails()
@@ -153,6 +153,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     require(collateral.balanceOf(msg.sender) >= _amount, "CoverPool: amount > collateral balance");
 
     address addr = coverMap[_collateral][_expiry];
+    require(addr != address(0), "CoverPool: not deployed yet");
     require(ICover(addr).deployComplete(), "CoverPool: cover deploy incomplete");
 
     _addCover(collateral, addr, _amount);
@@ -169,12 +170,14 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   function deleteAsset(bytes32 _asset) external override onlyDev {
     require(assetsMap[_asset] == 1, "CoverPool: not active asset");
     bytes32[] memory assetListCopy = assetList; //save gas
-    require(assetListCopy.length > 1, "CoverPool: only 1 asset");
+    require(assetListCopy.length > 1, "CoverPool: only 1 asset left");
 
     bytes32[] memory newAssetList = new bytes32[](assetListCopy.length - 1);
+    uint256 newListInd = 0;
     for (uint i = 0; i < assetListCopy.length; i++) {
       if (_asset != assetListCopy[i]) {
-        newAssetList[newAssetList.length - 1] = assetListCopy[i];
+        newAssetList[newListInd] = assetListCopy[i];
+        newListInd++;
       } else {
         assetsMap[_asset] = 2;
         deletedAssetList.push(_asset);
@@ -184,34 +187,58 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     assetList = newAssetList;
   }
 
-  /// @notice update status or add new collateral
+  /// @notice Will only deploy or complete existing deployment if necessary, safe to call
+  function deployCover(address _collateral, uint48 _expiry) public override returns (address addr) {
+    addr = coverMap[_collateral][_expiry];
+
+    // Deploy new cover contract if not exist or if claim accepted
+    if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
+      string memory coverName = _getCoverNameWithTimestamp(_expiry, IERC20(_collateral).symbol());
+      bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
+      bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
+      addr = Create2.deploy(0, salt, bytecode);
+
+      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _expiry, _collateral, collateralStatusMap[_collateral].depositRatio, claimNonce);
+      address coverImpl = ICoverPoolFactory(owner()).coverImpl();
+      InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
+        coverImpl,
+        IOwnable(owner()).owner(),
+        initData
+      );
+      activeCovers.push(addr);
+      allCovers.push(addr);
+      coverMap[_collateral][_expiry] = addr;
+    }
+
+    if (!ICover(addr).deployComplete()) {
+      ICover(addr).deploy();
+    }
+  }
+
+  /// @notice update status or add new collateral, call deployCover with collateral and expiry before add cover
   function updateCollateral(address _collateral, uint256 _depositRatio, uint8 _status) external override onlyDev {
     require(_collateral != address(0), "CoverPool: address cannot be 0");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
 
+    // status 0 means never added before, inactive expiry status should be 2
     if (collateralStatusMap[_collateral].status == 0) {
       collaterals.push(_collateral);
     }
     collateralStatusMap[_collateral] = CollateralInfo(_depositRatio, _status);
   }
 
-  /// @notice update status or add new expiry
+  /// @notice update status or add new expiry, call deployCover with collateral and expiry before add cover
   function updateExpiry(uint48 _expiry, string calldata _expiryString, uint8 _status)
     external override onlyDev
   {
     require(block.timestamp < _expiry, "CoverPool: expiry in the past");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
 
+    // status 0 means never added before, inactive expiry status should be 2
     if (expiryInfoMap[_expiry].status == 0) {
       expiries.push(_expiry);
     }
     expiryInfoMap[_expiry] = ExpiryInfo(_expiryString, _status);
-  }
-
-  function continueDeployCover(address _collateral, uint48 _expiry) external override {
-    address addr = coverMap[_collateral][_expiry];
-    require(!ICover(addr).deployComplete(), "CoverPool: cover deploy complete");
-    ICover(addr).deploy();
   }
 
   /**
@@ -291,29 +318,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       "_",
       _collateralSymbol
     ));
-  }
-
-  function _deployCover(address _collateral, uint48 _expiry) private returns (address addr) {
-    addr = coverMap[_collateral][_expiry];
-
-    // Deploy new cover contract if not exist or if claim accepted
-    if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
-      string memory coverName = _getCoverNameWithTimestamp(_expiry, IERC20(_collateral).symbol());
-      bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
-      bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
-      addr = Create2.deploy(0, salt, bytecode);
-
-      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _expiry, _collateral, collateralStatusMap[_collateral].depositRatio, claimNonce);
-      address coverImpl = ICoverPoolFactory(owner()).coverImpl();
-      InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
-        coverImpl,
-        IOwnable(owner()).owner(),
-        initData
-      );
-      activeCovers.push(addr);
-      allCovers.push(addr);
-      coverMap[_collateral][_expiry] = addr;
-    }
   }
 
   function _addCover(IERC20 _collateral, address _cover, uint256 _amount) private {

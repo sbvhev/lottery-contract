@@ -58,15 +58,15 @@ describe('Cover', function() {
     cover = Cover.attach(coverAddress);
   });
 
-  it ('Should deploy Cover in two txs with CoverPool', async function() {
-    const tx = await coverPoolFactory.createCoverPool(consts.POOL_3, consts.CAT, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME, {gasLimit: 2122841});
+  it('Should deploy Cover in two txs with CoverPool', async function() {
+    const tx = await coverPoolFactory.createCoverPool(consts.POOL_3, consts.CAT, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME, {gasLimit: 2222841});
     await tx;
     const coverPool2 = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_3));
     await dai.connect(userAAccount).approve(coverPool2.address, ETHER_UINT_10000);
 
     // revert cause deploy incomplete
     await expectRevert(coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10, {gasLimit: 2012841}), 'CoverPool: cover deploy incomplete');
-    await coverPool2.continueDeployCover(COLLATERAL, TIMESTAMP);
+    await coverPool2.deployCover(COLLATERAL, TIMESTAMP);
     await coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10)
   });
 

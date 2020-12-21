@@ -35,7 +35,9 @@ describe('CoverPool', () => {
     await tx;
     coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_2));
     await coverPool.connect(ownerAccount).updateExpiry(consts.ALLOWED_EXPIRYS[1], consts.ALLOWED_EXPIRY_NAMES[1], 1);
+    await coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     await coverPool.connect(ownerAccount).updateExpiry(consts.ALLOWED_EXPIRYS[2], consts.ALLOWED_EXPIRY_NAMES[2], 1);
+    await coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[2]);
 
     // init test account balances
     dai.mint(userAAddress, 1000);
@@ -56,8 +58,8 @@ describe('CoverPool', () => {
     expect(assetList).to.deep.equal([consts.ASSET_1, consts.ASSET_2]);
     expect(collaterals).to.deep.equal([COLLATERAL]);
     expect(expiries).to.deep.equal(consts.ALLOWED_EXPIRYS);
-    expect(allCovers.length).to.equal(0);
-    expect(allActiveCovers.length).to.equal(0);
+    expect(allCovers.length).to.equal(3);
+    expect(allActiveCovers.length).to.equal(3);
   });
 
   it('Should update state variables by the correct authority', async () => {
@@ -99,7 +101,7 @@ describe('CoverPool', () => {
     expect(deletedAssetList).to.deep.equal([consts.ASSET_1]);
 
     await expectRevert(coverPool.deleteAsset(consts.ASSET_1), "CoverPool: not active asset");
-    await expectRevert(coverPool.deleteAsset(consts.ASSET_2), "CoverPool: only 1 asset");
+    await expectRevert(coverPool.deleteAsset(consts.ASSET_2), "CoverPool: only 1 asset left");
   });
 
   it('Should add cover for userA and emit event', async () => {
@@ -135,6 +137,7 @@ describe('CoverPool', () => {
 
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
+    await coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     
     const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txB.wait();
@@ -153,6 +156,7 @@ describe('CoverPool', () => {
 
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimAccepted');
+      await coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
 
     const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
     await txB.wait();
