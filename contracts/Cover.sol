@@ -30,7 +30,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
 
   bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint8)"));
-  bool public override isDeployed;
+  bool public override deployComplete;
   uint48 public override expiry;
   address public override collateral;
   /// @notice e18 created as initialization, cannot be changed, used to decided the collateral to covToken ratio
@@ -60,7 +60,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     duration = uint256(_expiry) - block.timestamp;
 
     noclaimCovToken = _createCovToken("NOCLAIM");
-    isDeployed = false;
+    deployComplete = false;
     deploy();
   }
 
@@ -79,7 +79,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   function deploy() public {
-    require(!isDeployed, "Cover: deploy complete");
+    require(!deployComplete, "Cover: deploy complete");
     (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
     for (uint i = 0; i < _assetList.length; i++) {
       ICoverERC20 claimToken = claimCovTokenMap[_assetList[i]];
@@ -90,7 +90,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
         claimCovTokenMap[_assetList[i]] = claimToken;
       }
     }
-    isDeployed = true;
+    deployComplete = true;
   }
 
   function getCoverDetails()
@@ -109,7 +109,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
   function mint(uint256 _amount, address _receiver) external override onlyOwner {
-    require(isDeployed, "Cover: deploy incomplete");
+    require(deployComplete, "Cover: deploy incomplete");
     _noClaimAcceptedCheck(); // save gas than modifier
 
     (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();

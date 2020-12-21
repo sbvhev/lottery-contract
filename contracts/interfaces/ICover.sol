@@ -11,7 +11,7 @@ import "./ICoverERC20.sol";
 interface ICover {
   event NewCovTokenCreation(address);
 
-  function isDeployed() external view returns (bool);
+  function deployComplete() external view returns (bool);
   function collateral() external view returns (address);
   /// @notice created as initialization, cannot be changed
   function depositRatio() external view returns (uint256);
