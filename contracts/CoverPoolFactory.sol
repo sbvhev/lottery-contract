@@ -15,7 +15,7 @@ import "./interfaces/ICoverPoolFactory.sol";
  */
 contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
-  bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(string,string,bytes32[],address,uint256,uint48,string)"));
+  bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],address,uint256,uint48,string)"));
 
   address public override coverPoolImpl;
   address public override coverImpl;
@@ -94,7 +94,6 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   /**
    * @notice Create a new Cover Pool
    * @param _name all caps, name for pool, e.g. YEARN
-   * @param _category all caps, used identify the type of pool, DeFi, natural disaster
    * @param _assetList risk assets that are covered in this pool
    * @param _collateral the collateral of the pool
    * @param _depositRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
@@ -105,7 +104,6 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
    */
   function createCoverPool(
     string calldata _name,
-    string calldata _category,
     bytes32[] calldata _assetList,
     address _collateral,
     uint256 _depositRatio,
@@ -117,7 +115,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     require(_expiry > block.timestamp, "CoverPoolFactory: expiry in the past");
 
     coverPoolNames.push(_name);
-    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _category, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
+    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
     _addr =  address(_deployCoverPool(_name, initData));
     coverPools[_name] = _addr;
   }

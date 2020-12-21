@@ -31,7 +31,7 @@ describe('CoverPool', () => {
     await coverPoolFactory.updateClaimManager(ownerAddress);
 
     // add coverPool through coverPool factory
-    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, consts.CAT, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0]);
+    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0]);
     await tx;
     coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_2));
     await coverPool.connect(ownerAccount).updateExpiry(consts.ALLOWED_EXPIRYS[1], consts.ALLOWED_EXPIRY_NAMES[1], 1);
@@ -47,10 +47,9 @@ describe('CoverPool', () => {
   });
 
   it('Should initialize correct state variables', async () => {
-    const [name, category, isActive, assetList,, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, allActiveCovers] = await coverPool.getCoverPoolDetails();
+    const [name, isActive, assetList,, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, allActiveCovers] = await coverPool.getCoverPoolDetails();
 
     expect(name).to.equal(consts.POOL_2);
-    expect(category).to.equal(consts.CAT);
     expect(isActive).to.equal(true);
     expect(claimNonce).to.equal(0);
     expect(claimRedeemDelay).to.equal(2 * 24 * 60 * 60);
@@ -96,7 +95,7 @@ describe('CoverPool', () => {
 
   it('Should delete asset from pool correctly', async () => {
     await expect(coverPool.deleteAsset(consts.ASSET_1)).to.emit(coverPool, 'AssetUpdated');
-    const [,,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
+    const [,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
     expect(assetList).to.deep.equal([consts.ASSET_2]);
     expect(deletedAssetList).to.deep.equal([consts.ASSET_1]);
 

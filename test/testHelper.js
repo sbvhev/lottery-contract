@@ -6,7 +6,6 @@ module.exports = {
     POOL_1: 'Pool1',
     POOL_2: 'Pool2',
     POOL_3: 'Pool3',
-    CAT: 'DeFi',
     DEPOSIT_RATIO: ethers.utils.parseEther('1'),
     ADDRESS_ZERO: ethers.constants.AddressZero,
     ALLOWED_EXPIRYS: [Math.floor(Date.now()) + 30 * 24 * 60 * 60, Math.floor(Date.now()) + 60 * 24 * 60 * 60, Math.floor(Date.now()) + 90 * 24 * 60 * 60],

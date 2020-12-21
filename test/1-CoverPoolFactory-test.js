@@ -32,7 +32,7 @@ describe('CoverPoolFactory', () => {
 
   it('Should emit CoverPoolCreation event', async () => {
     await expect(coverPoolFactory.connect(ownerAccount)
-      .createCoverPool(consts.ASSET_1, consts.CAT, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      .createCoverPool(consts.ASSET_1, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.emit(coverPoolFactory, 'CoverPoolCreation');
   });
 
@@ -57,10 +57,10 @@ describe('CoverPoolFactory', () => {
 
   it('Should add 2 new coverPools by owner', async () => {
     expect(await coverPoolFactory
-      .createCoverPool(consts.POOL_1, consts.CAT, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      .createCoverPool(consts.POOL_1, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);  
     expect(await coverPoolFactory
-      .createCoverPool(consts.POOL_3, consts.CAT, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      .createCoverPool(consts.POOL_3, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);
     expect((await coverPoolFactory.getCoverPoolAddresses()).length).to.equal(2);
 
@@ -68,7 +68,6 @@ describe('CoverPoolFactory', () => {
     expect(await CoverPool.attach(coverPoolAddr1).name()).to.equal(consts.POOL_1);
     const coverPoolAddr2 = await coverPoolFactory.coverPools(consts.POOL_3);
     expect(await CoverPool.attach(coverPoolAddr2).name()).to.equal(consts.POOL_3);
-    expect(await CoverPool.attach(coverPoolAddr2).category()).to.equal(consts.CAT);
     expect(await CoverPool.attach(coverPoolAddr2).assetList(0)).to.equal(consts.ASSET_1);
     expect(await CoverPool.attach(coverPoolAddr2).assetList(1)).to.equal(consts.ASSET_2);
     expect(await CoverPool.attach(coverPoolAddr2).collateralStatusMap(COLLATERAL)).to.deep.equal([consts.DEPOSIT_RATIO, 1]);
@@ -76,7 +75,7 @@ describe('CoverPoolFactory', () => {
 
   it('Should compute the same coverPool addresses', async () => {
     expect(await coverPoolFactory
-      .createCoverPool(consts.POOL_3, consts.CAT, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      .createCoverPool(consts.POOL_3, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);  
 
     const coverPoolAddr = await coverPoolFactory.coverPools(consts.POOL_3);
@@ -89,7 +88,7 @@ describe('CoverPoolFactory', () => {
   it('Should NOT add new coverPool by userA', async () => {
     await expect(coverPoolFactory
       .connect(userAAccount)
-      .createCoverPool(consts.ASSET_1, consts.CAT, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      .createCoverPool(consts.ASSET_1, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.be.reverted;
   });
 });

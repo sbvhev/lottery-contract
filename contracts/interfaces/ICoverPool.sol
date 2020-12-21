@@ -34,7 +34,6 @@ interface ICoverPool {
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   function isActive() external view returns (bool);
   function name() external view returns (string memory);
-  function category() external view returns (string memory);
   function claimNonce() external view returns (uint256);
   /// @notice delay # of seconds for redeem with accepted claim, redeemCollateral is not affected
   function claimRedeemDelay() external view returns (uint256);
@@ -54,7 +53,6 @@ interface ICoverPool {
   function getCoverPoolDetails()
     external view returns (
       string memory _name,
-      string memory _category,
       bool _active,
       bytes32[] memory _assetList,
       bytes32[] memory _deletedAssetList,

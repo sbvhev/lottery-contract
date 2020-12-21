@@ -29,7 +29,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   bool public override isActive;
   string public override name;
-  string public override category;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
   // delay # of seconds for redeem with accepted claim, redeemCollateral is not affected
@@ -76,7 +75,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   /// @dev Initialize, called once
   function initialize (
     string calldata _coverPoolName,
-    string calldata _category,
     bytes32[] calldata _assetList,
     address _collateral,
     uint256 _depositRatio,
@@ -85,7 +83,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   ) external initializer {
     initializeOwner();
     name = _coverPoolName;
-    category = _category;
     assetList = _assetList;
     collaterals.push(_collateral);
     collateralStatusMap[_collateral] = CollateralInfo(_depositRatio, 1);
@@ -110,7 +107,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     external view override
     returns (
       string memory _name,
-      string memory _category,
       bool _isActive,
       bytes32[] memory _assetList,
       bytes32[] memory _deletedAssetList,
@@ -122,7 +118,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       address[] memory _allCovers,
       address[] memory _allActiveCovers)
   {
-    return (name, category, isActive, assetList, deletedAssetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, activeCovers);
+    return (name, isActive, assetList, deletedAssetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, activeCovers);
   }
 
   function getRedeemFees()

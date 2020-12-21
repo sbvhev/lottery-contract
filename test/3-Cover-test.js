@@ -41,7 +41,7 @@ describe('Cover', function() {
     TIMESTAMP_NAME = '2020_12_31';
 
     // add coverPool through coverPool factory
-    const tx = await coverPoolFactory.createCoverPool(consts.POOL_2, consts.CAT, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME);
+    const tx = await coverPoolFactory.createCoverPool(consts.POOL_2, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME);
     await tx;
     coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_2));
 
@@ -59,7 +59,7 @@ describe('Cover', function() {
   });
 
   it('Should deploy Cover in two txs with CoverPool', async function() {
-    const tx = await coverPoolFactory.createCoverPool(consts.POOL_3, consts.CAT, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME, {gasLimit: 2222841});
+    const tx = await coverPoolFactory.createCoverPool(consts.POOL_3, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME, {gasLimit: 2222841});
     await tx;
     const coverPool2 = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_3));
     await dai.connect(userAAccount).approve(coverPool2.address, ETHER_UINT_10000);
@@ -123,7 +123,7 @@ describe('Cover', function() {
 
   it('Should mint, and redeem correctly for non 1 deposit ratio', async function() {
     const ratio = 2;
-    const tx = await coverPoolFactory.createCoverPool(consts.POOL_3, consts.CAT, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO.mul(ratio), TIMESTAMP, TIMESTAMP_NAME);
+    const tx = await coverPoolFactory.createCoverPool(consts.POOL_3, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO.mul(ratio), TIMESTAMP, TIMESTAMP_NAME);
     await tx;
     const coverPool2 = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_3));
     await dai.connect(userBAccount).approve(coverPool2.address, ETHER_UINT_10000);
