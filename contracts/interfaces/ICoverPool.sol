@@ -70,9 +70,10 @@ interface ICoverPool {
   function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
 
   // user action
-  function addCover(address _collateral, uint48 _expiry, uint256 _amount) external;
   /// @notice Will only deploy or complete existing deployment if necessary, safe to call
   function deployCover(address _collateral, uint48 _expiry) external returns (address _coverAddress);
+  /// @notice cover must be deployed first
+  function addCover(address _collateral, uint48 _expiry, uint256 _amount) external;
 
   // access restriction - claimManager
   function enactClaim(

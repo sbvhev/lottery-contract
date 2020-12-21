@@ -78,29 +78,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
   }
 
-  /**
-   * @dev multi-tx/block deployment solution. Only called (1+ times depend on size of pool) at creation.
-   * Deploy covTokens as many as possible till not enough gas left. 
-   */
-  function deploy() public override {
-    require(!deployComplete, "Cover: deploy complete");
-    (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
-    uint256 startGas = gasleft();
-    for (uint256 i = 0; i < _assetList.length; i++) {
-      // with tests costs ~285k to deploy one, leave some space to update vars
-      if (startGas < 500000) return;
-      ICoverERC20 claimToken = claimCovTokenMap[_assetList[i]];
-      if (address(claimToken) == address(0)) {
-        string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
-        claimToken = _createCovToken(string(abi.encodePacked("CLAIM_", assetName)));
-        claimCovTokens.push(claimToken);
-        claimCovTokenMap[_assetList[i]] = claimToken;
-        startGas = gasleft();
-      }
-    }
-    deployComplete = true;
-  }
-
   function getCoverDetails()
     external view override
     returns (
@@ -126,34 +103,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       claimCovTokenMap[_assetList[i]].mint(_receiver, adjustedAmount);
     }
     noclaimCovToken.mint(_receiver, adjustedAmount);
-  }
-
-  /// @notice redeem when there is an accepted claim
-  function redeemClaim() external override nonReentrant {
-    ICoverPool coverPool = ICoverPool(owner());
-    require(coverPool.claimNonce() > claimNonce, "Cover: no claim accepted");
-
-    ICoverPool.ClaimDetails memory claim = _claimDetails();
-    require(claim.incidentTimestamp <= expiry, "Cover: not eligible, redeem collateral instead");
-    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "Cover: not ready");
-
-    uint256 eligibleAmount;
-    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
-      ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
-      uint256 amount = covToken.balanceOf(msg.sender);
-      eligibleAmount = eligibleAmount + amount * claim.payoutNumerators[i] / claim.payoutDenominator;
-      covToken.burnByCover(msg.sender, amount);
-    }
-
-    if (claim.payoutTotalNum < claim.payoutDenominator) {
-      uint256 amount = noclaimCovToken.balanceOf(msg.sender);
-      uint256 payoutAmount = amount * (claim.payoutDenominator - claim.payoutTotalNum) / claim.payoutDenominator;
-      eligibleAmount = eligibleAmount + payoutAmount;
-      noclaimCovToken.burnByCover(msg.sender, amount);
-    }
-
-    require(eligibleAmount > 0, "Cover: low covToken balance");
-    _payCollateral(msg.sender, eligibleAmount);
   }
 
   /// @notice redeem collateral, only when no claim accepted. If expired (with or withour claim), _amount is not respected
@@ -185,6 +134,57 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
         _burnCovTokenAndPay(noclaimCovToken, 1, 1);
       }
     }
+  }
+
+  /**
+   * @dev multi-tx/block deployment solution. Only called (1+ times depend on size of pool) at creation.
+   * Deploy covTokens as many as possible till not enough gas left. 
+   */
+  function deploy() public override {
+    require(!deployComplete, "Cover: deploy complete");
+    (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
+    uint256 startGas = gasleft();
+    for (uint256 i = 0; i < _assetList.length; i++) {
+      // with tests costs ~285k to deploy one, leave some space to update vars
+      if (startGas < 500000) return;
+      ICoverERC20 claimToken = claimCovTokenMap[_assetList[i]];
+      if (address(claimToken) == address(0)) {
+        string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
+        claimToken = _createCovToken(string(abi.encodePacked("CLAIM_", assetName)));
+        claimCovTokens.push(claimToken);
+        claimCovTokenMap[_assetList[i]] = claimToken;
+        startGas = gasleft();
+      }
+    }
+    deployComplete = true;
+  }
+
+  /// @notice redeem when there is an accepted claim
+  function redeemClaim() external override nonReentrant {
+    ICoverPool coverPool = ICoverPool(owner());
+    require(coverPool.claimNonce() > claimNonce, "Cover: no claim accepted");
+
+    ICoverPool.ClaimDetails memory claim = _claimDetails();
+    require(claim.incidentTimestamp <= expiry, "Cover: not eligible, redeem collateral instead");
+    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "Cover: not ready");
+
+    uint256 eligibleAmount;
+    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
+      ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
+      uint256 amount = covToken.balanceOf(msg.sender);
+      eligibleAmount = eligibleAmount + amount * claim.payoutNumerators[i] / claim.payoutDenominator;
+      covToken.burnByCover(msg.sender, amount);
+    }
+
+    if (claim.payoutTotalNum < claim.payoutDenominator) {
+      uint256 amount = noclaimCovToken.balanceOf(msg.sender);
+      uint256 payoutAmount = amount * (claim.payoutDenominator - claim.payoutTotalNum) / claim.payoutDenominator;
+      eligibleAmount = eligibleAmount + payoutAmount;
+      noclaimCovToken.burnByCover(msg.sender, amount);
+    }
+
+    require(eligibleAmount > 0, "Cover: low covToken balance");
+    _payCollateral(msg.sender, eligibleAmount);
   }
 
   /// @notice make sure no claim is accepted

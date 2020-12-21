@@ -140,7 +140,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return claimDetails[_nonce];
   }
 
-  /// @notice add coverage (with expiry) for sender
+  /// @notice add coverage (with expiry) for sender, cover must be deployed first
   function addCover(address _collateral, uint48 _expiry, uint256 _amount)
     external override onlyActive nonReentrant
   {
@@ -148,22 +148,15 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     require(collateralStatusMap[_collateral].status == 1, "CoverPool: invalid collateral");
     require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == 1, "CoverPool: invalid expiry");
 
-    // Validate sender collateral balance is > amount
-    IERC20 collateral = IERC20(_collateral);
-    require(collateral.balanceOf(msg.sender) >= _amount, "CoverPool: amount > collateral balance");
-
     address addr = coverMap[_collateral][_expiry];
     require(addr != address(0), "CoverPool: not deployed yet");
     require(ICover(addr).deployComplete(), "CoverPool: cover deploy incomplete");
 
-    _addCover(collateral, addr, _amount);
-  }
+    // Validate sender collateral balance is > amount
+    IERC20 collateral = IERC20(_collateral);
+    require(collateral.balanceOf(msg.sender) >= _amount, "CoverPool: amount > collateral balance");
 
-  function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external override onlyGov {
-    require(_feeDenominator > 0, "CoverPool: denominator cannot be 0");
-    require(_feeDenominator > _feeNumerator, "CoverPool: must < 100%");
-    feeNumerator = _feeNumerator;
-    feeDenominator = _feeDenominator;
+    _addCover(collateral, addr, _amount);
   }
 
   /// @notice delete asset from pool
@@ -278,6 +271,13 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       uint48(block.timestamp)
     ));
     emit ClaimAccepted(_coverPoolNonce);
+  }
+
+  function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external override onlyGov {
+    require(_feeDenominator > 0, "CoverPool: denominator cannot be 0");
+    require(_feeDenominator > _feeNumerator, "CoverPool: must < 100%");
+    feeNumerator = _feeNumerator;
+    feeDenominator = _feeDenominator;
   }
 
   // update status of coverPool, if false, will pause new cover creation
