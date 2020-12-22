@@ -146,7 +146,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     uint256 startGas = gasleft();
     for (uint256 i = 0; i < _assetList.length; i++) {
       // with tests costs ~285k to deploy one, leave some space to update vars
-      if (startGas < 500000) return;
+      if (startGas < _factory().deployGasMin()) return;
       ICoverERC20 claimToken = claimCovTokenMap[_assetList[i]];
       if (address(claimToken) == address(0)) {
         string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
@@ -198,18 +198,17 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice the owner of this contract is CoverPool contract, the owner of CoverPool is CoverPoolFactory contract
-  function _factory() internal view returns (address) {
-    return IOwnable(owner()).owner();
+  function _factory() internal view returns (ICoverPoolFactory) {
+    return ICoverPoolFactory(IOwnable(owner()).owner());
   }
 
   /// @notice transfer collateral (amount - fee) from this contract to recevier, transfer fee to COVER treasury
   function _payCollateral(address _receiver, uint256 _amount) private {
     uint256 adjustedAmount = _amount * 1e18 / depositRatio;
 
-    ICoverPoolFactory factory = ICoverPoolFactory(_factory());
     (uint256 feeNumerator, uint256 feeDenominator) = ICoverPool(owner()).getRedeemFees();
     uint256 fee = adjustedAmount * feeNumerator * duration / (feeDenominator * 365 days);
-    address treasury = factory.treasury();
+    address treasury = _factory().treasury();
     IERC20 collateralToken = IERC20(collateral);
 
     collateralToken.safeTransfer(_receiver, adjustedAmount - fee);
@@ -238,7 +237,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     if (decimals == 0) {
       decimals = 18;
     }
-    address coverERC20Impl = ICoverPoolFactory(_factory()).coverERC20Impl();
+    address coverERC20Impl = _factory().coverERC20Impl();
     bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), expiry, collateral, claimNonce, _prefix));
     address proxyAddr = BasicProxyLib.deployProxy(coverERC20Impl, salt);
     ICovTokenProxy(proxyAddr).initialize(string(abi.encodePacked(_prefix, "_", name)), decimals);

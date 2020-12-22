@@ -28,6 +28,7 @@ describe('CoverPoolFactory', () => {
     expect(await coverPoolFactory.coverERC20Impl()).to.equal(coverERC20Impl.address);
     expect(await coverPoolFactory.governance()).to.equal(governanceAddress);
     expect(await coverPoolFactory.treasury()).to.equal(treasuryAddress);
+    expect(await coverPoolFactory.deployGasMin()).to.equal(500000);
   });
 
   it('Should emit CoverPoolCreation event', async () => {
@@ -46,9 +47,12 @@ describe('CoverPoolFactory', () => {
   });
 
   // test functions with owner access restriction
-  it('Should update claimManager by owner', async () => {
+  it('Should update vars by owner', async () => {
     await coverPoolFactory.connect(ownerAccount).updateClaimManager(userAAddress);
     expect(await coverPoolFactory.claimManager()).to.equal(userAAddress);
+
+    await coverPoolFactory.connect(ownerAccount).updateDeployGasMin(6000000);
+    expect(await coverPoolFactory.deployGasMin()).to.equal(6000000);
   });
 
   it('Should NOT update claimManager by non-owner', async () => {

@@ -16,6 +16,7 @@ interface ICoverPoolFactory {
   function treasury() external view returns (address);
   function governance() external view returns (address);
   function claimManager() external view returns (address);
+  function  deployGasMin() external view returns (uint256);
   function coverPools(string calldata _coverPoolName) external view returns (address);
 
   /// @notice return contract address, the contract may not be deployed yet
@@ -25,6 +26,8 @@ interface ICoverPoolFactory {
   function getCovTokenAddress(string calldata _coverPoolName, uint48 _expiry, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
 
   // access restriction - owner (dev)
+  /// @notice min gas required to continue deployment
+  function updateDeployGasMin(uint256 _deployGasMin) external;
   /// @dev update Impl will only affect contracts deployed after
   function updateCoverPoolImpl(address _newImpl) external;
   function updateCoverImpl(address _newImpl) external;

@@ -24,6 +24,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   address public override treasury;
   address public override governance;
   address public override claimManager;
+  uint256 public override  deployGasMin = 500000;
 
   // not all coverPools are active
   string[] private coverPoolNames;
@@ -118,6 +119,12 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
     _addr =  address(_deployCoverPool(_name, initData));
     coverPools[_name] = _addr;
+  }
+
+  /// @dev update this will only affect coverPools deployed after
+  function updateDeployGasMin(uint256 _deployGasMin) external override onlyOwner {
+    require(_deployGasMin > 0, "CoverPoolFactory: min gas cannot be 0");
+    deployGasMin = _deployGasMin;
   }
 
   /// @dev update this will only affect coverPools deployed after
