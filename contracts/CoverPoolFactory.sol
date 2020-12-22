@@ -24,7 +24,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   address public override treasury;
   address public override governance;
   address public override claimManager;
-  uint256 public override  deployGasMin = 500000;
+  uint256 public override deployGasMin = 500000;
 
   // not all coverPools are active
   string[] private coverPoolNames;

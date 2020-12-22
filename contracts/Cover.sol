@@ -145,7 +145,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
     uint256 startGas = gasleft();
     for (uint256 i = 0; i < _assetList.length; i++) {
-      // with tests costs ~285k to deploy one, leave some space to update vars
       if (startGas < _factory().deployGasMin()) return;
       ICoverERC20 claimToken = claimCovTokenMap[_assetList[i]];
       if (address(claimToken) == address(0)) {
