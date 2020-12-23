@@ -64,7 +64,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
   /// @notice return coverPool contract address, the contract may not be deployed yet
   function getCoverPoolAddress(string calldata _name) public view override returns (address) {
-    return _computeAddress(keccak256(abi.encodePacked(_name)), address(this));
+    return _computeAddress(keccak256(abi.encodePacked("CoverV2", _name)), address(this));
   }
 
   /// @notice return cover contract address, the contract may not be deployed yet
@@ -75,7 +75,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     uint256 _claimNonce
   ) public view override returns (address) {
     return _computeAddress(
-      keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce)),
+      keccak256(abi.encodePacked("CoverV2", _coverPoolName, _timestamp, _collateral, _claimNonce)),
       getCoverPoolAddress(_coverPoolName)
     );
   }
@@ -88,7 +88,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     uint256 _claimNonce,
     string memory _prefix
   ) external view override returns (address) {
-    bytes32 salt = keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce, _prefix));
+    bytes32 salt = keccak256(abi.encodePacked("CoverV2", _coverPoolName, _timestamp, _collateral, _claimNonce, _prefix));
     address deployer = getCoverAddress(_coverPoolName, _timestamp, _collateral, _claimNonce);
     return BasicProxyLib.computeProxyAddress(coverERC20Impl, salt, deployer);
   }
@@ -177,7 +177,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   function _deployCoverPool(string calldata _name, bytes memory _initData) private returns (address payable _proxyAddr) {
     bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
     // unique salt required for each coverPool, salt + deployer decides contract address
-    _proxyAddr = Create2.deploy(0, keccak256(abi.encodePacked(_name)), bytecode);
+    _proxyAddr = Create2.deploy(0, keccak256(abi.encodePacked("CoverV2", _name)), bytecode);
     emit CoverPoolCreation(_proxyAddr);
     InitializableAdminUpgradeabilityProxy(_proxyAddr).initialize(coverPoolImpl, owner(), _initData);
   }

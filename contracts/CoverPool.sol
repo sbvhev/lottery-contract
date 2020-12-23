@@ -211,7 +211,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
       string memory coverName = _getCoverName(_expiry, IERC20(_collateral).symbol());
       bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
-      bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
+      bytes32 salt = keccak256(abi.encodePacked("CoverV2", name, _expiry, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);
 
       bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _expiry, _collateral, collateralStatusMap[_collateral].depositRatio, claimNonce);

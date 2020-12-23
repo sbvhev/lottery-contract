@@ -297,7 +297,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       decimals = 18;
     }
     address coverERC20Impl = _factory().coverERC20Impl();
-    bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), expiry, collateral, claimNonce, _prefix));
+    bytes32 salt = keccak256(abi.encodePacked("CoverV2", ICoverPool(owner()).name(), expiry, collateral, claimNonce, _prefix));
     address proxyAddr = BasicProxyLib.deployProxy(coverERC20Impl, salt);
     ICovTokenProxy(proxyAddr).initialize(string(abi.encodePacked(_prefix, name)), decimals);
 
