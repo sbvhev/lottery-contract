@@ -18,6 +18,9 @@ import "./interfaces/ICoverPoolFactory.sol";
 /**
  * @title CoverPool contract
  * @author crypto-pumpkin
+ * 
+ * - open pool: allow add and delete asset
+ * - close pool: NOT allow add asset, but allow delete asset
  */
 contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
@@ -158,7 +161,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     _addCover(collateral, addr, _amount);
   }
 
-  /// @notice add asset to pool (only called by factory)
+  /// @notice add asset to pool (only called by factory), cannot be deleted asset
   function addAsset(bytes32 _asset) external override onlyOwner {
     require(isOpenPool, "CoverPool: not open pool");
     bytes32[] memory deletedAssetListCopy = deletedAssetList; // save gas
