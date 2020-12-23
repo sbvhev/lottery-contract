@@ -13,10 +13,7 @@ interface ICover {
 
   function deployComplete() external view returns (bool);
   /// @notice created as initialization, cannot be changed
-  function depositRatio() external view returns (uint256);
-  function noclaimCovToken() external view returns (ICoverERC20);
   function claimNonce() external view returns (uint256);
-  function duration() external view returns (uint256);
   function viewClaimable(address _account) external view returns (uint256 _eligibleAmount);
   function getCoverDetails()
     external view returns (
@@ -27,7 +24,8 @@ interface ICover {
       uint256 _claimNonce,
       ICoverERC20[] memory _futureCovTokens,
       ICoverERC20[] memory _claimCovTokens,
-      ICoverERC20 _noclaimCovToken
+      ICoverERC20 _noclaimCovToken,
+      uint256 _duration
     );
 
   // user action

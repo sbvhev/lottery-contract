@@ -33,13 +33,13 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   bool public override deployComplete;
   uint48 private expiry;
   address private collateral;
-  /// @notice e18 created as initialization, cannot be changed, used to decided the collateral to covToken ratio
-  ICoverERC20 public override noclaimCovToken;
+  ICoverERC20 private noclaimCovToken;
   // Yearn_0_DAI_210131
   string private name;
+  // e18 created as initialization, cannot be changed, used to decided the collateral to covToken ratio
+  uint256 private depositRatio;
+  uint256 private duration;
   uint256 public override claimNonce;
-  uint256 public override duration;
-  uint256 public override depositRatio;
 
   ICoverERC20[] private futureCovTokens;
   ICoverERC20[] private claimCovTokens;
@@ -93,9 +93,10 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       uint256 _claimNonce,
       ICoverERC20[] memory _futureCovTokens,
       ICoverERC20[] memory _claimCovTokens,
-      ICoverERC20 _noclaimCovToken)
+      ICoverERC20 _noclaimCovToken,
+      uint256 _duration)
   {
-    return (name, expiry, collateral, depositRatio, claimNonce, futureCovTokens, claimCovTokens, noclaimCovToken);
+    return (name, expiry, collateral, depositRatio, claimNonce, futureCovTokens, claimCovTokens, noclaimCovToken, duration);
   }
 
   /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
