@@ -28,6 +28,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   bool public override isActive;
+  // Yearn_0_DAI_210131
   string public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
@@ -182,7 +183,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
     // Deploy new cover contract if not exist or if claim accepted
     if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
-      string memory coverName = _getCoverNameWithTimestamp(_expiry, IERC20(_collateral).symbol());
+      string memory coverName = _getCoverName(_expiry, IERC20(_collateral).symbol());
       bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
       bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);
@@ -294,25 +295,18 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return IOwnable(owner()).owner();
   }
 
-  /// @dev generate the cover name. Example: 3POOL_0_DAI_2020_12_31
-  function _getCoverNameWithTimestamp(uint48 _expiry, string memory _collateralSymbol)
-   internal view returns (string memory) 
+  /// @dev generate the cover name. Example: 3POOL_0_DAI_210131
+  function _getCoverName(uint48 _expiry, string memory _collateralSymbol)
+   internal view returns (string memory)
   {
-    return string(abi.encodePacked(
-      _getCoverName(_collateralSymbol),
-      "_",
-      expiryInfoMap[_expiry].name
-    ));
-  }
-
-  /// @dev generate the cover name. Example: 3POOL_0_DAI
-  function _getCoverName(string memory _collateralSymbol) internal view returns (string memory) {
     return string(abi.encodePacked(
       name,
       "_",
       StringHelper.uintToString(claimNonce),
       "_",
-      _collateralSymbol
+      _collateralSymbol,
+      "_",
+      expiryInfoMap[_expiry].name
     ));
   }
 

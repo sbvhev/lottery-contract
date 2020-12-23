@@ -79,7 +79,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     );
   }
 
-  /// @notice return covToken contract address, the contract may not be deployed yet, prefix should be "CLAIM_CURVE_POOL2" or "NOCLAIM_POOL2"
+  /// @notice return covToken contract address, the contract may not be deployed yet, prefix should be "C_CURVE_POOL2" or "NC_POOL2"
   function getCovTokenAddress(
     string calldata _coverPoolName,
     uint48 _timestamp,

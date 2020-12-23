@@ -40,8 +40,11 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   uint256 public override claimNonce;
   uint256 public override duration;
 
-  ICoverERC20[] public override claimCovTokens;
+  ICoverERC20[] private futureCovTokens;
+  ICoverERC20[] private claimCovTokens;
   mapping(bytes32 => ICoverERC20) public claimCovTokenMap;
+  // future token => CLAIM Token
+  mapping(ICoverERC20 => ICoverERC20) public futureCovTokenMap;
 
   /// @dev Initialize, called once
   function initialize (
@@ -59,7 +62,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     claimNonce = _claimNonce;
     duration = uint256(_expiry) - block.timestamp;
 
-    noclaimCovToken = _createCovToken("NOCLAIM");
+    noclaimCovToken = _createCovToken("NC_");
+    futureCovTokens.push(_createCovToken("C_FUT0_"));
     deployComplete = false;
     deploy();
   }
@@ -86,10 +90,11 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       address _collateral,
       uint256 _depositRatio,
       uint256 _claimNonce,
+      ICoverERC20[] memory _futureCovTokens,
       ICoverERC20[] memory _claimCovTokens,
       ICoverERC20 _noclaimCovToken)
   {
-    return (name, expiry, collateral, depositRatio, claimNonce, claimCovTokens, noclaimCovToken);
+    return (name, expiry, collateral, depositRatio, claimNonce, futureCovTokens, claimCovTokens, noclaimCovToken);
   }
 
   /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
@@ -136,6 +141,34 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
   }
 
+  function convert(ICoverERC20 _futureToken) public override {
+    ICoverERC20 claimCovToken = futureCovTokenMap[_futureToken];
+    require(address(claimCovToken) != address(0), "Cover: nothing to convert");
+    uint256 amount = _futureToken.balanceOf(msg.sender);
+    require(amount > 0, "Cover: insufficient balance");
+    _futureToken.burnByCover(msg.sender, amount);
+    claimCovToken.mint(msg.sender, amount);
+  }
+
+  function convertAll(ICoverERC20[] calldata _futureTokens) external override {
+    for (uint256 i = 0; i < _futureTokens.length; i++) {
+      convert(_futureTokens[i]);
+    }
+  }
+
+  function addAsset(bytes32 _asset) external override onlyOwner {
+    string memory assetName = StringHelper.bytes32ToString(_asset);
+    ICoverERC20 claimToken = _createCovToken(string(abi.encodePacked("C_", assetName, "_")));
+    claimCovTokens.push(claimToken);
+    claimCovTokenMap[_asset] = claimToken;
+    ICoverERC20[] memory futureCovTokensCopy = futureCovTokens; // save gas
+    uint256 len = futureCovTokensCopy.length;
+    ICoverERC20 futureCovToken = futureCovTokensCopy[len];
+    futureCovTokenMap[futureCovToken] = claimToken;
+    string memory futureTokenName = string(abi.encodePacked("C_FUT", StringHelper.uintToString(len), "_"));
+    futureCovTokens.push(_createCovToken(futureTokenName));
+  }
+
   /**
    * @dev multi-tx/block deployment solution. Only called (1+ times depend on size of pool) at creation.
    * Deploy covTokens as many as possible till not enough gas left. 
@@ -149,7 +182,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       ICoverERC20 claimToken = claimCovTokenMap[_assetList[i]];
       if (address(claimToken) == address(0)) {
         string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
-        claimToken = _createCovToken(string(abi.encodePacked("CLAIM_", assetName)));
+        claimToken = _createCovToken(string(abi.encodePacked("C_", assetName, "_")));
         claimCovTokens.push(claimToken);
         claimCovTokenMap[_assetList[i]] = claimToken;
         startGas = gasleft();
@@ -239,7 +272,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     address coverERC20Impl = _factory().coverERC20Impl();
     bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), expiry, collateral, claimNonce, _prefix));
     address proxyAddr = BasicProxyLib.deployProxy(coverERC20Impl, salt);
-    ICovTokenProxy(proxyAddr).initialize(string(abi.encodePacked(_prefix, "_", name)), decimals);
+    ICovTokenProxy(proxyAddr).initialize(string(abi.encodePacked(_prefix, name)), decimals);
 
     emit NewCovTokenCreation(proxyAddr);
     return ICoverERC20(proxyAddr);

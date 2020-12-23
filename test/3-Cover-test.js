@@ -59,27 +59,28 @@ describe('Cover', function() {
   });
 
   it('Should deploy Cover in two txs with CoverPool', async function() {
-    const tx = await coverPoolFactory.createCoverPool(consts.POOL_3, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME, {gasLimit: 2222841});
+    const tx = await coverPoolFactory.createCoverPool(consts.POOL_3, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME, {gasLimit: 2422841});
     await tx;
     const coverPool2 = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_3));
     await dai.connect(userAAccount).approve(coverPool2.address, ETHER_UINT_10000);
 
     // revert cause deploy incomplete
-    await expectRevert(coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10, {gasLimit: 2012841}), 'CoverPool: cover deploy incomplete');
+    await expectRevert(coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10, {gasLimit: 2112841}), 'CoverPool: cover deploy incomplete');
     await coverPool2.deployCover(COLLATERAL, TIMESTAMP);
     await coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10)
   });
 
   it('Should initialize correct state variables', async function() {
-    const [name, expiry, collateral, depositRatio, claimNonce, claimCovTokens, noclaimCovToken] = await cover.getCoverDetails();
+    const [name, expiry, collateral, depositRatio, claimNonce, futureCovTokens, claimCovTokens, noclaimCovToken] = await cover.getCoverDetails();
     expect(name).to.equal(NAME);
     expect(expiry).to.equal(TIMESTAMP);
     expect(collateral).to.equal(COLLATERAL);
     expect(depositRatio).to.equal(consts.DEPOSIT_RATIO);
     expect(claimNonce).to.equal(0);
-    expect(await CoverERC20.attach(claimCovTokens[0]).symbol()).to.equal('CLAIM_Binance_' + NAME);
-    expect(await CoverERC20.attach(claimCovTokens[1]).symbol()).to.equal('CLAIM_Curve_' + NAME);
-    expect(await CoverERC20.attach(noclaimCovToken).symbol()).to.equal('NOCLAIM_' + NAME);
+    expect(await CoverERC20.attach(futureCovTokens[0]).symbol()).to.equal('C_FUT0_' + NAME);
+    expect(await CoverERC20.attach(claimCovTokens[0]).symbol()).to.equal('C_Binance_' + NAME);
+    expect(await CoverERC20.attach(claimCovTokens[1]).symbol()).to.equal('C_Curve_' + NAME);
+    expect(await CoverERC20.attach(noclaimCovToken).symbol()).to.equal('NC_' + NAME);
     expect(await CoverERC20.attach(claimCovTokens[0]).totalSupply()).to.equal(ETHER_UINT_10);
     expect(await CoverERC20.attach(claimCovTokens[1]).totalSupply()).to.equal(ETHER_UINT_10);
     expect(await CoverERC20.attach(noclaimCovToken).totalSupply()).to.equal(ETHER_UINT_10);
@@ -91,12 +92,11 @@ describe('Cover', function() {
 
   // owner access tests
   it('Should match computed covToken addresses', async function() {
-    const claimCovTokenAddress = await cover.claimCovTokens(0);
-    const noclaimCovTokenAddress = await cover.noclaimCovToken();
-    const claimNonce = await coverPool.claimNonce();
+    const [,,,,claimNonce,, claimCovTokens, noclaimCovTokenAddress] = await cover.getCoverDetails();
+    const claimCovTokenAddress = claimCovTokens[0];
 
-    const computedClaimCovTokenAddress = await coverPoolFactory.getCovTokenAddress(consts.POOL_2, TIMESTAMP, COLLATERAL, claimNonce, 'CLAIM_Binance');
-    const computedNoclaimCovTokenAddress = await coverPoolFactory.getCovTokenAddress(consts.POOL_2, TIMESTAMP, COLLATERAL, claimNonce.toNumber(), 'NOCLAIM');
+    const computedClaimCovTokenAddress = await coverPoolFactory.getCovTokenAddress(consts.POOL_2, TIMESTAMP, COLLATERAL, claimNonce, 'C_Binance_');
+    const computedNoclaimCovTokenAddress = await coverPoolFactory.getCovTokenAddress(consts.POOL_2, TIMESTAMP, COLLATERAL, claimNonce, 'NC_');
     expect(claimCovTokenAddress).to.equal(computedClaimCovTokenAddress);
     expect(noclaimCovTokenAddress).to.equal(computedNoclaimCovTokenAddress);
   });
@@ -154,9 +154,8 @@ describe('Cover', function() {
   it('Should redeem collateral without accepted claim', async function() {
     const treasuryBalBefore = await dai.balanceOf(treasuryAddress);
     await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
-
-    const claimCovTokenAddress = await cover.claimCovTokens(0);
-    const noclaimCovTokenAddress = await cover.noclaimCovToken();
+    const [,,,,,, claimCovTokens, noclaimCovTokenAddress] = await cover.getCoverDetails();
+    const claimCovTokenAddress = claimCovTokens[0];
     expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(0);
     expect(await CoverERC20.attach(noclaimCovTokenAddress).totalSupply()).to.equal(0);
     expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
@@ -173,9 +172,8 @@ describe('Cover', function() {
     const collateralBalanceBefore = await dai.balanceOf(userAAddress);
     const collateralTreasuryBefore = await dai.balanceOf(treasuryAddress);
     await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
-
-    const claimCovTokenAddress = await cover.claimCovTokens(0);
-    const noclaimCovTokenAddress = await cover.noclaimCovToken();
+    const [,,,,,, claimCovTokens, noclaimCovTokenAddress] = await cover.getCoverDetails();
+    const claimCovTokenAddress = claimCovTokens[0];
     expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(0);
     expect(await CoverERC20.attach(noclaimCovTokenAddress).totalSupply()).to.equal(0);
     expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(0);
@@ -248,7 +246,8 @@ describe('Cover', function() {
 
     expect(await dai.balanceOf(cover.address)).to.equal(ETHER_UINT_10);
 
-    const claimCovTokenAddress = await cover.claimCovTokens(0);
+    const [,,,,,, claimCovTokens] = await cover.getCoverDetails();
+    const claimCovTokenAddress = claimCovTokens[0];
     expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(ETHER_UINT_10);
     expect(await CoverERC20.attach(claimCovTokenAddress).balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
   });

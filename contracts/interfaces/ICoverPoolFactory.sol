@@ -22,7 +22,7 @@ interface ICoverPoolFactory {
   /// @notice return contract address, the contract may not be deployed yet
   function getCoverPoolAddress(string calldata _name) external view returns (address);
   function getCoverAddress(string calldata _coverPoolName, uint48 _timestamp, address _collateral, uint256 _claimNonce) external view returns (address);
-  /// @notice _prefix example: "CLAIM_CURVE_POOL2" or "NOCLAIM_POOL2"
+  /// @notice _prefix example: "C_CURVE_POOL2" or "NC_POOL2"
   function getCovTokenAddress(string calldata _coverPoolName, uint48 _expiry, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
 
   // access restriction - owner (dev)
