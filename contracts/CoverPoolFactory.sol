@@ -7,6 +7,7 @@ import "./proxy/BasicProxyLib.sol";
 import "./utils/Address.sol";
 import "./utils/Create2.sol";
 import "./utils/Ownable.sol";
+import "./interfaces/ICoverPool.sol";
 import "./interfaces/ICoverPoolFactory.sol";
 
 /**
@@ -119,6 +120,15 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
     _addr =  address(_deployCoverPool(_name, initData));
     coverPools[_name] = _addr;
+  }
+
+  /// @notice addAsset
+  function addAsset(string calldata _name, bytes32 _asset) external override onlyOwner{
+    ICoverPool(coverPools[_name]).addAsset(_asset);
+  }
+
+  function deleteAsset(string calldata _name, bytes32 _asset) external override onlyOwner{
+    ICoverPool(coverPools[_name]).deleteAsset(_asset);
   }
 
   /// @dev update this will only affect coverPools deployed after

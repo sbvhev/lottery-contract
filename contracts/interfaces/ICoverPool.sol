@@ -88,6 +88,9 @@ interface ICoverPool {
   function updateCollateral(address _collateral, uint256 _depositRatio, uint8 _status) external;
   function deleteAsset(bytes32 _asset) external;
 
+  // access restriction - owner (factory)
+  function addAsset(bytes32 _asset) external;
+
   // access restriction - governance
   function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external;
   function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external;

@@ -94,13 +94,13 @@ describe('CoverPool', () => {
   });
 
   it('Should delete asset from pool correctly', async () => {
-    await expect(coverPool.deleteAsset(consts.ASSET_1)).to.emit(coverPool, 'AssetUpdated');
+    await expect(coverPoolFactory.deleteAsset(consts.POOL_2, consts.ASSET_1)).to.emit(coverPool, 'AssetUpdated');
     const [,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
     expect(assetList).to.deep.equal([consts.ASSET_2]);
     expect(deletedAssetList).to.deep.equal([consts.ASSET_1]);
 
-    await expectRevert(coverPool.deleteAsset(consts.ASSET_1), "CoverPool: not active asset");
-    await expectRevert(coverPool.deleteAsset(consts.ASSET_2), "CoverPool: only 1 asset left");
+    await expectRevert(coverPoolFactory.deleteAsset(consts.POOL_2, consts.ASSET_1), "CoverPool: not active asset");
+    await expectRevert(coverPoolFactory.deleteAsset(consts.POOL_2, consts.ASSET_2), "CoverPool: only 1 asset left");
   });
 
   it('Should add cover for userA and emit event', async () => {

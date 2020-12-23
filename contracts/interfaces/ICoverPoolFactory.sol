@@ -26,6 +26,8 @@ interface ICoverPoolFactory {
   function getCovTokenAddress(string calldata _coverPoolName, uint48 _expiry, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
 
   // access restriction - owner (dev)
+  function addAsset(string calldata _name, bytes32 _asset) external;
+  function deleteAsset(string calldata _name, bytes32 _asset) external;
   /// @notice min gas required to continue deployment
   function updateDeployGasMin(uint256 _deployGasMin) external;
   /// @dev update Impl will only affect contracts deployed after
