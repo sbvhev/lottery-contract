@@ -17,7 +17,6 @@ interface ICover {
   function depositRatio() external view returns (uint256);
   function noclaimCovToken() external view returns (ICoverERC20);
   function claimNonce() external view returns (uint256);
-  function expiry() external view returns (uint48);
   function duration() external view returns (uint256);
   function viewClaimable(address _account) external view returns (uint256 _eligibleAmount);
   function getCoverDetails()

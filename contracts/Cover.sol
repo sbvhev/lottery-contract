@@ -31,7 +31,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint8)"));
   bool public override deployComplete;
-  uint48 public override expiry;
+  uint48 private expiry;
   address public override collateral;
   /// @notice e18 created as initialization, cannot be changed, used to decided the collateral to covToken ratio
   ICoverERC20 public override noclaimCovToken;
