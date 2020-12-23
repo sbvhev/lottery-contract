@@ -52,19 +52,12 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   address[] public override collaterals;
   // [claimNonce] => accepted ClaimDetails
   ClaimDetails[] private claimDetails;
-  // @notice assetName => status. 0 never added; 1 active, 2 inactive/deleted
+  // assetName => status. 0 never added; 1 active, 2 inactive/deleted
   mapping(bytes32 => uint8) private assetsMap;
-  // @notice collateral => status. 0 never set; 1 active, 2 inactive
   mapping(address => CollateralInfo) public override collateralStatusMap;
-  // Cover type only
   mapping(uint48 => ExpiryInfo) public override expiryInfoMap;
   // collateral => timestamp => coverAddress, most recent cover created for the collateral and timestamp combination
   mapping(address => mapping(uint48 => address)) public override coverMap;
-
-  modifier onlyActive() {
-    require(isActive, "CoverPool: coverPool not active");
-    _;
-  }
 
   modifier onlyDev() {
     require(msg.sender == _dev(), "CoverPool: caller not dev");
@@ -145,8 +138,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   /// @notice add coverage (with expiry) for sender, cover must be deployed first
   function addCover(address _collateral, uint48 _expiry, uint256 _amount)
-    external override onlyActive nonReentrant
+    external override nonReentrant
   {
+    require(isActive, "CoverPool: pool not active");
     require(_amount > 0, "CoverPool: amount <= 0");
     require(collateralStatusMap[_collateral].status == 1, "CoverPool: invalid collateral");
     require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == 1, "CoverPool: invalid expiry");
@@ -169,9 +163,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     for (uint256 i = 0; i < deletedAssetListCopy.length; i++) {
       require(_asset != deletedAssetListCopy[i], "CoverPool: deleted asset not allowed");
     }
-
-    address[] memory activeCoversCopy = activeCovers; // save gas
+    assetsMap[_asset] = 1;
     assetList.push(_asset);
+    address[] memory activeCoversCopy = activeCovers; // save gas
     if (activeCoversCopy.length > 0) {
       uint256 startGas = gasleft();
       for (uint256 i = 0; i < activeCoversCopy.length; i++) {

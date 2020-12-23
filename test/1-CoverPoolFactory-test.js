@@ -108,6 +108,8 @@ describe('CoverPoolFactory', () => {
     await coverPoolFactory.addAsset(consts.POOL_3, consts.ASSET_4);
     const [,,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
     expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1, consts.ASSET_3, consts.ASSET_4]);
+
+    await coverPoolFactory.deleteAsset(consts.POOL_3, consts.ASSET_4);
   });
 
   it('Should ONLY delete, NOT add asset for close pool', async () => {
