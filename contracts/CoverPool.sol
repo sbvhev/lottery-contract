@@ -27,6 +27,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   uint256 private feeDenominator;
 
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
+  bool public override isOpenPool;
   bool public override isActive;
   string public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
@@ -75,6 +76,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   /// @dev Initialize, called once
   function initialize (
     string calldata _coverPoolName,
+    bool _isOpenPool,
     bytes32[] calldata _assetList,
     address _collateral,
     uint256 _depositRatio,
@@ -83,6 +85,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   ) external initializer {
     initializeOwner();
     name = _coverPoolName;
+    isOpenPool = _isOpenPool;
     assetList = _assetList;
     collaterals.push(_collateral);
     collateralStatusMap[_collateral] = CollateralInfo(_depositRatio, 1);
@@ -157,6 +160,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   /// @notice add asset to pool (only called by factory)
   function addAsset(bytes32 _asset) external override onlyOwner {
+    require(isOpenPool, "CoverPool: not open pool");
     bytes32[] memory deletedAssetListCopy = deletedAssetList; // save gas
     for (uint256 i = 0; i < deletedAssetListCopy.length; i++) {
       require(_asset != deletedAssetListCopy[i], "CoverPool: deleted asset not allowed");

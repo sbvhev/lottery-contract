@@ -37,7 +37,7 @@ describe("ClaimManagement", function () {
     COLLATERAL = dai.address;
 
     // add coverPool through coverPool factory
-    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, consts.CM_TIMESTAMPS[0], consts.ALLOWED_EXPIRY_NAMES[0]);
+    const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, true, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, consts.CM_TIMESTAMPS[0], consts.ALLOWED_EXPIRY_NAMES[0]);
     await tx;
     coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_2));
     await coverPool.connect(ownerAccount).updateExpiry(consts.CM_TIMESTAMPS[1], consts.ALLOWED_EXPIRY_NAMES[1], 1);

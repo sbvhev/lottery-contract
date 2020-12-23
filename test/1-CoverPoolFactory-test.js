@@ -33,7 +33,7 @@ describe('CoverPoolFactory', () => {
 
   it('Should emit CoverPoolCreation event', async () => {
     await expect(coverPoolFactory.connect(ownerAccount)
-      .createCoverPool(consts.ASSET_1, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      .createCoverPool(consts.ASSET_1, true, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.emit(coverPoolFactory, 'CoverPoolCreation');
   });
 
@@ -61,10 +61,10 @@ describe('CoverPoolFactory', () => {
 
   it('Should add 2 new coverPools by owner', async () => {
     expect(await coverPoolFactory
-      .createCoverPool(consts.POOL_1, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      .createCoverPool(consts.POOL_1, true, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);  
     expect(await coverPoolFactory
-      .createCoverPool(consts.POOL_3, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      .createCoverPool(consts.POOL_3, true, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);
     expect((await coverPoolFactory.getCoverPoolAddresses()).length).to.equal(2);
 
@@ -79,7 +79,7 @@ describe('CoverPoolFactory', () => {
 
   it('Should compute the same coverPool addresses', async () => {
     expect(await coverPoolFactory
-      .createCoverPool(consts.POOL_3, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      .createCoverPool(consts.POOL_3, true, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);  
 
     const coverPoolAddr = await coverPoolFactory.coverPools(consts.POOL_3);
@@ -89,10 +89,50 @@ describe('CoverPoolFactory', () => {
     expect(computedAddr).to.equal(coverPoolAddr);
   });
 
+  it('Should add and delete asset for open pool', async () => {
+    expect(await coverPoolFactory
+      .createCoverPool(consts.POOL_3, true, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      ).to.not.equal(consts.ADDRESS_ZERO);  
+
+    const coverPoolAddr = await coverPoolFactory.coverPools(consts.POOL_3);
+    const coverPool = CoverPool.attach(coverPoolAddr);
+    expect(await coverPool.name()).to.equal(consts.POOL_3);
+
+    await coverPoolFactory.deleteAsset(consts.POOL_3, consts.ASSET_2);
+    const [,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
+    expect(assetList).to.deep.equal([consts.ASSET_1, consts.ASSET_3]);
+    expect(deletedAssetList).to.deep.equal([consts.ASSET_2]);
+
+    await expect(coverPoolFactory.addAsset(consts.POOL_3, consts.ASSET_2)).to.be.reverted;
+    await coverPoolFactory.addAsset(consts.POOL_3, consts.ASSET_4);
+    const [,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
+    expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1, consts.ASSET_3, consts.ASSET_4]);
+  });
+
+  it('Should ONLY delete, NOT add asset for close pool', async () => {
+    expect(await coverPoolFactory
+      .createCoverPool(consts.POOL_3, false, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      ).to.not.equal(consts.ADDRESS_ZERO);  
+
+    const coverPoolAddr = await coverPoolFactory.coverPools(consts.POOL_3);
+    const coverPool = CoverPool.attach(coverPoolAddr);
+    expect(await coverPool.name()).to.equal(consts.POOL_3);
+
+    await coverPoolFactory.deleteAsset(consts.POOL_3, consts.ASSET_2);
+    const [,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
+    expect(assetList).to.deep.equal([consts.ASSET_1, consts.ASSET_3]);
+    expect(deletedAssetList).to.deep.equal([consts.ASSET_2]);
+
+    await expect(coverPoolFactory.addAsset(consts.POOL_3, consts.ASSET_2)).to.be.reverted;
+    await expect(coverPoolFactory.addAsset(consts.POOL_3, consts.ASSET_4)).to.be.reverted;
+    const [,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
+    expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1, consts.ASSET_3]);
+  });
+
   it('Should NOT add new coverPool by userA', async () => {
     await expect(coverPoolFactory
       .connect(userAAccount)
-      .createCoverPool(consts.ASSET_1, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      .createCoverPool(consts.ASSET_1, true, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.be.reverted;
   });
 });

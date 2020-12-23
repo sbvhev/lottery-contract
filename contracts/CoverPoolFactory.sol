@@ -16,7 +16,7 @@ import "./interfaces/ICoverPoolFactory.sol";
  */
 contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
-  bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bytes32[],address,uint256,uint48,string)"));
+  bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bool,bytes32[],address,uint256,uint48,string)"));
 
   address public override coverPoolImpl;
   address public override coverImpl;
@@ -106,6 +106,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
    */
   function createCoverPool(
     string calldata _name,
+    bool isOpenPool,
     bytes32[] calldata _assetList,
     address _collateral,
     uint256 _depositRatio,
@@ -117,7 +118,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     require(_expiry > block.timestamp, "CoverPoolFactory: expiry in the past");
 
     coverPoolNames.push(_name);
-    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
+    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, isOpenPool, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
     _addr =  address(_deployCoverPool(_name, initData));
     coverPools[_name] = _addr;
   }
