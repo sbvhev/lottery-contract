@@ -93,14 +93,57 @@ describe('CoverPool', () => {
     await expect(coverPool.connect(ownerAccount).updateClaimRedeemDelay(10 * 24 * 60 * 60)).to.be.reverted;
   });
 
+
+  it('Should add and delete asset for open pool', async () => {
+    expect(await coverPoolFactory
+      .createCoverPool(consts.POOL_3, true, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      ).to.not.equal(consts.ADDRESS_ZERO);  
+
+    const coverPoolAddr = await coverPoolFactory.coverPools(consts.POOL_3);
+    const coverPool = CoverPool.attach(coverPoolAddr);
+    expect(await coverPool.name()).to.equal(consts.POOL_3);
+
+    await coverPool.deleteAsset(consts.ASSET_2);
+    const [,,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
+    expect(assetList).to.deep.equal([consts.ASSET_1, consts.ASSET_3]);
+    expect(deletedAssetList).to.deep.equal([consts.ASSET_2]);
+
+    await expect(coverPool.addAsset(consts.ASSET_2)).to.be.reverted;
+    await coverPool.addAsset(consts.ASSET_4);
+    const [,,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
+    expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1, consts.ASSET_3, consts.ASSET_4]);
+
+    await coverPool.deleteAsset(consts.ASSET_4);
+  });
+
+  it('Should ONLY delete, NOT add asset for close pool', async () => {
+    expect(await coverPoolFactory
+      .createCoverPool(consts.POOL_3, false, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
+      ).to.not.equal(consts.ADDRESS_ZERO);  
+
+    const coverPoolAddr = await coverPoolFactory.coverPools(consts.POOL_3);
+    const coverPool = CoverPool.attach(coverPoolAddr);
+    expect(await coverPool.name()).to.equal(consts.POOL_3);
+
+    await coverPool.deleteAsset(consts.ASSET_2);
+    const [,,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
+    expect(assetList).to.deep.equal([consts.ASSET_1, consts.ASSET_3]);
+    expect(deletedAssetList).to.deep.equal([consts.ASSET_2]);
+
+    await expect(coverPool.addAsset(consts.ASSET_2)).to.be.reverted;
+    await expect(coverPool.addAsset(consts.ASSET_4)).to.be.reverted;
+    const [,,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
+    expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1, consts.ASSET_3]);
+  });
+
   it('Should delete asset from pool correctly', async () => {
-    await expect(coverPoolFactory.deleteAsset(consts.POOL_2, consts.ASSET_1)).to.emit(coverPool, 'AssetUpdated');
+    await expect(coverPool.deleteAsset(consts.ASSET_1)).to.emit(coverPool, 'AssetUpdated');
     const [,,, assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
     expect(assetList).to.deep.equal([consts.ASSET_2]);
     expect(deletedAssetList).to.deep.equal([consts.ASSET_1]);
 
-    await expectRevert(coverPoolFactory.deleteAsset(consts.POOL_2, consts.ASSET_1), "CoverPool: not active asset");
-    await expectRevert(coverPoolFactory.deleteAsset(consts.POOL_2, consts.ASSET_2), "CoverPool: only 1 asset left");
+    await expectRevert(coverPool.deleteAsset(consts.ASSET_1), "CoverPool: not active asset");
+    await expectRevert(coverPool.deleteAsset(consts.ASSET_2), "CoverPool: only 1 asset left");
   });
 
   it('Should add cover for userA and emit event', async () => {

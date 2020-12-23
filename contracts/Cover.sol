@@ -208,6 +208,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       }
     }
     deployComplete = true;
+    emit CoverDeployCompleted();
   }
 
   /// @notice redeem when there is an accepted claim
@@ -292,7 +293,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     _payCollateral(msg.sender, payoutAmount);
   }
 
-  /// @dev Emits NewCovTokenCreation
+  /// @dev Emits CovTokenCreated
   function _createCovToken(string memory _prefix) private returns (ICoverERC20) {
     uint8 decimals = uint8(IERC20(collateral).decimals());
     if (decimals == 0) {
@@ -303,7 +304,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     address proxyAddr = BasicProxyLib.deployProxy(coverERC20Impl, salt);
     ICovTokenProxy(proxyAddr).initialize(string(abi.encodePacked(_prefix, name)), decimals);
 
-    emit NewCovTokenCreation(proxyAddr);
+    emit CovTokenCreated(proxyAddr);
     return ICoverERC20(proxyAddr);
   }
 }

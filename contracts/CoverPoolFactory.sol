@@ -104,7 +104,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
    * @param _expiry expiration date supported for the pool
    * @param _expiryString YEAR_MONTH_DATE, used to create covToken symbols only
    * 
-   * Emits CoverPoolCreation, add a supported coverPool in COVER
+   * Emits CoverPoolCreated, add a supported coverPool in COVER
    */
   function createCoverPool(
     string calldata _name,
@@ -123,16 +123,6 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _isOpenPool, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
     _addr =  address(_deployCoverPool(_name, initData));
     coverPools[_name] = _addr;
-  }
-
-  function addAsset(string calldata _poolName, bytes32 _asset) external override onlyOwner {
-    require(coverPools[_poolName] != address(0), "CoverPoolFactory: pool does not exist");
-    ICoverPool(coverPools[_poolName]).addAsset(_asset);
-  }
-
-  function deleteAsset(string calldata _poolName, bytes32 _asset) external override onlyOwner {
-    require(coverPools[_poolName] != address(0), "CoverPoolFactory: pool does not exist");
-    ICoverPool(coverPools[_poolName]).deleteAsset(_asset);
   }
 
   /// @dev update this will only affect coverPools deployed after
@@ -179,7 +169,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
     // unique salt required for each coverPool, salt + deployer decides contract address
     _proxyAddr = Create2.deploy(0, keccak256(abi.encodePacked("CoverV2", _name)), bytecode);
-    emit CoverPoolCreation(_proxyAddr);
+    emit CoverPoolCreated(_proxyAddr);
     InitializableAdminUpgradeabilityProxy(_proxyAddr).initialize(coverPoolImpl, owner(), _initData);
   }
 

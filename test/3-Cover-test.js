@@ -102,7 +102,7 @@ describe('Cover', function() {
   });
 
   it('Should add asset, convert, mint, and redeem with new active tokens only', async function() {
-    await coverPoolFactory.addAsset(consts.POOL_2, consts.ASSET_4);
+    await coverPool.addAsset(consts.ASSET_4);
     const [,,,,,futureCovTokens, claimCovTokens, noclaimCovTokenAddress] = await cover.getCoverDetails();
     const noclaimCovToken = CoverERC20.attach(noclaimCovTokenAddress);
     const futureCovToken = CoverERC20.attach(futureCovTokens[futureCovTokens.length - 1]);
@@ -140,8 +140,8 @@ describe('Cover', function() {
   });
 
   it('Should delete asset, mint, and redeem with active tokens only', async function() {
-    await coverPoolFactory.deleteAsset(consts.POOL_2, consts.ASSET_2);
-    await expectRevert(coverPoolFactory.addAsset(consts.POOL_2, consts.ASSET_2), "CoverPool: deleted asset not allowed");
+    await coverPool.deleteAsset(consts.ASSET_2);
+    await expectRevert(coverPool.addAsset(consts.ASSET_2), "CoverPool: deleted asset not allowed");
 
     await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
     const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.ASSET_1));

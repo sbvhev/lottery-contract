@@ -7,7 +7,7 @@ pragma solidity ^0.8.0;
  * @author crypto-pumpkin
  */
 interface ICoverPoolFactory {
-  event CoverPoolCreation(address coverPoolAddress);
+  event CoverPoolCreated(address);
 
   function getCoverPoolAddresses() external view returns (address[] memory);
   function coverPoolImpl() external view returns (address);
@@ -26,8 +26,6 @@ interface ICoverPoolFactory {
   function getCovTokenAddress(string calldata _coverPoolName, uint48 _expiry, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
 
   // access restriction - owner (dev)
-  function addAsset(string calldata _poolName, bytes32 _asset) external;
-  function deleteAsset(string calldata _poolName, bytes32 _asset) external;
   /// @notice min gas required to continue deployment
   function updateDeployGasMin(uint256 _deployGasMin) external;
   /// @dev update Impl will only affect contracts deployed after
@@ -44,7 +42,7 @@ interface ICoverPoolFactory {
    * @param _expiry expiration date supported for the pool
    * @param _expiryString YEAR_MONTH_DATE, used to create covToken symbols only
    * 
-   * Emits CoverPoolCreation, add a supported coverPool in COVER
+   * Emits CoverPoolCreated, add a supported coverPool in COVER
    */
   function createCoverPool(
     string calldata _name,

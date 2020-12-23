@@ -9,7 +9,8 @@ import "./ICoverERC20.sol";
  * @author crypto-pumpkin
  */
 interface ICover {
-  event NewCovTokenCreation(address);
+  event CovTokenCreated(address);
+  event CoverDeployCompleted();
 
   function deployComplete() external view returns (bool);
   /// @notice created as initialization, cannot be changed

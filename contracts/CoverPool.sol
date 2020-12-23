@@ -156,7 +156,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice add asset to pool (only called by factory), cannot be deleted asset
-  function addAsset(bytes32 _asset) external override onlyOwner {
+  function addAsset(bytes32 _asset) external override onlyDev {
     require(isOpenPool, "CoverPool: not open pool");
 
     if (assetsMap[_asset] == 0) {
@@ -184,7 +184,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice delete asset from pool (only called by factory)
-  function deleteAsset(bytes32 _asset) external override onlyOwner {
+  function deleteAsset(bytes32 _asset) external override onlyDev {
     require(assetsMap[_asset] == 1, "CoverPool: not active asset");
     bytes32[] memory assetListCopy = assetList; //save gas
     require(assetListCopy.length > 1, "CoverPool: only 1 asset left");
@@ -225,6 +225,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       activeCovers.push(addr);
       allCovers.push(addr);
       coverMap[_collateral][_expiry] = addr;
+      emit CoverCreated(addr);
     }
 
     if (!ICover(addr).deployComplete()) {

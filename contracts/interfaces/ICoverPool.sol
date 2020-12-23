@@ -12,6 +12,7 @@ interface ICoverPool {
   event CoverAdded(address indexed _cover, uint256 _amount);
   /// @notice either delete or add asset
   event AssetUpdated(bytes32 _asset, bool _isAdd);
+  event CoverCreated(address);
 
   struct ExpiryInfo {
     string name;
@@ -84,8 +85,6 @@ interface ICoverPool {
   function updateExpiry(uint48 _expiry, string calldata _expiryName, uint8 _status) external;
   function updateCollateral(address _collateral, uint256 _depositRatio, uint8 _status) external;
   function deleteAsset(bytes32 _asset) external;
-
-  // access restriction - owner (factory)
   function addAsset(bytes32 _asset) external;
 
   // access restriction - governance
