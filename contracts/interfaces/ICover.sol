@@ -16,14 +16,13 @@ interface ICover {
   /// @notice created as initialization, cannot be changed
   function depositRatio() external view returns (uint256);
   function noclaimCovToken() external view returns (ICoverERC20);
-  function name() external view returns (string memory);
   function claimNonce() external view returns (uint256);
-  function viewClaimable(address _account) external view returns (uint256 _eligibleAmount);
   function expiry() external view returns (uint48);
   function duration() external view returns (uint256);
+  function viewClaimable(address _account) external view returns (uint256 _eligibleAmount);
   function getCoverDetails()
     external view returns (
-      string memory _name,
+      string memory _name, // Yearn_0_DAI_210131
       uint48 _expiry,
       address _collateral,
       uint256 _depositRatio,
