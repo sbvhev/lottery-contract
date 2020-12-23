@@ -64,12 +64,10 @@ describe('CoverPool', () => {
 
   it('Should update state variables by the correct authority', async () => {
     await coverPool.connect(ownerAccount).updateCollateral(NEW_COLLATERAL, consts.DEPOSIT_RATIO, 2);
-    expect(await coverPool.collaterals(1)).to.equal(NEW_COLLATERAL);
     const [, status] = await coverPool.collateralStatusMap(NEW_COLLATERAL);
     expect(status).to.equal(2);
     
     await coverPool.connect(ownerAccount).updateExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1);
-    expect(await coverPool.expiries(consts.ALLOWED_EXPIRYS.length)).to.equal(NEW_TIMESTAMP);
     expect((await coverPool.expiryInfoMap(NEW_TIMESTAMP)).status).to.equal(1);
 
     await coverPool.connect(ownerAccount).setActive(false);

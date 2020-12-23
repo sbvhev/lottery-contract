@@ -35,21 +35,18 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   string public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
-  // delay # of seconds for redeem with accepted claim, redeemCollateral is not affected
+  // delay # of seconds for redeem with/o. accepted claim, redeemCollateral is not affected
   uint256 public override claimRedeemDelay;
-  // Cover type only, redeemCollateral is not affected
   uint256 public override noclaimRedeemDelay;
 
-  // only active covers, once there is an accepted claim (enactClaim called successfully), this sets to [].
+  // only covers that have never accepted a claim
   address[] public override activeCovers;
   address[] private allCovers;
-  /// @notice Cover type only, list of every supported expiry, all may not be active.
-  uint48[] public override expiries;
+  uint48[] private expiries;
   // list of active assets in cover pool
   bytes32[] private assetList;
   bytes32[] private deletedAssetList;
-  /// @notice list of every supported collateral, all may not be active.
-  address[] public override collaterals;
+  address[] private collaterals;
   // [claimNonce] => accepted ClaimDetails
   ClaimDetails[] private claimDetails;
   // assetName => status. 0 never added; 1 active, 2 inactive/deleted

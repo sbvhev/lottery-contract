@@ -39,8 +39,6 @@ interface ICoverPool {
   /// @notice only used by cover with expiry, redeemCollateral is not affected
   function noclaimRedeemDelay() external view returns (uint256);
   function activeCovers(uint256 _index) external view returns (address);
-  function collaterals(uint256 _index) external view returns (address);
-  function expiries(uint256 _index) external view returns (uint48);
   function collateralStatusMap(address _collateral) external view returns (uint256 _depositRatio, uint8 _status);
   function expiryInfoMap(uint48 _expiry) external view returns (string memory _name, uint8 _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);
