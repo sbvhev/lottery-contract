@@ -32,7 +32,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint8)"));
   bool public override deployComplete;
   uint48 private expiry;
-  address public override collateral;
+  address private collateral;
   /// @notice e18 created as initialization, cannot be changed, used to decided the collateral to covToken ratio
   ICoverERC20 public override noclaimCovToken;
   // Yearn_0_DAI_210131
@@ -103,12 +103,21 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     require(deployComplete, "Cover: deploy incomplete");
     _noClaimAcceptedCheck(); // save gas than modifier
 
-    (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
     uint256 adjustedAmount = _amount * depositRatio / 1e18;
+
+    (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
     for (uint i = 0; i < _assetList.length; i++) {
       claimCovTokenMap[_assetList[i]].mint(_receiver, adjustedAmount);
     }
     noclaimCovToken.mint(_receiver, adjustedAmount);
+
+    ICoverERC20[] memory futureCovTokensCopy = futureCovTokens; // save gas
+    uint256 len = futureCovTokensCopy.length;
+    if (len > 0) {
+      // mint latest future token
+      ICoverERC20 futureCovToken = futureCovTokensCopy[len - 1];
+      futureCovToken.mint(_receiver, adjustedAmount);
+    }
   }
 
   /// @notice redeem collateral, only when no claim accepted. If expired (with or withour claim), _amount is not respected

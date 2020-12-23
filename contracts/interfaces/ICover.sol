@@ -12,7 +12,6 @@ interface ICover {
   event NewCovTokenCreation(address);
 
   function deployComplete() external view returns (bool);
-  function collateral() external view returns (address);
   /// @notice created as initialization, cannot be changed
   function depositRatio() external view returns (uint256);
   function noclaimCovToken() external view returns (ICoverERC20);
