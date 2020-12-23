@@ -29,9 +29,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   uint256 private feeNumerator;
   uint256 private feeDenominator;
 
-  /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
-  bool public override isOpenPool;
-  bool public override isActive;
+  // only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
+  bool private isOpenPool;
+  bool private isActive;
   string public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
@@ -45,9 +45,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   address[] private allCovers;
   /// @notice Cover type only, list of every supported expiry, all may not be active.
   uint48[] public override expiries;
-  /// @notice list of assets in cover pool
-  bytes32[] public override assetList;
-  bytes32[] public override deletedAssetList;
+  // list of active assets in cover pool
+  bytes32[] private assetList;
+  bytes32[] private deletedAssetList;
   /// @notice list of every supported collateral, all may not be active.
   address[] public override collaterals;
   // [claimNonce] => accepted ClaimDetails
@@ -113,6 +113,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     external view override
     returns (
       string memory _name,
+      bool _isOpenPool,
       bool _isActive,
       bytes32[] memory _assetList,
       bytes32[] memory _deletedAssetList,
@@ -124,7 +125,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       address[] memory _allCovers,
       address[] memory _allActiveCovers)
   {
-    return (name, isActive, assetList, deletedAssetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, activeCovers);
+    return (name, isOpenPool, isActive, assetList, deletedAssetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, activeCovers);
   }
 
   function getRedeemFees()

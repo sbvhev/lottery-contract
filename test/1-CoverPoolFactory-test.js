@@ -68,13 +68,14 @@ describe('CoverPoolFactory', () => {
       ).to.not.equal(consts.ADDRESS_ZERO);
     expect((await coverPoolFactory.getCoverPoolAddresses()).length).to.equal(2);
 
-    const coverPoolAddr1 = await coverPoolFactory.coverPools(consts.POOL_1);
-    expect(await CoverPool.attach(coverPoolAddr1).name()).to.equal(consts.POOL_1);
-    const coverPoolAddr2 = await coverPoolFactory.coverPools(consts.POOL_3);
-    expect(await CoverPool.attach(coverPoolAddr2).name()).to.equal(consts.POOL_3);
-    expect(await CoverPool.attach(coverPoolAddr2).assetList(0)).to.equal(consts.ASSET_1);
-    expect(await CoverPool.attach(coverPoolAddr2).assetList(1)).to.equal(consts.ASSET_2);
-    expect(await CoverPool.attach(coverPoolAddr2).collateralStatusMap(COLLATERAL)).to.deep.equal([consts.DEPOSIT_RATIO, 1]);
+    const coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_1));
+    expect(await coverPool.name()).to.equal(consts.POOL_1);
+    const coverPool2 = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_3));
+    const [name2,,,assetList] = await coverPool2.getCoverPoolDetails();
+    expect(name2).to.equal(consts.POOL_3);
+    expect(assetList[0]).to.equal(consts.ASSET_1);
+    expect(assetList[1]).to.equal(consts.ASSET_2);
+    expect(await coverPool2.collateralStatusMap(COLLATERAL)).to.deep.equal([consts.DEPOSIT_RATIO, 1]);
   });
 
   it('Should compute the same coverPool addresses', async () => {
@@ -82,11 +83,11 @@ describe('CoverPoolFactory', () => {
       .createCoverPool(consts.POOL_3, true, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);  
 
-    const coverPoolAddr = await coverPoolFactory.coverPools(consts.POOL_3);
-    expect(await CoverPool.attach(coverPoolAddr).name()).to.equal(consts.POOL_3);
+    const coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_3));
+    expect(await coverPool.name()).to.equal(consts.POOL_3);
 
     const computedAddr = await coverPoolFactory.getCoverPoolAddress(consts.POOL_3);
-    expect(computedAddr).to.equal(coverPoolAddr);
+    expect(computedAddr).to.equal(coverPool.address);
   });
 
   it('Should add and delete asset for open pool', async () => {
@@ -99,13 +100,13 @@ describe('CoverPoolFactory', () => {
     expect(await coverPool.name()).to.equal(consts.POOL_3);
 
     await coverPoolFactory.deleteAsset(consts.POOL_3, consts.ASSET_2);
-    const [,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
+    const [,,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
     expect(assetList).to.deep.equal([consts.ASSET_1, consts.ASSET_3]);
     expect(deletedAssetList).to.deep.equal([consts.ASSET_2]);
 
     await expect(coverPoolFactory.addAsset(consts.POOL_3, consts.ASSET_2)).to.be.reverted;
     await coverPoolFactory.addAsset(consts.POOL_3, consts.ASSET_4);
-    const [,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
+    const [,,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
     expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1, consts.ASSET_3, consts.ASSET_4]);
   });
 
@@ -119,13 +120,13 @@ describe('CoverPoolFactory', () => {
     expect(await coverPool.name()).to.equal(consts.POOL_3);
 
     await coverPoolFactory.deleteAsset(consts.POOL_3, consts.ASSET_2);
-    const [,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
+    const [,,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
     expect(assetList).to.deep.equal([consts.ASSET_1, consts.ASSET_3]);
     expect(deletedAssetList).to.deep.equal([consts.ASSET_2]);
 
     await expect(coverPoolFactory.addAsset(consts.POOL_3, consts.ASSET_2)).to.be.reverted;
     await expect(coverPoolFactory.addAsset(consts.POOL_3, consts.ASSET_4)).to.be.reverted;
-    const [,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
+    const [,,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
     expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1, consts.ASSET_3]);
   });
 
