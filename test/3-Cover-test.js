@@ -141,6 +141,7 @@ describe('Cover', function() {
 
   it('Should delete asset, mint, and redeem with active tokens only', async function() {
     await coverPoolFactory.deleteAsset(consts.POOL_2, consts.ASSET_2);
+    await expectRevert(coverPoolFactory.addAsset(consts.POOL_2, consts.ASSET_2), "CoverPool: deleted asset not allowed");
 
     await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
     const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.ASSET_1));

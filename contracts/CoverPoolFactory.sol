@@ -123,11 +123,13 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   }
 
   /// @notice addAsset
-  function addAsset(string calldata _name, bytes32 _asset) external override onlyOwner{
+  function addAsset(string calldata _name, bytes32 _asset) external override onlyOwner {
+    require(coverPools[_name] != address(0), "CoverPoolFactory: pool does not exist");
     ICoverPool(coverPools[_name]).addAsset(_asset);
   }
 
-  function deleteAsset(string calldata _name, bytes32 _asset) external override onlyOwner{
+  function deleteAsset(string calldata _name, bytes32 _asset) external override onlyOwner {
+    require(coverPools[_name] != address(0), "CoverPoolFactory: pool does not exist");
     ICoverPool(coverPools[_name]).deleteAsset(_asset);
   }
 
