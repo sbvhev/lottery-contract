@@ -25,7 +25,8 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   address public override treasury;
   address public override governance;
   address public override claimManager;
-  uint256 public override deployGasMin = 500000;
+  /// @notice min gas left requirement before continue deployments, will be used by children
+  uint256 public override deployGasMin = 1000000;
 
   // not all coverPools are active
   string[] private coverPoolNames;
@@ -95,7 +96,8 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
   /**
    * @notice Create a new Cover Pool
-   * @param _name all caps, name for pool, e.g. YEARN
+   * @param _name name for pool, e.g. Yearn
+   * @param _isOpenPool open pools allow adding new asset
    * @param _assetList risk assets that are covered in this pool
    * @param _collateral the collateral of the pool
    * @param _depositRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
@@ -106,7 +108,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
    */
   function createCoverPool(
     string calldata _name,
-    bool isOpenPool,
+    bool _isOpenPool,
     bytes32[] calldata _assetList,
     address _collateral,
     uint256 _depositRatio,
@@ -118,20 +120,19 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     require(_expiry > block.timestamp, "CoverPoolFactory: expiry in the past");
 
     coverPoolNames.push(_name);
-    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, isOpenPool, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
+    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _isOpenPool, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
     _addr =  address(_deployCoverPool(_name, initData));
     coverPools[_name] = _addr;
   }
 
-  /// @notice addAsset
-  function addAsset(string calldata _name, bytes32 _asset) external override onlyOwner {
-    require(coverPools[_name] != address(0), "CoverPoolFactory: pool does not exist");
-    ICoverPool(coverPools[_name]).addAsset(_asset);
+  function addAsset(string calldata _poolName, bytes32 _asset) external override onlyOwner {
+    require(coverPools[_poolName] != address(0), "CoverPoolFactory: pool does not exist");
+    ICoverPool(coverPools[_poolName]).addAsset(_asset);
   }
 
-  function deleteAsset(string calldata _name, bytes32 _asset) external override onlyOwner {
-    require(coverPools[_name] != address(0), "CoverPoolFactory: pool does not exist");
-    ICoverPool(coverPools[_name]).deleteAsset(_asset);
+  function deleteAsset(string calldata _poolName, bytes32 _asset) external override onlyOwner {
+    require(coverPools[_poolName] != address(0), "CoverPoolFactory: pool does not exist");
+    ICoverPool(coverPools[_poolName]).deleteAsset(_asset);
   }
 
   /// @dev update this will only affect coverPools deployed after

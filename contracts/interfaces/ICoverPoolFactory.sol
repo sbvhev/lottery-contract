@@ -26,8 +26,8 @@ interface ICoverPoolFactory {
   function getCovTokenAddress(string calldata _coverPoolName, uint48 _expiry, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
 
   // access restriction - owner (dev)
-  function addAsset(string calldata _name, bytes32 _asset) external;
-  function deleteAsset(string calldata _name, bytes32 _asset) external;
+  function addAsset(string calldata _poolName, bytes32 _asset) external;
+  function deleteAsset(string calldata _poolName, bytes32 _asset) external;
   /// @notice min gas required to continue deployment
   function updateDeployGasMin(uint256 _deployGasMin) external;
   /// @dev update Impl will only affect contracts deployed after
@@ -36,10 +36,11 @@ interface ICoverPoolFactory {
   function updateCoverERC20Impl(address _newImpl) external;
   /**
    * @notice Create a new Cover Pool
-   * @param _name all caps, name for pool, e.g. YEARN
+   * @param _name name for pool, e.g. Yearn
+   * @param _isOpenPool open pools allow adding new asset
    * @param _assetList risk assets that are covered in this pool
    * @param _collateral the collateral of the pool
-   * @param _depositRatio e18, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
+   * @param _depositRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
    * @param _expiry expiration date supported for the pool
    * @param _expiryString YEAR_MONTH_DATE, used to create covToken symbols only
    * 
@@ -47,7 +48,7 @@ interface ICoverPoolFactory {
    */
   function createCoverPool(
     string calldata _name,
-    bool isOpenPool,
+    bool _isOpenPool,
     bytes32[] calldata _assetList,
     address _collateral,
     uint256 _depositRatio,

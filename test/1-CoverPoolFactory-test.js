@@ -28,7 +28,7 @@ describe('CoverPoolFactory', () => {
     expect(await coverPoolFactory.coverERC20Impl()).to.equal(coverERC20Impl.address);
     expect(await coverPoolFactory.governance()).to.equal(governanceAddress);
     expect(await coverPoolFactory.treasury()).to.equal(treasuryAddress);
-    expect(await coverPoolFactory.deployGasMin()).to.equal(500000);
+    expect(await coverPoolFactory.deployGasMin()).to.equal(1000000);
   });
 
   it('Should emit CoverPoolCreation event', async () => {
@@ -62,7 +62,7 @@ describe('CoverPoolFactory', () => {
   it('Should add 2 new coverPools by owner', async () => {
     expect(await coverPoolFactory
       .createCoverPool(consts.POOL_1, true, [consts.ASSET_1], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
-      ).to.not.equal(consts.ADDRESS_ZERO);  
+      ).to.not.equal(consts.ADDRESS_ZERO);
     expect(await coverPoolFactory
       .createCoverPool(consts.POOL_3, true, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);
