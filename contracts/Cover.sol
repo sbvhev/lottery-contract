@@ -111,14 +111,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       claimCovTokenMap[_assetList[i]].mint(_receiver, adjustedAmount);
     }
     noclaimCovToken.mint(_receiver, adjustedAmount);
-
-    ICoverERC20[] memory futureCovTokensCopy = futureCovTokens; // save gas
-    uint256 len = futureCovTokensCopy.length;
-    if (len > 0) {
-      // mint latest future token
-      ICoverERC20 futureCovToken = futureCovTokensCopy[len - 1];
-      futureCovToken.mint(_receiver, adjustedAmount);
-    }
+    _handleLatestFutureToken(_receiver, adjustedAmount, true);
   }
 
   /// @notice redeem collateral, only when no claim accepted. If expired (with or withour claim), _amount is not respected
@@ -137,6 +130,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
         // there is NO accepted claim, not expired
         ICoverERC20 _noclaimCovToken = noclaimCovToken; // save gas
         _noclaimCovToken.burnByCover(msg.sender, _amount);
+        _handleLatestFutureToken(msg.sender, _amount, false);
 
         (bytes32[] memory assetList) = coverPool.getAssetList();
         for (uint i = 0; i < assetList.length; i++) {
@@ -152,6 +146,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
   }
 
+  /// @notice convert last future token to claim token and lastest future token
   function convert(ICoverERC20 _futureToken) public override {
     ICoverERC20 claimCovToken = futureCovTokenMap[_futureToken];
     require(address(claimCovToken) != address(0), "Cover: nothing to convert");
@@ -159,6 +154,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     require(amount > 0, "Cover: insufficient balance");
     _futureToken.burnByCover(msg.sender, amount);
     claimCovToken.mint(msg.sender, amount);
+    _handleLatestFutureToken(msg.sender, amount, true);
   }
 
   function convertAll(ICoverERC20[] calldata _futureTokens) external override {
@@ -170,7 +166,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   /**
    * @notice called by owner (CoverPool) only, when a new asset is added to pool
    * - create a new claim token for asset
-   * - point the current latest (last one in array) to newly created claim token
+   * - point the current latest (last one in futureCovTokens) to newly created claim token
    * - create a new future token and push to futureCovTokens
    */
   function addAsset(bytes32 _asset) external override onlyOwner {
@@ -183,11 +179,11 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
     ICoverERC20[] memory futureCovTokensCopy = futureCovTokens; // save gas
     uint256 len = futureCovTokensCopy.length;
-    ICoverERC20 futureCovToken = futureCovTokensCopy[len];
+    ICoverERC20 futureCovToken = futureCovTokensCopy[len - 1];
     futureCovTokenMap[futureCovToken] = claimToken;
 
-    string memory futureTokenName = string(abi.encodePacked("C_FUT", StringHelper.uintToString(len), "_"));
-    futureCovTokens.push(_createCovToken(futureTokenName));
+    string memory nextFutureTokenName = string(abi.encodePacked("C_FUT", StringHelper.uintToString(len), "_"));
+    futureCovTokens.push(_createCovToken(nextFutureTokenName));
   }
 
   /**
@@ -243,6 +239,16 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   /// @notice make sure no claim is accepted
   function _noClaimAcceptedCheck() internal view {
     require(ICoverPool(owner()).claimNonce() == claimNonce, "Cover: claim accepted");
+  }
+
+  function _handleLatestFutureToken(address _receiver, uint256 _amount, bool _mint) private {
+    ICoverERC20[] memory futureCovTokensCopy = futureCovTokens; // save gas
+    uint256 len = futureCovTokensCopy.length;
+    if (len > 0) {
+      // mint or burn latest future token
+      ICoverERC20 futureCovToken = futureCovTokensCopy[len - 1];
+      _mint ? futureCovToken.mint(_receiver, _amount) : futureCovToken.burnByCover(_receiver, _amount);
+    }
   }
 
   // get the claim details for the corresponding nonce from coverPool contract

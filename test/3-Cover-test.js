@@ -101,6 +101,44 @@ describe('Cover', function() {
     expect(noclaimCovTokenAddress).to.equal(computedNoclaimCovTokenAddress);
   });
 
+  it('Should add asset, convert, mint, and redeem with new active tokens only', async function() {
+    await coverPoolFactory.addAsset(consts.POOL_2, consts.ASSET_4);
+    const [,,,,,futureCovTokens, claimCovTokens, noclaimCovTokenAddress] = await cover.getCoverDetails();
+    const noclaimCovToken = CoverERC20.attach(noclaimCovTokenAddress);
+    const futureCovToken = CoverERC20.attach(futureCovTokens[futureCovTokens.length - 1]);
+    const lastFutureToken = CoverERC20.attach(futureCovTokens[futureCovTokens.length - 2]);
+    // 2nd to the last future token points to newly created claim token
+    expect(await cover.futureCovTokenMap(lastFutureToken.address)).to.equal(claimCovTokens[claimCovTokens.length - 1]);
+
+    // verify convert for userA
+    expect(await futureCovToken.balanceOf(userAAddress)).to.equal(0);
+    expect(await lastFutureToken.balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
+    await cover.connect(userAAccount).convert(lastFutureToken.address);
+    expect(await lastFutureToken.balanceOf(userAAddress)).to.equal(0);
+    expect(await futureCovToken.balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
+    
+    await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
+    expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20);
+    for (let i = 0; i < claimCovTokens.length; i++) {
+      const claimCovToken = CoverERC20.attach(claimCovTokens[i]);
+      expect(await claimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20);
+      expect(await claimCovToken.balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
+    }
+    expect(futureCovTokens.length).to.equal(2);
+    expect(await futureCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20);
+
+    const userABal = await dai.balanceOf(userAAddress);
+    await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
+    for (let i = 0; i < claimCovTokens.length; i++) {
+      const claimCovToken = CoverERC20.attach(claimCovTokens[i]);
+      expect(await claimCovToken.balanceOf(userAAddress)).to.equal(0);
+    }
+    expect(await noclaimCovToken.balanceOf(userAAddress)).to.equal(0);
+    expect(await futureCovToken.balanceOf(userAAddress)).to.equal(0);
+    const fees = await calFees(ETHER_UINT_10);
+    expect(await dai.balanceOf(userAAddress)).to.equal(userABal.add(ETHER_UINT_10).sub(fees));
+  });
+
   it('Should delete asset, mint, and redeem with active tokens only', async function() {
     await coverPoolFactory.deleteAsset(consts.POOL_2, consts.ASSET_2);
 

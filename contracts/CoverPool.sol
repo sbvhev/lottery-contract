@@ -155,8 +155,22 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     _addCover(collateral, addr, _amount);
   }
 
-  /// @notice delete asset from pool
-  function deleteAsset(bytes32 _asset) external override onlyDev {
+  /// @notice add asset to pool (only called by factory)
+  function addAsset(bytes32 _asset) external override onlyOwner {
+    address[] memory activeCoversCopy = activeCovers; // save gas
+    assetList.push(_asset);
+    if (activeCoversCopy.length > 0) {
+      uint256 startGas = gasleft();
+      for (uint256 i = 0; i < activeCoversCopy.length; i++) {
+        if (startGas < ICoverPoolFactory(owner()).deployGasMin()) return;
+        ICover(activeCoversCopy[i]).addAsset(_asset);
+        startGas = gasleft();
+      }
+    }
+  }
+
+  /// @notice delete asset from pool (only called by factory)
+  function deleteAsset(bytes32 _asset) external override onlyOwner {
     require(assetsMap[_asset] == 1, "CoverPool: not active asset");
     bytes32[] memory assetListCopy = assetList; //save gas
     require(assetListCopy.length > 1, "CoverPool: only 1 asset left");
