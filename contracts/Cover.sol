@@ -164,7 +164,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   /**
-   * @notice called by owner (CoverPool) only, when a new asset is added to pool
+   * @notice called by owner (CoverPool) only, when a new asset is added to pool the first time
    * - create a new claim token for asset
    * - point the current latest (last one in futureCovTokens) to newly created claim token
    * - create a new future token and push to futureCovTokens
@@ -172,14 +172,16 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   function addAsset(bytes32 _asset) external override onlyOwner {
     if (block.timestamp >= expiry) return;
 
+    ICoverERC20[] memory futureCovTokensCopy = futureCovTokens; // save gas
+    uint256 len = futureCovTokensCopy.length;
+    ICoverERC20 futureCovToken = futureCovTokensCopy[len - 1];
+    // make sure new asset has not already been added
+    if (address(futureCovTokenMap[futureCovToken]) != address(0)) return;
+
     string memory assetName = StringHelper.bytes32ToString(_asset);
     ICoverERC20 claimToken = _createCovToken(string(abi.encodePacked("C_", assetName, "_")));
     claimCovTokens.push(claimToken);
     claimCovTokenMap[_asset] = claimToken;
-
-    ICoverERC20[] memory futureCovTokensCopy = futureCovTokens; // save gas
-    uint256 len = futureCovTokensCopy.length;
-    ICoverERC20 futureCovToken = futureCovTokensCopy[len - 1];
     futureCovTokenMap[futureCovToken] = claimToken;
 
     string memory nextFutureTokenName = string(abi.encodePacked("C_FUT", StringHelper.uintToString(len), "_"));

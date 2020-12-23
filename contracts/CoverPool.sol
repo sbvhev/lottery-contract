@@ -31,6 +31,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   // only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   bool private isOpenPool;
+  bool public override isAddingAsset;
   bool private isActive;
   string public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
@@ -138,6 +139,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     external override nonReentrant
   {
     require(isActive, "CoverPool: pool not active");
+    require(!isAddingAsset, "CoverPool: waiting to complete adding asset");
     require(_amount > 0, "CoverPool: amount <= 0");
     require(collateralStatusMap[_collateral].status == 1, "CoverPool: invalid collateral");
     require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == 1, "CoverPool: invalid expiry");
@@ -156,20 +158,28 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   /// @notice add asset to pool (only called by factory), cannot be deleted asset
   function addAsset(bytes32 _asset) external override onlyOwner {
     require(isOpenPool, "CoverPool: not open pool");
-    bytes32[] memory deletedAssetListCopy = deletedAssetList; // save gas
-    for (uint256 i = 0; i < deletedAssetListCopy.length; i++) {
-      require(_asset != deletedAssetListCopy[i], "CoverPool: deleted asset not allowed");
+
+    if (assetsMap[_asset] == 0) {
+      // first time adding asset, make sure no other asset adding in prrogress
+      require(!isAddingAsset, "CoverPool: last asset adding not complete");
+      assetsMap[_asset] = 1;
+      assetList.push(_asset);
+      isAddingAsset = true;
     }
-    assetsMap[_asset] = 1;
-    assetList.push(_asset);
+    require(assetsMap[_asset] != 2, "CoverPool: deleted asset not allowed");
+
+    // continue adding asset, this may not be the first time this func is called for the asset
     address[] memory activeCoversCopy = activeCovers; // save gas
     if (activeCoversCopy.length > 0) {
       uint256 startGas = gasleft();
       for (uint256 i = 0; i < activeCoversCopy.length; i++) {
+        // ensure enough gas left to avoid revert all the previous work
         if (startGas < ICoverPoolFactory(owner()).deployGasMin()) return;
+        // below call deploys two covToken contracts, if cover already added, call will do nothing
         ICover(activeCoversCopy[i]).addAsset(_asset);
         startGas = gasleft();
       }
+      isAddingAsset = false;
     }
   }
 
