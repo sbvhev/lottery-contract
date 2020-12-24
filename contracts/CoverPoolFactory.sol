@@ -123,6 +123,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _isOpenPool, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
     _addr =  address(_deployCoverPool(_name, initData));
     coverPools[_name] = _addr;
+    emit CoverPoolCreated(_addr);
   }
 
   /// @dev update this will only affect coverPools deployed after
@@ -134,34 +135,40 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   /// @dev update this will only affect coverPools deployed after
   function updateCoverPoolImpl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
+    emit CoverPoolImplUpdated(coverPoolImpl, _newImpl);
     coverPoolImpl = _newImpl;
   }
 
   /// @dev update this will only affect covers of coverPools deployed after
   function updateCoverImpl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
+    emit CoverImplUpdated(coverImpl, _newImpl);
     coverImpl = _newImpl;
   }
 
   /// @dev update this will only affect covTokens of covers of coverPools deployed after
   function updateCoverERC20Impl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
+    emit CoverERC20ImplUpdated(coverERC20Impl, _newImpl);
     coverERC20Impl = _newImpl;
   }
 
   function updateClaimManager(address _address) external override onlyOwner {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
+    emit ClaimManagerUpdated(claimManager, _address);
     claimManager = _address;
   }
 
   function updateGovernance(address _address) external override onlyGov {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
     require(_address != owner(), "CoverPoolFactory: governance cannot be owner");
+    emit GovernanceUpdated(governance, _address);
     governance = _address;
   }
 
   function updateTreasury(address _address) external override onlyOwner {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
+    emit TreasuryUpdated(treasury, _address);
     treasury = _address;
   }
 
@@ -169,7 +176,6 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
     // unique salt required for each coverPool, salt + deployer decides contract address
     _proxyAddr = Create2.deploy(0, keccak256(abi.encodePacked("CoverV2", _name)), bytecode);
-    emit CoverPoolCreated(_proxyAddr);
     InitializableAdminUpgradeabilityProxy(_proxyAddr).initialize(coverPoolImpl, owner(), _initData);
   }
 

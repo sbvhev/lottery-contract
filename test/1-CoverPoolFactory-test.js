@@ -47,16 +47,21 @@ describe('CoverPoolFactory', () => {
   });
 
   // test functions with owner access restriction
-  it('Should update vars by owner', async () => {
-    await coverPoolFactory.connect(ownerAccount).updateClaimManager(userAAddress);
+  it('Should update vars by authorized only', async () => {
+    // should only be updated by owner
+    await expect(coverPoolFactory.connect(userAAccount).updateClaimManager(userAAddress)).to.be.reverted;
+    await expect(coverPoolFactory.connect(ownerAccount).updateClaimManager(userAAddress)).to.emit(coverPoolFactory, 'ClaimManagerUpdated');
     expect(await coverPoolFactory.claimManager()).to.equal(userAAddress);
 
+    // should only be updated by owner
     await coverPoolFactory.connect(ownerAccount).updateDeployGasMin(6000000);
     expect(await coverPoolFactory.deployGasMin()).to.equal(6000000);
-  });
+    await expect(coverPoolFactory.connect(ownerAccount).updateTreasury(ownerAddress)).to.emit(coverPoolFactory, 'TreasuryUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).updateCoverERC20Impl(dai.address)).to.emit(coverPoolFactory, 'CoverERC20ImplUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).updateCoverImpl(dai.address)).to.emit(coverPoolFactory, 'CoverImplUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).updateCoverPoolImpl(dai.address)).to.emit(coverPoolFactory, 'CoverPoolImplUpdated');
 
-  it('Should NOT update claimManager by non-owner', async () => {
-    await expect(coverPoolFactory.connect(userAAccount).updateClaimManager(userAAddress)).to.be.reverted;
+    await expect(coverPoolFactory.connect(governanceAccount).updateGovernance(userAAddress)).to.emit(coverPoolFactory, 'GovernanceUpdated');
   });
 
   it('Should add 2 new coverPools by owner', async () => {
