@@ -66,7 +66,8 @@ describe('Cover', function() {
 
     // revert cause deploy incomplete
     await expectRevert(coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10, {gasLimit: 2112841}), 'CoverPool: cover deploy incomplete');
-    await coverPool2.deployCover(COLLATERAL, TIMESTAMP);
+    const coverIP = Cover.attach(await coverPool2.coverMap(COLLATERAL, TIMESTAMP));
+    await expect(coverPool2.deployCover(COLLATERAL, TIMESTAMP)).to.emit(coverIP, 'CoverDeployCompleted');
     await coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10)
   });
 
@@ -102,7 +103,7 @@ describe('Cover', function() {
   });
 
   it('Should add asset, convert, mint, and redeem with new active tokens only', async function() {
-    await coverPool.addAsset(consts.ASSET_4);
+    await expect(coverPool.addAsset(consts.ASSET_4)).to.emit(cover, 'CovTokenCreated');
     const [,,,,,futureCovTokens, claimCovTokens, noclaimCovTokenAddress] = await cover.getCoverDetails();
     const noclaimCovToken = CoverERC20.attach(noclaimCovTokenAddress);
     const futureCovToken = CoverERC20.attach(futureCovTokens[futureCovTokens.length - 1]);
@@ -284,9 +285,7 @@ describe('Cover', function() {
     const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1], [100], 100, startTimestamp, 0);
     await txA.wait();
 
-    const aDaiBalance = await dai.balanceOf(userAAddress);
     await expect(cover.connect(userBAccount).redeemClaim()).to.be.reverted;
-
     expect(await dai.balanceOf(cover.address)).to.equal(ETHER_UINT_10);
 
     const [,,,,,, claimCovTokens] = await cover.getCoverDetails();
