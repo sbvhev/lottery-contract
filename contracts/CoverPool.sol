@@ -233,18 +233,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     }
   }
 
-  /// @notice update status or add new collateral, call deployCover with collateral and expiry before add cover
-  function updateCollateral(address _collateral, uint256 _depositRatio, uint8 _status) external override onlyDev {
-    require(_collateral != address(0), "CoverPool: address cannot be 0");
-    require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
-
-    // status 0 means never added before, inactive expiry status should be 2
-    if (collateralStatusMap[_collateral].status == 0) {
-      collaterals.push(_collateral);
-    }
-    collateralStatusMap[_collateral] = CollateralInfo(_depositRatio, _status);
-  }
-
   /// @notice update status or add new expiry, call deployCover with collateral and expiry before add cover
   function updateExpiry(uint48 _expiry, string calldata _expiryString, uint8 _status)
     external override onlyDev
@@ -257,6 +245,40 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       expiries.push(_expiry);
     }
     expiryInfoMap[_expiry] = ExpiryInfo(_expiryString, _status);
+  }
+
+  /// @notice update status or add new collateral, call deployCover with collateral and expiry before add cover
+  function updateCollateral(address _collateral, uint256 _depositRatio, uint8 _status) external override onlyDev {
+    require(_collateral != address(0), "CoverPool: address cannot be 0");
+    require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
+
+    // status 0 means never added before, inactive expiry status should be 2
+    if (collateralStatusMap[_collateral].status == 0) {
+      collaterals.push(_collateral);
+    }
+    collateralStatusMap[_collateral] = CollateralInfo(_depositRatio, _status);
+  }
+
+  function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external override onlyGov {
+    require(_feeDenominator > 0, "CoverPool: denominator cannot be 0");
+    require(_feeDenominator > _feeNumerator, "CoverPool: must < 100%");
+    emit FeesUpdated(feeNumerator, feeDenominator, _feeNumerator, _feeDenominator);
+    feeNumerator = _feeNumerator;
+    feeDenominator = _feeDenominator;
+  }
+
+  // update status of coverPool, if false, will pause new cover creation
+  function setActive(bool _isActive) external override onlyDev {
+    emit PoolActiveStatusUpdated(isActive, _isActive);
+    isActive = _isActive;
+  }
+
+  function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external override onlyGov {
+    claimRedeemDelay = _claimRedeemDelay;
+  }
+
+  function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external override onlyGov {
+    noclaimRedeemDelay = _noclaimRedeemDelay;
   }
 
   /**
@@ -295,27 +317,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       _incidentTimestamp,
       uint48(block.timestamp)
     ));
-    emit ClaimAccepted(_coverPoolNonce);
-  }
-
-  function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external override onlyGov {
-    require(_feeDenominator > 0, "CoverPool: denominator cannot be 0");
-    require(_feeDenominator > _feeNumerator, "CoverPool: must < 100%");
-    feeNumerator = _feeNumerator;
-    feeDenominator = _feeDenominator;
-  }
-
-  // update status of coverPool, if false, will pause new cover creation
-  function setActive(bool _isActive) external override onlyDev {
-    isActive = _isActive;
-  }
-
-  function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external override onlyGov {
-    claimRedeemDelay = _claimRedeemDelay;
-  }
-
-  function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external override onlyGov {
-    noclaimRedeemDelay = _noclaimRedeemDelay;
+    emit ClaimEnacted(_coverPoolNonce);
   }
 
   /// @dev the owner of this contract is CoverPoolFactory contract. The owner of CoverPoolFactory is dev
@@ -344,7 +346,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint256 coverBalanceAfter = _collateral.balanceOf(_cover);
     require(coverBalanceAfter > coverBalanceBefore, "CoverPool: collateral transfer failed");
 
-    emit CoverAdded(_cover, coverBalanceAfter - coverBalanceBefore);
+    emit CoverAdded(_cover, msg.sender, coverBalanceAfter - coverBalanceBefore);
     ICover(_cover).mint(coverBalanceAfter - coverBalanceBefore, msg.sender);
   }
 }

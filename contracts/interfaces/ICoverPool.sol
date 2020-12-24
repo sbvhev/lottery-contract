@@ -7,12 +7,12 @@ pragma solidity ^0.8.0;
  * @author crypto-pumpkin
  */
 interface ICoverPool {
-  /// @notice emit when a claim against the coverPool is accepted
-  event ClaimAccepted(uint256 _claimNonce);
-  event CoverAdded(address indexed _cover, uint256 _amount);
-  /// @notice either delete or add asset
-  event AssetUpdated(bytes32 _asset, bool _isAdd);
   event CoverCreated(address);
+  event CoverAdded(address indexed _cover, address _acount, uint256 _amount);
+  event ClaimEnacted(uint256 _enactedClaimNonce);
+  event PoolActiveStatusUpdated(bool _oldIsActive, bool _newIsActive);
+  event AssetUpdated(bytes32 _asset, bool _isAddAsset);
+  event FeesUpdated(uint256 _oldFeeNumerator, uint256 _oldFeeDenominator, uint256 _feeNumerator, uint256 _feeDenominator);
 
   struct ExpiryInfo {
     string name;
