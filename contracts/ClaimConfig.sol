@@ -13,7 +13,6 @@ contract ClaimConfig is IClaimConfig, Ownable {
   
   bool public override allowPartialClaim = true;
   IERC20 public override feeCurrency = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
-  address public override auditor;
   address public override governance;
   address public override treasury;
   address public override coverPoolFactory;
@@ -26,6 +25,12 @@ contract ClaimConfig is IClaimConfig, Ownable {
 
   // coverPool => claim fee
   mapping(address => uint256) private coverPoolClaimFee;
+
+  // coverPool => cvc => status
+  mapping(address => mapping(address => bool)) public override cvcMap;
+  
+  // coverPool => number of CVC groups
+  mapping(address => uint256) public override numCVCGroups;
 
   modifier onlyGov() {
     require(msg.sender == governance, "COVER_CC: !governance");
@@ -59,10 +64,27 @@ contract ClaimConfig is IClaimConfig, Ownable {
   }
 
   /**
-   * @notice Set the status and address of auditor
+   * @notice Set the CVC group for a coverPool
    */
-  function setAuditor(address _auditor) external override onlyOwner {
-    auditor = _auditor;
+  function setCVCForPool(address _coverPool, address _cvc, bool _status) public override onlyOwner {
+    bool currentStatus = cvcMap[_coverPool][_cvc];
+    require(currentStatus != _status, "COVER_CC: status is unchanged");
+    if (!currentStatus) {
+      numCVCGroups[_coverPool] += 1;
+    } else {
+      numCVCGroups[_coverPool] -= 1;
+    }
+    cvcMap[_coverPool][_cvc] = _status;
+  }
+
+  /**
+   * @notice Set the CVC group for multiple coverPools
+   */
+  function setCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs, bool[] calldata _statuses) external override onlyOwner {
+    require(_coverPools.length == _cvcs.length && _cvcs.length == _statuses.length, "COVER_CC: lengths don't match");
+    for (uint i = 0; i < _coverPools.length; i++) {
+      setCVCForPool(_coverPools[i], _cvcs[i], _statuses[i]);
+    }
   }
 
   /**
@@ -99,12 +121,12 @@ contract ClaimConfig is IClaimConfig, Ownable {
   }
 
   /**
-   * @notice Get status of auditor voting
-   * @dev Returns false if `auditor` is 0
-   * @return status of auditor voting in decideClaim
+   * @notice Get status of CVC voting
+   * @dev Returns true if number of CVC groups is > 0, otherwise false
+   * @return status of CVC voting in decideClaim
    */
-  function isAuditorVoting() public view override returns (bool) {
-    return auditor != address(0);
+  function isCVCVoting(address _coverPool) public view override returns (bool) {
+    return numCVCGroups[_coverPool] > 0;
   }
 
   /**

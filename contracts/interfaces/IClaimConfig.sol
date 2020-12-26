@@ -10,7 +10,6 @@ import "./IERC20.sol";
  */
 interface IClaimConfig {
   function allowPartialClaim() external view returns (bool);
-  function auditor() external view returns (address);
   function governance() external view returns (address);
   function treasury() external view returns (address);
   function coverPoolFactory() external view returns (address);
@@ -19,14 +18,17 @@ interface IClaimConfig {
   function forceClaimFee() external view returns (uint256);
   function feeMultiplier() external view returns (uint256);
   function feeCurrency() external view returns (IERC20);
+  function cvcMap(address _coverPool, address _cvc) external view returns (bool);
+  function numCVCGroups(address _coverPool) external view returns (uint256);
   function getFileClaimWindow(address _coverPool) external view returns (uint256);
-  function isAuditorVoting() external view returns (bool);
+  function isCVCVoting(address _coverPool) external view returns (bool);
   function getCoverPoolClaimFee(address _coverPool) external view returns (uint256);
   
   // @notice only dev
   function setMaxClaimDecisionWindow(uint256 _newTimeWindow) external;
   function setTreasury(address _treasury) external;
-  function setAuditor(address _auditor) external;
+  function setCVCForPool(address _coverPool, address _cvc, bool _status) external;
+  function setCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs, bool[] calldata _statuses) external;
   function setPartialClaimStatus(bool _allowPartialClaim) external;
 
   // @dev Only callable by governance

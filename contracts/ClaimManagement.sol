@@ -17,21 +17,16 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   // coverPool => nonce => Claim[]
   mapping(address => mapping(uint256 => Claim[])) private coverPoolClaims;
 
-  modifier onlyApprovedDecider() {
-    if (isAuditorVoting()) {
-      require(msg.sender == auditor, "COVER_CM: !auditor");
+  modifier onlyApprovedDecider(address _coverPool) {
+    if (isCVCVoting(_coverPool)) {
+      require(cvcMap[_coverPool][msg.sender], "COVER_CM: !cvc");
     } else {
       require(msg.sender == governance, "COVER_CM: !governance");
     }
     _;
   }
 
-  modifier onlyWhenAuditorVoting() {
-    require(isAuditorVoting(), "COVER_CM: !isAuditorVoting");
-    _;
-  }
-
-  constructor(address _governance, address _auditor, address _treasury, address _coverPoolFactory) {
+  constructor(address _governance, address _treasury, address _coverPoolFactory) {
     require(
       _governance != msg.sender && _governance != address(0), 
       "COVER_CC: governance cannot be owner or 0"
@@ -39,7 +34,6 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     require(_treasury != address(0), "COVER_CM: treasury cannot be 0");
     require(_coverPoolFactory != address(0), "COVER_CM: coverPool factory cannot be 0");
     governance = _governance;
-    auditor = _auditor;
     treasury = _treasury;
     coverPoolFactory = _coverPoolFactory;
 
@@ -112,8 +106,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
 
   /**
    * @notice Force file a claim for a Cover Pool
-   * @dev `_incidentTimestamp` must be within the past 3 days. 
-   * Only callable when isAuditorVoting is true
+   * @dev `_incidentTimestamp` must be within the past 3 days.    
+   * Only callable when isCVCVoting is true
    * 
    * Emits ClaimUpdated
    */
@@ -122,9 +116,10 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     bytes32[] calldata _exploitAssets,
     uint48 _incidentTimestamp,
     string calldata _description
-  ) external override onlyWhenAuditorVoting {
+  ) external override {
     address coverPool = _getAddressFromFactory(_coverPoolName);
     require(coverPool != address(0), "COVER_CM: pool not found");
+    require(isCVCVoting(coverPool), "COVER_CM: !isCVCVoting");
     require(block.timestamp - _incidentTimestamp <= getFileClaimWindow(coverPool), "COVER_CM: time passed window");
 
     uint256 nonce = _getCoverPoolNonce(coverPool);
@@ -146,7 +141,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
 
   /**
    * @notice Validates whether claim will be passed to approvedDecider to decideClaim
-   * @dev Only callable if isAuditorVoting is true
+   * @dev Only callable if isCVCVoting is true
    * @param _coverPool address: contract address of the coverPool that COVER supports
    * @param _nonce uint256: nonce of the coverPool
    * @param _index uint256: index of the claim
@@ -159,7 +154,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     uint256 _nonce,
     uint256 _index,
     bool _claimIsValid
-  ) external override onlyGov onlyWhenAuditorVoting {
+  ) external override onlyGov {
+    require(isCVCVoting(_coverPool), "COVER_CM: !isCVCVoting");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
     require(_nonce == _getCoverPoolNonce(_coverPool), "COVER_CM: wrong nonce");
     require(claim.state == ClaimState.Filed, "COVER_CM: claim not filed");
@@ -193,10 +189,10 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     bytes32[] calldata _exploitAssets,
     uint256[] calldata _payoutNumerators,
     uint256 _payoutDenominator
-  ) external override onlyApprovedDecider {
+  ) external override onlyApprovedDecider(_coverPool) {
     require(_nonce == _getCoverPoolNonce(_coverPool), "COVER_CM: wrong nonce");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
-    _validateClaimState(claim);
+    _validateClaimState(claim, _coverPool);
 
     // Max decision claim window passed, claim is default to Denied
     if (_claimIsAccepted && !_isDecisionWindowPassed(claim)) {
@@ -262,8 +258,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     }
   }
 
-  function _validateClaimState(Claim memory claim) private view {
-    if (isAuditorVoting()) {
+  function _validateClaimState(Claim memory claim, address _coverPool) private view {
+    if (isCVCVoting(_coverPool)) {
       require(
         claim.state == ClaimState.Validated || 
         claim.state == ClaimState.ForceFiled, 
