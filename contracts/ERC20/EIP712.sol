@@ -18,6 +18,8 @@ pragma solidity 0.8.0;
  *
  * NOTE: This contract implements the version of the encoding known as "v4", as implemented by the JSON RPC method
  * https://docs.metamask.io/guide/signing-data.html[`eth_signTypedDataV4` in MetaMask].
+ *
+ * !!! crypto-pumpkin modified: remove immutable for the 5 vars, since we cannot set them in constructor, should be safe as they are set once in initialize internally
  */
 abstract contract EIP712 {
     /* solhint-disable var-name-mixedcase */

@@ -27,6 +27,8 @@ import "./IERC20.sol";
  * Finally, the non-standard {decreaseAllowance} and {increaseAllowance}
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
+ * 
+ * !!! crypto-pumpkin modified: use initializeERC20 to replace constructor for proxy
  */
 contract ERC20 is IERC20 {
 
