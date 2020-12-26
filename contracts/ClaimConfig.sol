@@ -69,11 +69,9 @@ contract ClaimConfig is IClaimConfig, Ownable {
   function setCVCForPool(address _coverPool, address _cvc, bool _status) public override onlyOwner {
     bool currentStatus = cvcMap[_coverPool][_cvc];
     require(currentStatus != _status, "COVER_CC: status is unchanged");
-    if (!currentStatus) {
-      numCVCGroups[_coverPool] += 1;
-    } else {
-      numCVCGroups[_coverPool] -= 1;
-    }
+    numCVCGroups[_coverPool] = !currentStatus 
+                                  ? numCVCGroups[_coverPool] + 1 
+                                  : numCVCGroups[_coverPool] - 1;
     cvcMap[_coverPool][_cvc] = _status;
   }
 
