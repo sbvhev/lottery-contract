@@ -45,7 +45,6 @@ describe("ClaimManagement", function () {
     const ClaimManagement = await ethers.getContractFactory("ClaimManagement");
     management = await ClaimManagement.deploy(
       governanceAddress,
-      consts.ADDRESS_ZERO,
       treasuryAddress,
       coverPoolFactory.address
     );
@@ -58,10 +57,8 @@ describe("ClaimManagement", function () {
 
   it("Should deploy ClaimManagement correctly", async function () {
     expect(await management.governance()).to.equal(governanceAddress);
-    expect(await management.auditor()).to.equal(consts.ADDRESS_ZERO);
     expect(await management.treasury()).to.equal(treasuryAddress);
     expect(await management.coverPoolFactory()).to.equal(coverPoolFactory.address);
-    expect(await management.isAuditorVoting()).to.equal(false);
   });
 
   it("Should set vars correctly", async function () {
@@ -70,11 +67,12 @@ describe("ClaimManagement", function () {
     let feeCurrency = dai.address;
     await management.connect(governanceAccount).setFeeAndCurrency(baseClaimFee, forceClaimFee, feeCurrency);
     expect(await management.feeCurrency()).to.equal(dai.address);
-    
-    await management.setAuditor(auditorAddress);
-    expect(await management.isAuditorVoting()).to.equal(true);
-    expect(await management.auditor()).to.equal(auditorAddress);
   });
+
+  it("Should add cvc to deployed cover pool" , async function () {
+    await management.connect(ownerAccount).setCVCForPool(coverPool.address, auditorAddress, true);
+    expect(await management.isCVCVoting(coverPool.address)).to.equal(true);
+  })
 
   // fileClaim
   it("Should file a claim for incident correctly", async function () {
@@ -103,10 +101,8 @@ describe("ClaimManagement", function () {
   });
 
   // forceFileClaim
-  it("Should NOT allow force filing when condition not right", async function () {
-    await management.setAuditor(consts.ADDRESS_ZERO);
+  it("Should NOT allow force filing when pool is not assigned CVC group", async function () {
     await expect(management.forceFileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC)).to.be.reverted;
-    await management.setAuditor(auditorAddress);
     await expect(management.forceFileClaim("any", EXPLOIT_ASSETS, timestamp, DESC)).to.be.reverted;
   });
 
@@ -127,10 +123,10 @@ describe("ClaimManagement", function () {
 
   // validateClaim
   it("Should NOT validate if condition is wrong", async function () {
-    // error to validate when !isAuditorVoting
-    await management.setAuditor(consts.ADDRESS_ZERO);
+    // error to validate when !isCVCVoting
+    await management.connect(ownerAccount).setCVCForPool(coverPool.address, auditorAddress, false);
     await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 0, false)).to.be.reverted;
-    await management.setAuditor(auditorAddress);
+    await management.connect(ownerAccount).setCVCForPool(coverPool.address, auditorAddress, true);
 
     // validate zero address
     await expect(management.connect(governanceAccount).validateClaim(consts.ADDRESS_ZERO, 0, 0, true)).to.be.reverted;
@@ -170,12 +166,12 @@ describe("ClaimManagement", function () {
   });
   // decideClaim
   it("Should NOT decideClaim if condition is wrong", async function () {
-    // owner decideClaim when isAuditorVoting
+    // owner decideClaim when isCVCVoting
     await expect(management.connect(ownerAccount).decideClaim(coverPool.address, 0, 1, true, EXPLOIT_ASSETS, [100], 100)).to.be.reverted;
-    // if auditor decideClaim when !isAuditorVoting
-    await management.setAuditor(consts.ADDRESS_ZERO);
+    // if auditor decideClaim when !isCVCVoting
+    await management.connect(ownerAccount).setCVCForPool(coverPool.address, auditorAddress, false);
     await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, true, EXPLOIT_ASSETS, [100], 100)).to.be.reverted;
-    await management.setAuditor(auditorAddress);
+    await management.connect(ownerAccount).setCVCForPool(coverPool.address, auditorAddress, true);
     // if deciding a claim for zero address
     await expect(management.connect(auditorAccount).decideClaim(consts.ADDRESS_ZERO, 0, 1, true, EXPLOIT_ASSETS, [100], 100)).to.be.reverted;
     // if input nonce != coverPool nonce
@@ -211,7 +207,7 @@ describe("ClaimManagement", function () {
   
   it("Should NOT validateClaim when auditor is not voting", async function () {
     await management.setAuditor(consts.ADDRESS_ZERO);
-    expect(await management.isAuditorVoting()).to.equal(false);
+    expect(await management.isCVCVoting()).to.equal(false);
     expect(await management.auditor()).to.equal(consts.ADDRESS_ZERO);
     await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 1, 0, true)).to.be.reverted;
   });

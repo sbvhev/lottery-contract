@@ -4,6 +4,7 @@ const { consts, getAccounts } = require('../testHelper');
 describe("ClaimConfig", function () {
   let claimConfig;
   let ownerAccount, ownerAddress, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress, auditorAccount, auditorAddress;
+  let testCoverPool = "0x000000000000000000000000000000000000dEaD";
 
   before(async () => {
     ({ownerAccount, ownerAddress, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress, auditorAccount, auditorAddress} = await getAccounts());
@@ -14,17 +15,14 @@ describe("ClaimConfig", function () {
     await expect(ClaimConfig.deploy(ownerAddress, treasuryAddress, userAAddress)).to.be.reverted;
     claimConfig = await ClaimConfig.deploy(
       governanceAddress,
-      consts.ADDRESS_ZERO,
       treasuryAddress,
       userAAddress
     );
     await claimConfig.deployed();
 
-    expect(await claimConfig.isAuditorVoting()).to.equal(false);
     expect(await claimConfig.allowPartialClaim()).to.equal(true);
     expect(await claimConfig.governance()).to.equal(governanceAddress);
     expect(await claimConfig.treasury()).to.equal(treasuryAddress);
-    expect(await claimConfig.auditor()).to.equal(consts.ADDRESS_ZERO);
   });
 
   it("Should only set if authorized", async function () {
@@ -39,14 +37,10 @@ describe("ClaimConfig", function () {
     await claimConfig.setTreasury(treasuryAddress);
     expect(await claimConfig.treasury()).to.equal(treasuryAddress);
 
-    await expect(claimConfig.connect(userAAccount).setAuditor(treasuryAddress)).to.be.reverted;
-    await claimConfig.setAuditor(auditorAddress);
-    expect(await claimConfig.auditor()).to.equal(auditorAddress);
-    expect(await claimConfig.isAuditorVoting()).to.equal(true);
-    await claimConfig.setAuditor(consts.ADDRESS_ZERO);
-    expect(await claimConfig.auditor()).to.equal(consts.ADDRESS_ZERO);
-    expect(await claimConfig.isAuditorVoting()).to.equal(false);
-
+    await expect(claimConfig.connect(ownerAccount).setCVCForPool(testCoverPool, auditorAddress, false)).to.be.reverted;
+    await claimConfig.setCVCForPool(testCoverPool, auditorAddress, true);
+    expect(await claimConfig.cvcNumMap(testCoverPool)).to.equal(1);
+    expect(await claimConfig.isCVCVoting(testCoverPool)).to.equal(true);
   });
   
   it("Should set fees and currency", async function () {
