@@ -73,17 +73,11 @@ contract ClaimConfig is IClaimConfig, Ownable {
    * @notice Add CVC group for a coverPool if `_cvc` isn't already added
    */
   function addCVCForPool(address _coverPool, address _cvc) public override onlyOwner {
-    bool found = false;
     address[] memory cvcCopy = cvcMap[_coverPool];
     for (uint i = 0; i < cvcCopy.length; i++) {
-      if (cvcCopy[i] == _cvc) {
-        found = true;
-        break;
-      }
+      require(cvcCopy[i] != _cvc, "COVER_CC: cvc exists");
     }
-    if (!found) {
-      cvcMap[_coverPool].push(_cvc);
-    }
+    cvcMap[_coverPool].push(_cvc);
   }
 
   /**
@@ -176,10 +170,10 @@ contract ClaimConfig is IClaimConfig, Ownable {
   }
 
   /**
-   * @notice Get the CVC groups for a pool
-   * @return CVC groups for a pool
+   * @notice Get the CVC list for a pool
+   * @return CVC list for a pool
    */
-  function getCVCGroups(address _coverPool) external view override returns (address[] memory) {
+  function getCVCList(address _coverPool) external view override returns (address[] memory) {
     return cvcMap[_coverPool];
   }
 
