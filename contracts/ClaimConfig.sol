@@ -16,6 +16,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
   address public override governance;
   address public override treasury;
   address public override coverPoolFactory;
+  address public override defaultCVC; // if not specified, default to this
   
   // The max time allowed from filing a claim to a decision made
   uint256 public override maxClaimDecisionWindow = 7 days;
@@ -26,12 +27,9 @@ contract ClaimConfig is IClaimConfig, Ownable {
   // coverPool => claim fee
   mapping(address => uint256) private coverPoolClaimFee;
 
-  // coverPool => cvc => status
-  mapping(address => mapping(address => bool)) public override cvcMap;
+  // coverPool => cvc addresses
+  mapping(address => address[]) public override cvcMap;
   
-  // coverPool => number of CVC groups
-  mapping(address => uint256) public override cvcNumMap;
-
   modifier onlyGov() {
     require(msg.sender == governance, "COVER_CC: !governance");
     _;
@@ -64,24 +62,63 @@ contract ClaimConfig is IClaimConfig, Ownable {
   }
 
   /**
-   * @notice Set the CVC group for a coverPool
+   * @notice Set the address of `defaultCVC`
    */
-  function setCVCForPool(address _coverPool, address _cvc, bool _status) public override onlyOwner {
-    bool currentStatus = cvcMap[_coverPool][_cvc];
-    require(currentStatus != _status, "COVER_CC: status is unchanged");
-    cvcNumMap[_coverPool] = !currentStatus 
-                                  ? cvcNumMap[_coverPool] + 1 
-                                  : cvcNumMap[_coverPool] - 1;
-    cvcMap[_coverPool][_cvc] = _status;
+  function setDefaultCVC(address _cvc) external override onlyOwner {
+    require(_cvc != address(0), "COVER_CC: default CVC cannot be 0");
+    defaultCVC = _cvc;
   }
 
   /**
-   * @notice Set the CVC group for multiple coverPools
+   * @notice Add CVC group for a coverPool if `_cvc` isn't already added
    */
-  function setCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs, bool[] calldata _statuses) external override onlyOwner {
-    require(_coverPools.length == _cvcs.length && _cvcs.length == _statuses.length, "COVER_CC: lengths don't match");
+  function addCVCForPool(address _coverPool, address _cvc) public override onlyOwner {
+    bool found = false;
+    address[] memory cvcCopy = cvcMap[_coverPool];
+    for (uint i = 0; i < cvcCopy.length; i++) {
+      if (cvcCopy[i] == _cvc) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      cvcMap[_coverPool].push(_cvc);
+    }
+  }
+
+  /**
+   * @notice Add CVC groups for multiple coverPools
+   */
+  function addCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external override onlyOwner {
+    require(_coverPools.length == _cvcs.length, "COVER_CC: lengths don't match");
     for (uint i = 0; i < _coverPools.length; i++) {
-      setCVCForPool(_coverPools[i], _cvcs[i], _statuses[i]);
+      addCVCForPool(_coverPools[i], _cvcs[i]);
+    }
+  }
+
+  /**
+   * @notice Remove CVC group for a coverPool
+   */
+  function removeCVCForPool(address _coverPool, address _cvc) public override onlyOwner {
+    address[] memory cvcCopy = cvcMap[_coverPool];
+    require(cvcCopy.length > 0, "COVER_CC: cvc is empty");
+    address[] memory newCVC = new address[](cvcCopy.length - 1);
+    uint256 newListInd = 0;
+    for (uint i = 0; i < cvcCopy.length; i++) {
+      if (_cvc != cvcCopy[i]) {
+        newCVC[newListInd] = cvcCopy[i];
+      }
+    }
+    cvcMap[_coverPool] = newCVC;
+  }
+
+  /**
+   * @notice Remove CVC groups for multiple coverPools
+   */
+  function removeCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external override onlyOwner {
+    require(_coverPools.length == _cvcs.length, "COVER_CC: lengths don't match");
+    for (uint i = 0; i < _coverPools.length; i++) {
+      removeCVCForPool(_coverPools[i], _cvcs[i]);
     }
   }
 
@@ -119,15 +156,6 @@ contract ClaimConfig is IClaimConfig, Ownable {
   }
 
   /**
-   * @notice Get status of CVC voting
-   * @dev Returns true if number of CVC groups is > 0, otherwise false
-   * @return status of CVC voting in decideClaim
-   */
-  function isCVCVoting(address _coverPool) public view override returns (bool) {
-    return cvcNumMap[_coverPool] > 0;
-  }
-
-  /**
    * @notice Get the claim fee for coverPool `_coverPool`
    * @dev Will return `baseClaimFee` if fee is less
    * @return fee for filing a claim for coverPool
@@ -145,6 +173,33 @@ contract ClaimConfig is IClaimConfig, Ownable {
     uint256 noclaimRedeemDelay = ICoverPool(_coverPool).noclaimRedeemDelay();
     return noclaimRedeemDelay - maxClaimDecisionWindow - 1 hours;
   }
+
+  /**
+   * @notice Get the CVC groups for a pool
+   * @return CVC groups for a pool
+   */
+  function getCVC(address _coverPool) public view override returns (address[] memory) {
+    return cvcMap[_coverPool];
+  }
+
+  /**
+   * @notice Get whether input address is a CVC member
+   * @return whether `_address` is a CVC member
+   */
+  function isCVCMember(address _coverPool, address _address) public view override returns (bool) {
+    if (_address == defaultCVC) {
+      return true;
+    } else {
+      address[] memory cvcCopy = cvcMap[_coverPool];
+      for (uint i = 0; i < cvcCopy.length; i++) {
+        if (_address == cvcCopy[i]) {
+          return true;
+        }
+      }
+      return false;
+    }
+  }
+
 
   /**
    * @notice Updates fee for coverPool `_coverPool` by multiplying current fee by `feeMultiplier`
