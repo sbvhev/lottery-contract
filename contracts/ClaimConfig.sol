@@ -107,6 +107,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
     for (uint i = 0; i < cvcCopy.length; i++) {
       if (_cvc != cvcCopy[i]) {
         newCVC[newListInd] = cvcCopy[i];
+        newListInd++;
       }
     }
     cvcMap[_coverPool] = newCVC;
