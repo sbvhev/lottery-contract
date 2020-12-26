@@ -15,6 +15,12 @@ import "./interfaces/ICoverERC20.sol";
  *  - Has mint and burn by owner (Cover contract) only feature.
  *  - No limit on the totalSupply.
  *  - Should only be created from Cover contract. See {Cover}
+ *
+ * Symbol example:
+ *  C_FUT0_Yearn_0_DAI_12_31_20
+ *  C_3Crv_Yearn_0_DAI_12_31_20
+ *  C_yCRV_Yearn_0_DAI_12_31_20
+ *  NC_Yearn_0_DAI_12_31_20
  */
 contract CoverERC20 is ICoverERC20, ERC20Permit, Ownable {
 
@@ -23,6 +29,14 @@ contract CoverERC20 is ICoverERC20, ERC20Permit, Ownable {
     initializeOwner();
     initializeERC20(_symbol, _decimals);
     initializeERC20Permit(_symbol);
+  }
+
+  function getChainId() external view returns (uint256 chainId) {
+    this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+    // solhint-disable-next-line no-inline-assembly
+    assembly {
+      chainId := chainid()
+    }
   }
 
   /// @notice COVER specific function
