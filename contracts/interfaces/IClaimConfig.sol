@@ -23,7 +23,7 @@ interface IClaimConfig {
   function getFileClaimWindow(address _coverPool) external view returns (uint256);
   function isCVCMember(address _coverPool, address _address) external view returns (bool);
   function getCoverPoolClaimFee(address _coverPool) external view returns (uint256);
-  function getCVC(address _coverPool) external view returns (address[] memory);
+  function getCVCGroups(address _coverPool) external view returns (address[] memory);
   
   // @notice only dev
   function setMaxClaimDecisionWindow(uint256 _newTimeWindow) external;

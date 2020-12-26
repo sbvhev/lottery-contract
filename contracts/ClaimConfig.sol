@@ -179,13 +179,13 @@ contract ClaimConfig is IClaimConfig, Ownable {
    * @notice Get the CVC groups for a pool
    * @return CVC groups for a pool
    */
-  function getCVC(address _coverPool) public view override returns (address[] memory) {
+  function getCVCGroups(address _coverPool) external view override returns (address[] memory) {
     return cvcMap[_coverPool];
   }
 
   /**
-   * @notice Get whether input address is a CVC member
-   * @return whether `_address` is a CVC member
+   * @notice Get whether input address is a member of the CVC group for a pool
+   * @return whether `_address` is a member of the CVC group for a pool
    */
   function isCVCMember(address _coverPool, address _address) public view override returns (bool) {
     address[] memory cvcCopy = cvcMap[_coverPool];
