@@ -17,21 +17,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   // coverPool => nonce => Claim[]
   mapping(address => mapping(uint256 => Claim[])) private coverPoolClaims;
 
-  modifier onlyApprovedDecider() {
-    if (isAuditorVoting()) {
-      require(msg.sender == auditor, "COVER_CM: !auditor");
-    } else {
-      require(msg.sender == governance, "COVER_CM: !governance");
-    }
-    _;
-  }
-
-  modifier onlyWhenAuditorVoting() {
-    require(isAuditorVoting(), "COVER_CM: !isAuditorVoting");
-    _;
-  }
-
-  constructor(address _governance, address _auditor, address _treasury, address _coverPoolFactory) {
+  constructor(address _governance, address _treasury, address _coverPoolFactory, address _defaultCVC) {
     require(
       _governance != msg.sender && _governance != address(0), 
       "COVER_CC: governance cannot be owner or 0"
@@ -39,9 +25,9 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     require(_treasury != address(0), "COVER_CM: treasury cannot be 0");
     require(_coverPoolFactory != address(0), "COVER_CM: coverPool factory cannot be 0");
     governance = _governance;
-    auditor = _auditor;
     treasury = _treasury;
     coverPoolFactory = _coverPoolFactory;
+    defaultCVC = _defaultCVC;
 
     initializeOwner();
   }
@@ -96,6 +82,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     coverPoolClaims[coverPool][nonce].push(Claim({
       state: ClaimState.Filed,
       filedBy: msg.sender,
+      decidedBy: address(0),
       payoutAssetList: _exploitAssets,
       payoutNumerators: new uint256[](_exploitAssets.length),
       payoutDenominator: 1,
@@ -112,8 +99,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
 
   /**
    * @notice Force file a claim for a Cover Pool
-   * @dev `_incidentTimestamp` must be within the past 3 days. 
-   * Only callable when isAuditorVoting is true
+   * @dev `_incidentTimestamp` must be within the past 3 days.    
    * 
    * Emits ClaimUpdated
    */
@@ -122,7 +108,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     bytes32[] calldata _exploitAssets,
     uint48 _incidentTimestamp,
     string calldata _description
-  ) external override onlyWhenAuditorVoting {
+  ) external override {
     address coverPool = _getAddressFromFactory(_coverPoolName);
     require(coverPool != address(0), "COVER_CM: pool not found");
     require(block.timestamp - _incidentTimestamp <= getFileClaimWindow(coverPool), "COVER_CM: time passed window");
@@ -131,6 +117,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     coverPoolClaims[coverPool][nonce].push(Claim({
       state: ClaimState.ForceFiled,
       filedBy: msg.sender,
+      decidedBy: address(0),
       payoutAssetList: _exploitAssets,
       payoutNumerators: new uint256[](_exploitAssets.length),
       payoutDenominator: 1,
@@ -146,11 +133,10 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
 
   /**
    * @notice Validates whether claim will be passed to approvedDecider to decideClaim
-   * @dev Only callable if isAuditorVoting is true
    * @param _coverPool address: contract address of the coverPool that COVER supports
    * @param _nonce uint256: nonce of the coverPool
    * @param _index uint256: index of the claim
-   * @param _claimIsValid bool: true if claim is valid and passed to auditor, false otherwise
+   * @param _claimIsValid bool: true if claim is valid and passed to CVC, false otherwise
    *   
    * Emits ClaimValidated
    */
@@ -159,7 +145,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     uint256 _nonce,
     uint256 _index,
     bool _claimIsValid
-  ) external override onlyGov onlyWhenAuditorVoting {
+  ) external override onlyGov {
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
     require(_nonce == _getCoverPoolNonce(_coverPool), "COVER_CM: wrong nonce");
     require(claim.state == ClaimState.Filed, "COVER_CM: claim not filed");
@@ -193,10 +179,15 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     bytes32[] calldata _exploitAssets,
     uint256[] calldata _payoutNumerators,
     uint256 _payoutDenominator
-  ) external override onlyApprovedDecider {
+  ) external override {
+    require(isCVCMember(_coverPool, msg.sender), "COVER_CM: !cvc");
     require(_nonce == _getCoverPoolNonce(_coverPool), "COVER_CM: wrong nonce");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
-    _validateClaimState(claim);
+    require(
+        claim.state == ClaimState.Validated || 
+        claim.state == ClaimState.ForceFiled, 
+        "COVER_CM: claim not validated or forceFiled"
+      );
 
     // Max decision claim window passed, claim is default to Denied
     if (_claimIsAccepted && !_isDecisionWindowPassed(claim)) {
@@ -215,6 +206,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       claim.state = ClaimState.Denied;
       feeCurrency.safeTransfer(treasury, claim.feePaid);
     }
+    claim.decidedBy = msg.sender;
     claim.decidedTimestamp = uint48(block.timestamp);
     emit ClaimUpdate(_coverPool, claim.state, _nonce, _index);
   }
@@ -259,18 +251,6 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   function _getTotalNum(uint256[] calldata _payoutNumerators) private pure returns (uint256 _totalNum) {
     for (uint256 i = 0; i < _payoutNumerators.length; i++) {
       _totalNum = _totalNum + _payoutNumerators[i];
-    }
-  }
-
-  function _validateClaimState(Claim memory claim) private view {
-    if (isAuditorVoting()) {
-      require(
-        claim.state == ClaimState.Validated || 
-        claim.state == ClaimState.ForceFiled, 
-        "COVER_CM: claim not validated or forceFiled"
-      );
-    } else {
-      require(claim.state == ClaimState.Filed, "COVER_CM: claim state not filed");
     }
   }
 } 

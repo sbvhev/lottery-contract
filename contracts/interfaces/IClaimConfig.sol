@@ -10,24 +10,30 @@ import "../ERC20/IERC20.sol";
  */
 interface IClaimConfig {
   function allowPartialClaim() external view returns (bool);
-  function auditor() external view returns (address);
   function governance() external view returns (address);
   function treasury() external view returns (address);
   function coverPoolFactory() external view returns (address);
+  function defaultCVC() external view returns (address);
   function maxClaimDecisionWindow() external view returns (uint256);
   function baseClaimFee() external view returns (uint256);
   function forceClaimFee() external view returns (uint256);
   function feeMultiplier() external view returns (uint256);
   function feeCurrency() external view returns (IERC20);
+  function cvcMap(address _coverPool, uint256 _idx) external view returns (address);
   function getFileClaimWindow(address _coverPool) external view returns (uint256);
-  function isAuditorVoting() external view returns (bool);
+  function isCVCMember(address _coverPool, address _address) external view returns (bool);
   function getCoverPoolClaimFee(address _coverPool) external view returns (uint256);
+  function getCVCList(address _coverPool) external view returns (address[] memory);
   
   // @notice only dev
   function setMaxClaimDecisionWindow(uint256 _newTimeWindow) external;
   function setTreasury(address _treasury) external;
-  function setAuditor(address _auditor) external;
+  function addCVCForPool(address _coverPool, address _cvc) external;
+  function addCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external;
+  function removeCVCForPool(address _coverPool, address _cvc) external;
+  function removeCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external;
   function setPartialClaimStatus(bool _allowPartialClaim) external;
+  function setDefaultCVC(address _cvc) external;
 
   // @dev Only callable by governance
   function setGovernance(address _governance) external;

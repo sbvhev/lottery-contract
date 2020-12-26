@@ -13,6 +13,7 @@ interface IClaimManagement {
   struct Claim {
     ClaimState state; // Current state of claim
     address filedBy; // Address of user who filed claim
+    address decidedBy; // Address of the CVC who decided claim
     bytes32[] payoutAssetList;
     uint256[] payoutNumerators; // Numerators of percent to payout
     uint256 payoutDenominator; // Denominator of percent to payout
