@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./ERC20/SafeERC20.sol";
 import "./ClaimConfig.sol";
 import "./interfaces/ICoverPool.sol";
 import "./interfaces/ICoverPoolFactory.sol";
 import "./interfaces/IClaimManagement.sol";
-import "./utils/SafeERC20.sol";
 
 /**
  * @title Claim Management for claims filed for a COVER supported coverPool

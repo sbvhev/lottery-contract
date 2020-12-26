@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "./IERC20.sol";
+import "../ERC20/IERC20.sol";
 
 /**
  * @title CoverERC20 contract interface, implements {IERC20}. See {CoverERC20}.

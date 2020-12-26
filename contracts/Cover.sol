@@ -2,16 +2,16 @@
 
 pragma solidity ^0.8.0;
 
+import "./ERC20/SafeERC20.sol";
+import "./ERC20/IERC20.sol";
 import "./proxy/BasicProxyLib.sol";
 import "./utils/Create2.sol";
 import "./utils/Initializable.sol";
 import "./utils/Ownable.sol";
 import "./utils/ReentrancyGuard.sol";
-import "./utils/SafeERC20.sol";
 import "./utils/StringHelper.sol";
 import "./interfaces/ICover.sol";
 import "./interfaces/ICoverERC20.sol";
-import "./interfaces/IERC20.sol";
 import "./interfaces/IOwnable.sol";
 import "./interfaces/ICoverPool.sol";
 import "./interfaces/ICoverPoolFactory.sol";
@@ -29,7 +29,6 @@ import "./interfaces/ICovTokenProxy.sol";
 contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
 
-  bytes4 private constant COVERERC20_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint8)"));
   bool public override deployComplete;
   uint48 private expiry;
   address private collateral;
@@ -300,7 +299,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       decimals = 18;
     }
     address coverERC20Impl = _factory().coverERC20Impl();
-    bytes32 salt = keccak256(abi.encodePacked("CoverV2", ICoverPool(owner()).name(), expiry, collateral, claimNonce, _prefix));
+    bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), expiry, collateral, claimNonce, _prefix));
     address proxyAddr = BasicProxyLib.deployProxy(coverERC20Impl, salt);
     ICovTokenProxy(proxyAddr).initialize(string(abi.encodePacked(_prefix, name)), decimals);
 

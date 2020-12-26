@@ -59,7 +59,7 @@ describe('Cover', function() {
   });
 
   it('Should deploy Cover in two txs with CoverPool', async function() {
-    const tx = await coverPoolFactory.createCoverPool(consts.POOL_3, true, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME, {gasLimit: 2422841});
+    const tx = await coverPoolFactory.createCoverPool(consts.POOL_3, true, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, TIMESTAMP, TIMESTAMP_NAME, {gasLimit: 3000000});
     await tx;
     const coverPool2 = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_3));
     await dai.connect(userAAccount).approve(coverPool2.address, ETHER_UINT_10000);

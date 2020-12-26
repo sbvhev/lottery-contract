@@ -2,15 +2,15 @@
 
 pragma solidity ^0.8.0;
 
+import "./ERC20/SafeERC20.sol";
+import "./ERC20/IERC20.sol";
 import "./proxy/InitializableAdminUpgradeabilityProxy.sol";
 import "./utils/Create2.sol";
 import "./utils/Initializable.sol";
 import "./utils/Ownable.sol";
-import "./utils/SafeERC20.sol";
 import "./utils/ReentrancyGuard.sol";
 import "./utils/StringHelper.sol";
 import "./interfaces/ICover.sol";
-import "./interfaces/IERC20.sol";
 import "./interfaces/IOwnable.sol";
 import "./interfaces/ICoverPool.sol";
 import "./interfaces/ICoverPoolFactory.sol";
@@ -212,7 +212,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
       string memory coverName = _getCoverName(_expiry, IERC20(_collateral).symbol());
       bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
-      bytes32 salt = keccak256(abi.encodePacked("CoverV2", name, _expiry, _collateral, claimNonce));
+      bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);
 
       bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _expiry, _collateral, collateralStatusMap[_collateral].depositRatio, claimNonce);

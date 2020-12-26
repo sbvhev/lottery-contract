@@ -76,7 +76,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     uint256 _claimNonce
   ) public view override returns (address) {
     return _computeAddress(
-      keccak256(abi.encodePacked("CoverV2", _coverPoolName, _timestamp, _collateral, _claimNonce)),
+      keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce)),
       getCoverPoolAddress(_coverPoolName)
     );
   }
@@ -89,7 +89,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     uint256 _claimNonce,
     string memory _prefix
   ) external view override returns (address) {
-    bytes32 salt = keccak256(abi.encodePacked("CoverV2", _coverPoolName, _timestamp, _collateral, _claimNonce, _prefix));
+    bytes32 salt = keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce, _prefix));
     address deployer = getCoverAddress(_coverPoolName, _timestamp, _collateral, _claimNonce);
     return BasicProxyLib.computeProxyAddress(coverERC20Impl, salt, deployer);
   }
