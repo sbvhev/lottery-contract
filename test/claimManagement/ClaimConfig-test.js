@@ -39,9 +39,10 @@ describe("ClaimConfig", function () {
     await claimConfig.setTreasury(treasuryAddress);
     expect(await claimConfig.treasury()).to.equal(treasuryAddress);
 
+    expect(await claimConfig.isCVCMember(testCoverPool, defaultCVC)).to.equal(true);
     await claimConfig.addCVCForPool(testCoverPool, auditorAddress);
     expect(await claimConfig.isCVCMember(testCoverPool, auditorAddress)).to.equal(true);
-    expect(await claimConfig.isCVCMember(testCoverPool, defaultCVC)).to.equal(true);
+    expect(await claimConfig.isCVCMember(testCoverPool, defaultCVC)).to.equal(false);
 
     expect(await claimConfig.removeCVCForPool(testCoverPool, auditorAddress))
     expect(await claimConfig.isCVCMember(testCoverPool, auditorAddress)).to.equal(false);

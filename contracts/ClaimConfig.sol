@@ -188,10 +188,10 @@ contract ClaimConfig is IClaimConfig, Ownable {
    * @return whether `_address` is a CVC member
    */
   function isCVCMember(address _coverPool, address _address) public view override returns (bool) {
-    if (_address == defaultCVC) {
+    address[] memory cvcCopy = cvcMap[_coverPool];
+    if (cvcCopy.length == 0 && _address == defaultCVC) {
       return true;
     } else {
-      address[] memory cvcCopy = cvcMap[_coverPool];
       for (uint i = 0; i < cvcCopy.length; i++) {
         if (_address == cvcCopy[i]) {
           return true;
