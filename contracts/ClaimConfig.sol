@@ -30,7 +30,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
   mapping(address => mapping(address => bool)) public override cvcMap;
   
   // coverPool => number of CVC groups
-  mapping(address => uint256) public override numCVCGroups;
+  mapping(address => uint256) public override cvcNumMap;
 
   modifier onlyGov() {
     require(msg.sender == governance, "COVER_CC: !governance");
@@ -69,9 +69,9 @@ contract ClaimConfig is IClaimConfig, Ownable {
   function setCVCForPool(address _coverPool, address _cvc, bool _status) public override onlyOwner {
     bool currentStatus = cvcMap[_coverPool][_cvc];
     require(currentStatus != _status, "COVER_CC: status is unchanged");
-    numCVCGroups[_coverPool] = !currentStatus 
-                                  ? numCVCGroups[_coverPool] + 1 
-                                  : numCVCGroups[_coverPool] - 1;
+    cvcNumMap[_coverPool] = !currentStatus 
+                                  ? cvcNumMap[_coverPool] + 1 
+                                  : cvcNumMap[_coverPool] - 1;
     cvcMap[_coverPool][_cvc] = _status;
   }
 
@@ -124,7 +124,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
    * @return status of CVC voting in decideClaim
    */
   function isCVCVoting(address _coverPool) public view override returns (bool) {
-    return numCVCGroups[_coverPool] > 0;
+    return cvcNumMap[_coverPool] > 0;
   }
 
   /**
