@@ -158,8 +158,10 @@ describe("ClaimManagement", function () {
   });
   // decideClaim
   it("Should NOT decideClaim if condition is wrong", async function () {
-    // owner decideClaim when isCVCVoting
+    // default CVC cannot call
     await expect(management.connect(ownerAccount).decideClaim(coverPool.address, 0, 1, true, EXPLOIT_ASSETS, [100], 100)).to.be.reverted;
+    // non-CVC cannot call
+    await expect(management.connect(treasuryAccount).decideClaim(coverPool.address, 0, 1, true, EXPLOIT_ASSETS, [100], 100)).to.be.reverted;
     // if deciding a claim for zero address
     await expect(management.connect(auditorAccount).decideClaim(consts.ADDRESS_ZERO, 0, 1, true, EXPLOIT_ASSETS, [100], 100)).to.be.reverted;
     // if input nonce != coverPool nonce
