@@ -12,10 +12,15 @@ interface ICover {
   event CovTokenCreated(address);
   event CoverDeployCompleted();
 
+  // state vars
   function deployComplete() external view returns (bool);
   /// @notice created as initialization, cannot be changed
   function claimNonce() external view returns (uint256);
-  function viewClaimable(address _account) external view returns (uint256 _eligibleAmount);
+  function claimCovTokenMap(bytes32 _asset) external view returns (ICoverERC20 _claimCovToken);
+  function futureCovTokenMap(ICoverERC20 _futureCovToken) external view returns (ICoverERC20 _claimCovToken);
+
+  // extra view
+  function viewClaimable(address _account) external view returns (uint256 _eligibleCovTokenAmount);
   function getCoverDetails()
     external view returns (
       string memory _name, // Yearn_0_DAI_210131
@@ -23,10 +28,10 @@ interface ICover {
       address _collateral,
       uint256 _depositRatio,
       uint256 _claimNonce,
-      ICoverERC20[] memory _futureCovTokens,
-      ICoverERC20[] memory _claimCovTokens,
+      uint256 _duration,
       ICoverERC20 _noclaimCovToken,
-      uint256 _duration
+      ICoverERC20[] memory _claimCovTokens,
+      ICoverERC20[] memory _futureCovTokens
     );
 
   // user action
