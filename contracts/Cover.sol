@@ -116,11 +116,12 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   /// @notice redeem collateral, only when no claim accepted. If expired (with or withour claim), _amount is not respected
   function redeemCollateral(uint256 _amount) external override nonReentrant {
     ICoverPool coverPool = ICoverPool(owner());
+    (, uint256 noclaimRedeemDelay) = coverPool.getRedeemDelays();
     if (coverPool.claimNonce() > claimNonce) {
       // there is an accepted claim, redeem back all if incident time must > expiry to redeem collateral
       ICoverPool.ClaimDetails memory claim = _claimDetails();
       require(claim.incidentTimestamp > expiry, "Cover: claimable covTokens cannot redeem collateral");
-      require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.noclaimRedeemDelay(), "Cover: not ready");
+      require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + noclaimRedeemDelay, "Cover: not ready");
       _burnCovTokenAndPay(noclaimCovToken, 1, 1);
     } else {
       require(_amount > 0, "Cover: amount is 0");
@@ -139,7 +140,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
         _payCollateral(msg.sender, _amount);
       } else {
         // there is NO accepted claim, expired, redeem back all
-        require(block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay(), "Cover: not ready");
+        require(block.timestamp >= uint256(expiry) + noclaimRedeemDelay, "Cover: not ready");
         _burnCovTokenAndPay(noclaimCovToken, 1, 1);
       }
     }
@@ -170,12 +171,12 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
    */
   function addAsset(bytes32 _asset) external override onlyOwner {
     if (block.timestamp >= expiry) return;
+    // make sure new asset has not already been added
+    if (address(claimCovTokenMap[_asset]) != address(0)) return;
 
     ICoverERC20[] memory futureCovTokensCopy = futureCovTokens; // save gas
     uint256 len = futureCovTokensCopy.length;
     ICoverERC20 futureCovToken = futureCovTokensCopy[len - 1];
-    // make sure new asset has not already been added
-    if (address(futureCovTokenMap[futureCovToken]) != address(0)) return;
 
     string memory assetName = StringHelper.bytes32ToString(_asset);
     ICoverERC20 claimToken = _createCovToken(string(abi.encodePacked("C_", assetName, "_")));
@@ -217,7 +218,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
     ICoverPool.ClaimDetails memory claim = _claimDetails();
     require(claim.incidentTimestamp <= expiry, "Cover: not eligible, redeem collateral instead");
-    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + coverPool.claimRedeemDelay(), "Cover: not ready");
+    (uint256 claimRedeemDelay, ) = coverPool.getRedeemDelays();
+    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + claimRedeemDelay, "Cover: not ready");
 
     uint256 eligibleAmount;
     for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {

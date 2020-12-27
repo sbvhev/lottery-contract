@@ -76,8 +76,8 @@ describe('CoverPoolFactory', () => {
     const coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_1));
     expect(await coverPool.name()).to.equal(consts.POOL_1);
     const coverPool2 = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_3));
-    const [name2,,,assetList] = await coverPool2.getCoverPoolDetails();
-    expect(name2).to.equal(consts.POOL_3);
+    const [,,,,,assetList] = await coverPool2.getCoverPoolDetails();
+    expect(await coverPool2.name()).to.equal(consts.POOL_3);
     expect(assetList[0]).to.equal(consts.ASSET_1);
     expect(assetList[1]).to.equal(consts.ASSET_2);
     expect(await coverPool2.collateralStatusMap(COLLATERAL)).to.deep.equal([consts.DEPOSIT_RATIO, 1]);

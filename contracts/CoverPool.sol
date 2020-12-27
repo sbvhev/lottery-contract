@@ -16,9 +16,10 @@ import "./interfaces/ICoverPool.sol";
 import "./interfaces/ICoverPoolFactory.sol";
 
 /**
- * @title CoverPool contract
+ * @title CoverPool contract, manages covers for pool, add coverage for user
  * @author crypto-pumpkin
  * 
+ * Pool types:
  * - open pool: allow add and delete asset
  * - close pool: NOT allow add asset, but allow delete asset
  */
@@ -26,22 +27,22 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
 
   bytes4 private constant COVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint48,address,uint256,uint256)"));
-  uint256 private feeNumerator;
-  uint256 private feeDenominator;
 
   // only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
+  bool private isActive;
   bool private isOpenPool;
   bool public override isAddingAsset;
-  bool private isActive;
   string public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
+  uint256 private feeNumerator;
+  uint256 private feeDenominator;
   // delay # of seconds for redeem with/o. accepted claim, redeemCollateral is not affected
-  uint256 public override claimRedeemDelay;
-  uint256 public override noclaimRedeemDelay;
+  uint256 private claimRedeemDelay;
+  uint256 private noclaimRedeemDelay;
 
   // only covers that have never accepted a claim
-  address[] public override activeCovers;
+  address[] private activeCovers;
   address[] private allCovers;
   uint48[] private expiries;
   // list of active assets in cover pool
@@ -54,7 +55,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   mapping(bytes32 => uint8) private assetsMap;
   mapping(address => CollateralInfo) public override collateralStatusMap;
   mapping(uint48 => ExpiryInfo) public override expiryInfoMap;
-  // collateral => timestamp => coverAddress, most recent cover created for the collateral and timestamp combination
+  // collateral => timestamp => coverAddress, most recent (might be expired) cover created for the collateral and timestamp combination
   mapping(address => mapping(uint48 => address)) public override coverMap;
 
   modifier onlyDev() {
@@ -100,29 +101,26 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     deployCover(_collateral, _expiry);
   }
 
-  function getCoverPoolDetails()
-    external view override
+  function getCoverPoolDetails() external view override
     returns (
-      string memory _name,
       bool _isOpenPool,
       bool _isActive,
-      bytes32[] memory _assetList,
-      bytes32[] memory _deletedAssetList,
       uint256 _claimNonce,
-      uint256 _claimRedeemDelay,
-      uint256 _noclaimRedeemDelay,
       address[] memory _collaterals,
       uint48[] memory _expiries,
-      address[] memory _allCovers,
-      address[] memory _allActiveCovers)
+      bytes32[] memory _assetList,
+      bytes32[] memory _deletedAssetList,
+      address[] memory _allActiveCovers,
+      address[] memory _allCovers)
   {
-    return (name, isOpenPool, isActive, assetList, deletedAssetList, claimNonce, claimRedeemDelay, noclaimRedeemDelay, collaterals, expiries, allCovers, activeCovers);
+    return (isOpenPool, isActive, claimNonce, collaterals, expiries, assetList, deletedAssetList, activeCovers, allCovers);
   }
 
-  function getRedeemFees()
-    external view override
-    returns (uint256 _numerator, uint256 _denominator) 
-  {
+  function getRedeemDelays() external view override returns (uint256 _claimRedeemDelay, uint256 _noclaimRedeemDelay) {
+    return (claimRedeemDelay, noclaimRedeemDelay);
+  }
+
+  function getRedeemFees() external view override returns (uint256 _numerator, uint256 _denominator) {
     return (feeNumerator, feeDenominator);
   }
 
@@ -138,14 +136,11 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   function addCover(address _collateral, uint48 _expiry, uint256 _amount)
     external override nonReentrant
   {
-    require(isActive, "CoverPool: pool not active");
-    require(!isAddingAsset, "CoverPool: waiting to complete adding asset");
+    _validateCover(_collateral, _expiry);
     require(_amount > 0, "CoverPool: amount <= 0");
-    require(collateralStatusMap[_collateral].status == 1, "CoverPool: invalid collateral");
-    require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == 1, "CoverPool: invalid expiry");
 
     address addr = coverMap[_collateral][_expiry];
-    require(addr != address(0), "CoverPool: not deployed yet");
+    require(addr != address(0), "CoverPool: cover not deployed yet");
     require(ICover(addr).deployComplete(), "CoverPool: cover deploy incomplete");
 
     // Validate sender collateral balance is > amount
@@ -155,9 +150,10 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     _addCover(collateral, addr, _amount);
   }
 
-  /// @notice add asset to pool (only called by factory), cannot be deleted asset
+  /// @notice add asset to pool, new asset cannot be deleted asset
   function addAsset(bytes32 _asset) external override onlyDev {
     require(isOpenPool, "CoverPool: not open pool");
+    require(assetsMap[_asset] != 2, "CoverPool: deleted asset not allowed");
 
     if (assetsMap[_asset] == 0) {
       // first time adding asset, make sure no other asset adding in prrogress
@@ -166,7 +162,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       assetList.push(_asset);
       isAddingAsset = true;
     }
-    require(assetsMap[_asset] != 2, "CoverPool: deleted asset not allowed");
 
     // continue adding asset, this may not be the first time this func is called for the asset
     address[] memory activeCoversCopy = activeCovers; // save gas
@@ -183,15 +178,15 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     }
   }
 
-  /// @notice delete asset from pool (only called by factory)
+  /// @notice delete asset from pool
   function deleteAsset(bytes32 _asset) external override onlyDev {
     require(assetsMap[_asset] == 1, "CoverPool: not active asset");
-    bytes32[] memory assetListCopy = assetList; //save gas
+    bytes32[] memory assetListCopy = assetList; // save gas
     require(assetListCopy.length > 1, "CoverPool: only 1 asset left");
 
     bytes32[] memory newAssetList = new bytes32[](assetListCopy.length - 1);
     uint256 newListInd = 0;
-    for (uint i = 0; i < assetListCopy.length; i++) {
+    for (uint256 i = 0; i < assetListCopy.length; i++) {
       if (_asset != assetListCopy[i]) {
         newAssetList[newListInd] = assetListCopy[i];
         newListInd++;
@@ -210,6 +205,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
     // Deploy new cover contract if not exist or if claim accepted
     if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
+      _validateCover(_collateral, _expiry);
       string memory coverName = _getCoverName(_expiry, IERC20(_collateral).symbol());
       bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
       bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
@@ -261,23 +257,18 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external override onlyGov {
     require(_feeDenominator > 0, "CoverPool: denominator cannot be 0");
-    require(_feeDenominator > _feeNumerator, "CoverPool: must < 100%");
-    emit FeesUpdated(feeNumerator, feeDenominator, _feeNumerator, _feeDenominator);
+    require(_feeDenominator > (_feeNumerator * 10), "CoverPool: must < 10%");
     feeNumerator = _feeNumerator;
     feeDenominator = _feeDenominator;
   }
 
   // update status of coverPool, if false, will pause new cover creation
   function setActive(bool _isActive) external override onlyDev {
-    emit PoolActiveStatusUpdated(isActive, _isActive);
     isActive = _isActive;
   }
 
-  function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external override onlyGov {
+  function updateRedeemDelays(uint256 _claimRedeemDelay, uint256 _noclaimRedeemDelay) external override onlyGov {
     claimRedeemDelay = _claimRedeemDelay;
-  }
-
-  function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external override onlyGov {
     noclaimRedeemDelay = _noclaimRedeemDelay;
   }
 
@@ -320,6 +311,24 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     emit ClaimEnacted(_coverPoolNonce);
   }
 
+  function _validateCover(address _collateral, uint48 _expiry) private view {
+    require(isActive, "CoverPool: pool not active");
+    require(!isAddingAsset, "CoverPool: waiting to complete adding asset");
+    require(collateralStatusMap[_collateral].status == 1, "CoverPool: invalid collateral");
+    require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == 1, "CoverPool: invalid expiry");
+  }
+
+  function _addCover(IERC20 _collateral, address _cover, uint256 _amount) private {
+    uint256 coverBalanceBefore = _collateral.balanceOf(_cover);
+    _collateral.safeTransferFrom(msg.sender, _cover, _amount);
+    uint256 coverBalanceAfter = _collateral.balanceOf(_cover);
+    uint256 received = coverBalanceAfter - coverBalanceBefore;
+    require(received > 0, "CoverPool: collateral transfer failed");
+
+    ICover(_cover).mint(received, msg.sender);
+    emit CoverAdded(_cover, msg.sender, received);
+  }
+
   /// @dev the owner of this contract is CoverPoolFactory contract. The owner of CoverPoolFactory is dev
   function _dev() private view returns (address) {
     return IOwnable(owner()).owner();
@@ -330,23 +339,10 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
    internal view returns (string memory)
   {
     return string(abi.encodePacked(
-      name,
-      "_",
-      StringHelper.uintToString(claimNonce),
-      "_",
-      _collateralSymbol,
-      "_",
+      name, "_",
+      StringHelper.uintToString(claimNonce), "_",
+      _collateralSymbol, "_",
       expiryInfoMap[_expiry].name
     ));
-  }
-
-  function _addCover(IERC20 _collateral, address _cover, uint256 _amount) private {
-    uint256 coverBalanceBefore = _collateral.balanceOf(_cover);
-    _collateral.safeTransferFrom(msg.sender, _cover, _amount);
-    uint256 coverBalanceAfter = _collateral.balanceOf(_cover);
-    require(coverBalanceAfter > coverBalanceBefore, "CoverPool: collateral transfer failed");
-
-    emit CoverAdded(_cover, msg.sender, coverBalanceAfter - coverBalanceBefore);
-    ICover(_cover).mint(coverBalanceAfter - coverBalanceBefore, msg.sender);
   }
 }

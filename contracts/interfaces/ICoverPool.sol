@@ -10,9 +10,7 @@ interface ICoverPool {
   event CoverCreated(address);
   event CoverAdded(address indexed _cover, address _acount, uint256 _amount);
   event ClaimEnacted(uint256 _enactedClaimNonce);
-  event PoolActiveStatusUpdated(bool _oldIsActive, bool _newIsActive);
   event AssetUpdated(bytes32 _asset, bool _isAddAsset);
-  event FeesUpdated(uint256 _oldFeeNumerator, uint256 _oldFeeDenominator, uint256 _feeNumerator, uint256 _feeDenominator);
 
   struct ExpiryInfo {
     string name;
@@ -36,40 +34,32 @@ interface ICoverPool {
   function isAddingAsset() external view returns (bool);
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   function claimNonce() external view returns (uint256);
-  /// @notice delay # of seconds for redeem with accepted claim, redeemCollateral is not affected
-  function claimRedeemDelay() external view returns (uint256);
-  /// @notice only used by cover with expiry, redeemCollateral is not affected
-  function noclaimRedeemDelay() external view returns (uint256);
-  function activeCovers(uint256 _index) external view returns (address);
   function collateralStatusMap(address _collateral) external view returns (uint256 _depositRatio, uint8 _status);
   function expiryInfoMap(uint48 _expiry) external view returns (string memory _name, uint8 _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);
 
   // extra view
   function getAssetList() external view returns (bytes32[] memory _assetList);
+  function getRedeemFees() external view returns (uint256 _numerator, uint256 _denominator);
+  function getRedeemDelays() external view returns (uint256 _claimRedeemDelay, uint256 _noclaimRedeemDelay);
+  function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
   function getCoverPoolDetails()
     external view returns (
-      string memory _name,
       bool _isOpenPool,
       bool _active,
-      bytes32[] memory _assetList,
-      bytes32[] memory _deletedAssetList,
       uint256 _claimNonce,
-      uint256 _claimRedeemDelay,
-      uint256 _noclaimRedeemDelay,
       address[] memory _collaterals,
       uint48[] memory _expiries,
-      address[] memory _allCovers,
-      address[] memory _allActiveCovers
+      bytes32[] memory _assetList,
+      bytes32[] memory _deletedAssetList,
+      address[] memory _allActiveCovers,
+      address[] memory _allCovers
     );
-  function getRedeemFees() external view returns (uint256 _numerator, uint256 _denominator);
-  function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
 
   // user action
-  /// @notice Will only deploy or complete existing deployment if necessary, safe to call
-  function deployCover(address _collateral, uint48 _expiry) external returns (address _coverAddress);
   /// @notice cover must be deployed first
   function addCover(address _collateral, uint48 _expiry, uint256 _amount) external;
+  function deployCover(address _collateral, uint48 _expiry) external returns (address _coverAddress);
 
   // access restriction - claimManager
   function enactClaim(
@@ -81,14 +71,13 @@ interface ICoverPool {
   ) external;
 
   // access restriction - dev
-  function setActive(bool _active) external;
+  function addAsset(bytes32 _asset) external;
+  function deleteAsset(bytes32 _asset) external;
   function updateExpiry(uint48 _expiry, string calldata _expiryName, uint8 _status) external;
   function updateCollateral(address _collateral, uint256 _depositRatio, uint8 _status) external;
-  function deleteAsset(bytes32 _asset) external;
-  function addAsset(bytes32 _asset) external;
+  function setActive(bool _active) external;
 
   // access restriction - governance
-  function updateClaimRedeemDelay(uint256 _claimRedeemDelay) external;
-  function updateNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external;
   function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external;
+  function updateRedeemDelays(uint256 _claimRedeemDelay, uint256 _noclaimRedeemDelay) external;
 }

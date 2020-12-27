@@ -165,7 +165,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
    * @return time window
    */
   function getFileClaimWindow(address _coverPool) public view override returns (uint256) {
-    uint256 noclaimRedeemDelay = ICoverPool(_coverPool).noclaimRedeemDelay();
+    (, uint256 noclaimRedeemDelay) = ICoverPool(_coverPool).getRedeemDelays();
     return noclaimRedeemDelay - maxClaimDecisionWindow - 1 hours;
   }
 
