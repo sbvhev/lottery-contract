@@ -31,6 +31,7 @@ contract CoverERC20 is ICoverERC20, ERC20Permit, Ownable {
     initializeERC20Permit(_symbol);
   }
 
+  // to support permit
   function getChainId() external view returns (uint256 chainId) {
     this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
     // solhint-disable-next-line no-inline-assembly
