@@ -11,7 +11,7 @@ import "./interfaces/ICoverPool.sol";
 import "./interfaces/ICoverPoolFactory.sol";
 
 /**
- * @title CoverPoolFactory contract
+ * @title CoverPoolFactory contract, manages all the coverPools for Cover Protocol
  * @author crypto-pumpkin
  */
 contract CoverPoolFactory is ICoverPoolFactory, Ownable {
@@ -25,7 +25,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   address public override treasury;
   address public override governance;
   address public override claimManager;
-  /// @notice min gas left requirement before continue deployments, will be used by children
+  /// @notice min gas left requirement before continue deployments (when creating new Cover or adding assets to CoverPool)
   uint256 public override deployGasMin = 1000000;
 
   // not all coverPools are active
@@ -57,7 +57,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   function getCoverPoolAddresses() external view override returns (address[] memory) {
     string[] memory coverPoolNamesCopy = coverPoolNames;
     address[] memory coverPoolAddresses = new address[](coverPoolNamesCopy.length);
-    for (uint i = 0; i < coverPoolNamesCopy.length; i++) {
+    for (uint256 i = 0; i < coverPoolNamesCopy.length; i++) {
       coverPoolAddresses[i] = coverPools[coverPoolNamesCopy[i]];
     }
     return coverPoolAddresses;
@@ -81,7 +81,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     );
   }
 
-  /// @notice return covToken contract address, the contract may not be deployed yet, prefix should be "C_CURVE_POOL2" or "NC_POOL2"
+  /// @notice return covToken contract address, the contract may not be deployed yet, _prefix example: "C_CURVE", "C_FUT1", or "NC_"
   function getCovTokenAddress(
     string calldata _coverPoolName,
     uint48 _timestamp,
@@ -102,7 +102,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
    * @param _collateral the collateral of the pool
    * @param _depositRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
    * @param _expiry expiration date supported for the pool
-   * @param _expiryString YEAR_MONTH_DATE, used to create covToken symbols only
+   * @param _expiryString MONTH_DATE_YEAR, used to create covToken symbols only
    * 
    * Emits CoverPoolCreated, add a supported coverPool in COVER
    */
@@ -121,12 +121,11 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
     coverPoolNames.push(_name);
     bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _isOpenPool, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
-    _addr =  address(_deployCoverPool(_name, initData));
+    _addr = address(_deployCoverPool(_name, initData));
     coverPools[_name] = _addr;
     emit CoverPoolCreated(_addr);
   }
 
-  /// @dev update this will only affect coverPools deployed after
   function updateDeployGasMin(uint256 _deployGasMin) external override onlyOwner {
     require(_deployGasMin > 0, "CoverPoolFactory: min gas cannot be 0");
     deployGasMin = _deployGasMin;

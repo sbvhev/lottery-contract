@@ -15,24 +15,26 @@ interface ICoverPoolFactory {
   event ClaimManagerUpdated(address _old, address _new);
   event TreasuryUpdated(address _old, address _new);
 
-  function getCoverPoolAddresses() external view returns (address[] memory);
+  // state vars
   function coverPoolImpl() external view returns (address);
   function coverImpl() external view returns (address);
   function coverERC20Impl() external view returns (address);
   function treasury() external view returns (address);
   function governance() external view returns (address);
   function claimManager() external view returns (address);
-  function  deployGasMin() external view returns (uint256);
+  /// @notice min gas left requirement before continue deployments (when creating new Cover or adding assets to CoverPool)
+  function deployGasMin() external view returns (uint256);
   function coverPools(string calldata _coverPoolName) external view returns (address);
 
+  // extra view
+  function getCoverPoolAddresses() external view returns (address[] memory);
   /// @notice return contract address, the contract may not be deployed yet
   function getCoverPoolAddress(string calldata _name) external view returns (address);
   function getCoverAddress(string calldata _coverPoolName, uint48 _timestamp, address _collateral, uint256 _claimNonce) external view returns (address);
-  /// @notice _prefix example: "C_CURVE_POOL2" or "NC_POOL2"
+  /// @notice _prefix example: "C_CURVE", "C_FUT1", or "NC_"
   function getCovTokenAddress(string calldata _coverPoolName, uint48 _expiry, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
 
   // access restriction - owner (dev)
-  /// @notice min gas required to continue deployment
   function updateDeployGasMin(uint256 _deployGasMin) external;
   /// @dev update Impl will only affect contracts deployed after
   function updateCoverPoolImpl(address _newImpl) external;
@@ -46,7 +48,7 @@ interface ICoverPoolFactory {
    * @param _collateral the collateral of the pool
    * @param _depositRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
    * @param _expiry expiration date supported for the pool
-   * @param _expiryString YEAR_MONTH_DATE, used to create covToken symbols only
+   * @param _expiryString MONTH_DATE_YEAR, used to create covToken symbols only
    * 
    * Emits CoverPoolCreated, add a supported coverPool in COVER
    */
