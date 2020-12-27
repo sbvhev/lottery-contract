@@ -143,7 +143,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     require(addr != address(0), "CoverPool: cover not deployed yet");
     require(ICover(addr).deployComplete(), "CoverPool: cover deploy incomplete");
 
-    _addCover( IERC20(_collateral), addr, _amount);
+    _addCover(IERC20(_collateral), addr, _amount);
   }
 
   /// @notice add asset to pool, new asset cannot be deleted asset

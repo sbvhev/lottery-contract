@@ -40,6 +40,7 @@ interface ICoverPool {
 
   // extra view
   function getAssetList() external view returns (bytes32[] memory _assetList);
+  // only affect future Covers, see fees rate for Cover
   function getRedeemFees() external view returns (uint256 _numerator, uint256 _denominator);
   function getRedeemDelays() external view returns (uint256 _claimRedeemDelay, uint256 _noclaimRedeemDelay);
   function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);

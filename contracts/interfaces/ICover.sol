@@ -20,6 +20,7 @@ interface ICover {
   function futureCovTokenMap(ICoverERC20 _futureCovToken) external view returns (ICoverERC20 _claimCovToken);
 
   // extra view
+  function getRedeemFees() external view returns (uint256 _numerator, uint256 _denominator);
   function viewClaimable(address _account) external view returns (uint256 _eligibleCovTokenAmount);
   function getCoverDetails()
     external view returns (
@@ -35,6 +36,7 @@ interface ICover {
     );
 
   // user action
+  function collectFees() external;
   function deploy() external;
   /// @notice convert futureToken to claimToken
   function convert(ICoverERC20 _futureToken) external;

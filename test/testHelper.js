@@ -9,7 +9,7 @@ module.exports = {
     POOL_3: 'Pool3',
     DEPOSIT_RATIO: ethers.utils.parseEther('1'),
     ADDRESS_ZERO: ethers.constants.AddressZero,
-    ALLOWED_EXPIRYS: [Math.floor(Date.now()) + 30 * 24 * 60 * 60, Math.floor(Date.now()) + 60 * 24 * 60 * 60, Math.floor(Date.now()) + 90 * 24 * 60 * 60],
+    ALLOWED_EXPIRYS: [Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60, Math.floor(Date.now() / 1000) + 60 * 24 * 60 * 60, Math.floor(Date.now() / 1000) + 90 * 24 * 60 * 60],
     ALLOWED_EXPIRY_NAMES: ['2020_1_1', '2050_12_31', '2100_1_1'],
     CM_TIMESTAMPS: [Math.floor(Date.now())+ 300 * 24 * 60 * 60, 4105123200000, Math.floor(Date.now()) + 600 * 24 * 60 * 60, 4105123200000],
   },

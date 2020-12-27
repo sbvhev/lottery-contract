@@ -6,6 +6,8 @@ describe('CoverPool', () => {
   const NEW_TIMESTAMP = 2556057500000;
   const NEW_TIMESTAMP_NAME = ethers.utils.formatBytes32String('2040_12_31');
   const INCIDENT_TIMESTAMP = 1580515200000;
+  const ETHER_UINT_10 = ethers.utils.parseEther('10');
+  const ETHER_UINT_9 = ethers.utils.parseEther('9');
 
   let ownerAddress, ownerAccount, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
   let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
@@ -40,10 +42,10 @@ describe('CoverPool', () => {
     await coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[2]);
 
     // init test account balances
-    dai.mint(userAAddress, 1000);
-    await dai.connect(userAAccount).approve(coverPool.address, 1000);
-    dai.mint(userBAddress, 1000);
-    await dai.connect(userBAccount).approve(coverPool.address, 1000);
+    dai.mint(userAAddress, ETHER_UINT_10);
+    await dai.connect(userAAccount).approve(coverPool.address, ETHER_UINT_10);
+    dai.mint(userBAddress, ETHER_UINT_10);
+    await dai.connect(userBAccount).approve(coverPool.address, ETHER_UINT_10);
   });
 
   it('Should initialize correct state variables', async () => {
@@ -150,14 +152,11 @@ describe('CoverPool', () => {
   });
 
   it('Should add cover for userA and emit event', async () => {
-    await expect(coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10)).to.emit(coverPool, 'CoverAdded');
-    const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
-    expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
-    expect(await dai.balanceOf(coverAddress)).to.equal(10);
+    await expect(coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10)).to.emit(coverPool, 'CoverAdded');
   });
 
   it('Should match cover with computed cover address', async () => {
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
+    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
     await txA.wait();
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
 
@@ -167,14 +166,14 @@ describe('CoverPool', () => {
   });
 
   it('Should add cover for userB on existing contract', async () => {
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
+    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
     await txA.wait();
 
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimEnacted');
     await expect(coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1])).to.emit(coverPool, 'CoverCreated');
     
-    const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
+    const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
     await txB.wait();
 
     const [,,,,,,, activeCovers] = await coverPool.getCoverPoolDetails();
@@ -183,18 +182,18 @@ describe('CoverPool', () => {
 
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
-    expect(await dai.balanceOf(coverAddress)).to.equal(10);
+    expect(await dai.balanceOf(coverAddress)).to.equal(ETHER_UINT_10);
   });
 
   it('Should create new cover for userB on existing contract when accepted claim', async () => {
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
+    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
     await txA.wait();
 
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimEnacted');
     await coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
 
-    const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10);
+    const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
     await txB.wait();
 
     const [,,,,,,, activeCovers] = await coverPool.getCoverPoolDetails();
@@ -203,7 +202,7 @@ describe('CoverPool', () => {
 
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
-    expect(await dai.balanceOf(coverAddress)).to.equal(10);
+    expect(await dai.balanceOf(coverAddress)).to.equal(ETHER_UINT_10);
   });
 
   it('Should emit event and enactClaim if called by claimManager', async () => {
@@ -242,6 +241,6 @@ describe('CoverPool', () => {
     await time.increaseTo(consts.ALLOWED_EXPIRYS[1]);
     await time.advanceBlock();
 
-    await expect(coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], 10)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10)).to.be.reverted;
   });
 });
