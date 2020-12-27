@@ -112,6 +112,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     IERC20 collateralToken = IERC20(collateral);
     if (totalDebt == 0) {
       _sendFees(collateralToken.balanceOf(address(this)));
+      return;
     }
     uint256 feeToCollect = collateralToken.balanceOf(address(this)) - _afterFees(totalDebt);
     if (feeToCollect > 10) {
