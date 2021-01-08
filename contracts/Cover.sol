@@ -136,25 +136,29 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     totalDebt = totalDebt + adjustedAmount;
   }
 
-  /// @notice redeem collateral, only when no claim accepted. If expired (with or withour claim), _amount is not respected
+  /**
+   * @notice redeem collateral
+   * - if expired, there is an accepted claim, but incident time > expiry, redeem with noclaim tokens only
+   * - if expired and noclaim delay passed, no accepted claim, redeem with noclaim tokens only
+   * - otherwise, always allow redeem back collateral with all covToken at any give moment
+   */
   function redeemCollateral(uint256 _amount) external override nonReentrant {
     ICoverPool coverPool = ICoverPool(owner());
     (, uint256 noclaimRedeemDelay) = coverPool.getRedeemDelays();
 
     if (coverPool.claimNonce() > claimNonce) {
-      // there is an accepted claim, incident time > expiry to redeem collateral
       ICoverPool.ClaimDetails memory claim = _claimDetails();
-      require(claim.incidentTimestamp > expiry, "Cover: claimable covTokens cannot redeem collateral");
-      require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + noclaimRedeemDelay, "Cover: not ready");
+      if (block.timestamp >= uint256(claim.claimEnactedTimestamp) + noclaimRedeemDelay) {
+        // expired, there is an accepted claim, but incident time > expiry, redeem with noclaim tokens only
+        _burnNoclaimAndPay(noclaimCovToken, 1, 1);
+        return;
+      }
+    } else if (block.timestamp >= uint256(expiry) + noclaimRedeemDelay) {
+      // expired and noclaim delay passed, no accepted claim, redeem with noclaim tokens only
       _burnNoclaimAndPay(noclaimCovToken, 1, 1);
-    } else if (block.timestamp < expiry) {
-      // there is NO accepted claim, not expired
-      _redeemWithAllCovTokens(coverPool, _amount);
-    } else {
-      // there is NO accepted claim, expired, redeem back all
-      require(block.timestamp >= uint256(expiry) + noclaimRedeemDelay, "Cover: not ready");
-      _burnNoclaimAndPay(noclaimCovToken, 1, 1);
+      return;
     }
+    _redeemWithAllCovTokens(coverPool, _amount);
   }
 
   function _redeemWithAllCovTokens(ICoverPool coverPool, uint256 _amount) private {
