@@ -149,21 +149,24 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       _burnNoclaimAndPay(noclaimCovToken, 1, 1);
     } else if (block.timestamp < expiry) {
       // there is NO accepted claim, not expired
-      require(_amount > 0, "Cover: amount is 0");
-      noclaimCovToken.burnByCover(msg.sender, _amount);
-      _handleLatestFutureToken(msg.sender, _amount, false); // burn
-
-      (bytes32[] memory assetList) = coverPool.getAssetList();
-      for (uint i = 0; i < assetList.length; i++) {
-        ICoverERC20 claimToken = claimCovTokenMap[assetList[i]];
-        claimToken.burnByCover(msg.sender, _amount);
-      }
-      _payCollateral(msg.sender, _amount);
+      _redeemWithAllCovTokens(coverPool, _amount);
     } else {
       // there is NO accepted claim, expired, redeem back all
       require(block.timestamp >= uint256(expiry) + noclaimRedeemDelay, "Cover: not ready");
       _burnNoclaimAndPay(noclaimCovToken, 1, 1);
     }
+  }
+
+  function _redeemWithAllCovTokens(ICoverPool coverPool, uint256 _amount) private {
+    noclaimCovToken.burnByCover(msg.sender, _amount);
+    _handleLatestFutureToken(msg.sender, _amount, false); // burn
+
+    (bytes32[] memory assetList) = coverPool.getAssetList();
+    for (uint i = 0; i < assetList.length; i++) {
+      ICoverERC20 claimToken = claimCovTokenMap[assetList[i]];
+      claimToken.burnByCover(msg.sender, _amount);
+    }
+    _payCollateral(msg.sender, _amount);
   }
 
   /// @notice convert last future token to claim token and lastest future token
