@@ -27,7 +27,7 @@ interface ICoverPoolFactory {
   function coverPools(string calldata _coverPoolName) external view returns (address);
 
   // extra view
-  function getCoverPoolAddresses() external view returns (address[] memory);
+  function getCoverPools() external view returns (address[] memory);
   /// @notice return contract address, the contract may not be deployed yet
   function getCoverPoolAddress(string calldata _name) external view returns (address);
   function getCoverAddress(string calldata _coverPoolName, uint48 _timestamp, address _collateral, uint256 _claimNonce) external view returns (address);

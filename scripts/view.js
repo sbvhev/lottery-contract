@@ -22,10 +22,20 @@ async function main() {
   const coverPoolFactory = CoverPoolFactory.attach(envVars.factory);
   const claimManagement = ClaimManagement.attach(envVars.claimManagement);
 
-  const factoryOwner = await coverPoolFactory.owner();
-  console.log(`coverPoolFactory owner: ${factoryOwner}`);
-  const claimManagementOwner = await claimManagement.owner();
-  console.log(`claimManagement owner: ${claimManagementOwner}`);
+  // check owners
+  // const factoryOwner = await coverPoolFactory.owner();
+  // console.log(`coverPoolFactory owner: ${factoryOwner}`);
+  // const claimManagementOwner = await claimManagement.owner();
+  // console.log(`claimManagement owner: ${claimManagementOwner}`);
+
+  // check CoverPool 0x686f472d46b3c7bd58d2d0df22e9adbf0a4f2083 
+  const coverPoolYearn = CoverPool.attach('0x686f472d46b3c7bd58d2d0df22e9adbf0a4f2083');
+  const details = await coverPoolYearn.getCoverPoolDetails();
+  console.log('coverPoolYearn details: ', details);
+  
+  const coverYearn = Cover.attach('0xD316790fE78B6b9106ae8C7a524aBbB46a430b33');
+  const coverDetails = await coverYearn.getCoverDetails();
+  console.log('coverDetails: ', coverDetails);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

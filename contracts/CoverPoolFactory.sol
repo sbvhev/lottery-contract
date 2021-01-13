@@ -54,7 +54,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     initializeOwner();
   }
 
-  function getCoverPoolAddresses() external view override returns (address[] memory) {
+  function getCoverPools() external view override returns (address[] memory) {
     string[] memory coverPoolNamesCopy = coverPoolNames;
     address[] memory coverPoolAddresses = new address[](coverPoolNamesCopy.length);
     for (uint256 i = 0; i < coverPoolNamesCopy.length; i++) {
