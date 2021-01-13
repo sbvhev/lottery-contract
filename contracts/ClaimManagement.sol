@@ -61,6 +61,18 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     return coverPoolClaims[_coverPool][_nonce];
   }
 
+  /// @notice Get whether a pending claim for coverPool `_coverPool` and nonce `_nonce` exists
+  function hasPendingClaim(address _coverPool, uint256 _nonce) external view override returns (bool) {
+    Claim[] memory allClaims = coverPoolClaims[_coverPool][_nonce];
+    for (uint i = 0; i < allClaims.length; i++) {
+      ClaimState state = allClaims[i].state;
+      if (state == ClaimState.Filed || state == ClaimState.ForceFiled || state == ClaimState.Validated) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /**
    * @notice File a claim for a Cover Pool
    * @dev `_incidentTimestamp` must be within the past 3 days

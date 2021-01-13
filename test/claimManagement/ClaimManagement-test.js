@@ -77,6 +77,11 @@ describe("ClaimManagement", function () {
     expect(await management.isCVCMember(coverPool.address, ownerAddress)).to.equal(false);
   })
 
+  // hasPendingClaim
+  it("Should return false when no claims exist", async function () {
+    expect(await management.hasPendingClaim(coverPool.address, 0)).to.equal(false);
+  });
+
   // fileClaim
   it("Should file a claim for incident correctly", async function () {
     expect(await management.getCoverPoolClaimFee(coverPool.address)).to.equal(ethers.utils.parseEther("40"));
@@ -93,6 +98,14 @@ describe("ClaimManagement", function () {
     expect(claim.payoutDenominator).to.equal(1);
     expect(await management.getCoverPoolClaims(coverPool.address, 0, 0)).to.exist;
     expect(await dai.balanceOf(ownerAddress)).to.equal(ethers.utils.parseEther("4960"));
+  });
+
+  it("Should return true for pending claim on coverPool", async function () {
+    expect(await management.hasPendingClaim(coverPool.address, 0)).to.equal(true);
+  });
+
+  it("Should return false for pending claim on non-existent pool", async function () {
+    expect(await management.hasPendingClaim(coverPoolFactory.address, 0)).to.equal(false);
   });
 
   it("Should cost 80 dai to file next claim", async function () {
@@ -207,6 +220,10 @@ describe("ClaimManagement", function () {
     expect(claim.state).to.equal(state.denied);
     expect(claim.payoutNumerators[0].toNumber()).to.equal(0);
     expect(claim.payoutDenominator).to.equal(1);
+  });
+  
+  it("Should return false for pending claim", async function () {
+    expect(await management.hasPendingClaim(coverPool.address, 1)).to.equal(false);
   });
 
   // edge cases
