@@ -16,7 +16,7 @@ import "./interfaces/ICoverPoolFactory.sol";
  */
 contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
-  bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bool,bytes32[],address,uint256,uint48,string)"));
+  bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bool,string[],address,uint256,uint48,string)"));
 
   address public override coverPoolImpl;
   address public override coverImpl;
@@ -109,7 +109,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   function createCoverPool(
     string calldata _name,
     bool _isOpenPool,
-    bytes32[] calldata _assetList,
+    string[] calldata _assetList,
     address _collateral,
     uint256 _depositRatio,
     uint48 _expiry,

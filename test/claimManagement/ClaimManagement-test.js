@@ -5,7 +5,7 @@ const { deployCoin, consts, getAccounts, getImpls} = require('../testHelper');
 
 describe("ClaimManagement", function () {
   const BOGEY_PROTOCOL = ethers.utils.formatBytes32String("BOGEY");
-  const EXPLOIT_ASSETS = [consts.ASSET_1];
+  const EXPLOIT_ASSETS = [consts.ASSET_1_BYTES32];
   const DESC = "Binance is hacked.";
 
   let timestamp;

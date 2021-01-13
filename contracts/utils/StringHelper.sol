@@ -8,6 +8,13 @@ pragma solidity ^0.8.0;
  * Help convert other types to string
  */
 library StringHelper {
+  function stringToBytes32(string calldata str) internal pure returns (bytes32 result) {
+    bytes memory strBytes = abi.encodePacked(str);
+    assembly {
+      result := mload(add(strBytes, 32))
+    }
+  }
+
   function bytes32ToString(bytes32 _bytes32) internal pure returns (string memory) {
     uint8 i = 0;
     while(i < 32 && _bytes32[i] != 0) {

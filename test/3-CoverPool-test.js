@@ -58,7 +58,7 @@ describe('CoverPool', () => {
     expect(claimNonce).to.equal(0);
     expect(claimRedeemDelay).to.equal(2 * 24 * 60 * 60);
     expect(noclaimRedeemDelay).to.equal(10 * 24 * 60 * 60);
-    expect(assetList).to.deep.equal([consts.ASSET_1, consts.ASSET_2]);
+    expect(assetList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_2_BYTES32]);
     expect(deletedAssetList).to.deep.equal([]);
     expect(collaterals).to.deep.equal([COLLATERAL]);
     expect(expiries).to.deep.equal(consts.ALLOWED_EXPIRYS);
@@ -110,13 +110,13 @@ describe('CoverPool', () => {
 
     await coverPool.deleteAsset(consts.ASSET_2);
     const [,,,,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
-    expect(assetList).to.deep.equal([consts.ASSET_1, consts.ASSET_3]);
-    expect(deletedAssetList).to.deep.equal([consts.ASSET_2]);
+    expect(assetList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32]);
+    expect(deletedAssetList).to.deep.equal([consts.ASSET_2_BYTES32]);
 
     await expect(coverPool.addAsset(consts.ASSET_2)).to.be.reverted;
     await coverPool.addAsset(consts.ASSET_4);
     const [,,,,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
-    expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1, consts.ASSET_3, consts.ASSET_4]);
+    expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32, consts.ASSET_4_BYTES32]);
 
     await coverPool.deleteAsset(consts.ASSET_4);
   });
@@ -132,20 +132,20 @@ describe('CoverPool', () => {
 
     await coverPool.deleteAsset(consts.ASSET_2);
     const [,,,,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
-    expect(assetList).to.deep.equal([consts.ASSET_1, consts.ASSET_3]);
-    expect(deletedAssetList).to.deep.equal([consts.ASSET_2]);
+    expect(assetList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32]);
+    expect(deletedAssetList).to.deep.equal([consts.ASSET_2_BYTES32]);
 
     await expect(coverPool.addAsset(consts.ASSET_2)).to.be.reverted;
     await expect(coverPool.addAsset(consts.ASSET_4)).to.be.reverted;
     const [,,,,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
-    expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1, consts.ASSET_3]);
+    expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32]);
   });
 
   it('Should delete asset from pool correctly', async () => {
     await expect(coverPool.deleteAsset(consts.ASSET_1)).to.emit(coverPool, 'AssetUpdated');
     const [,,,,, assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
-    expect(assetList).to.deep.equal([consts.ASSET_2]);
-    expect(deletedAssetList).to.deep.equal([consts.ASSET_1]);
+    expect(assetList).to.deep.equal([consts.ASSET_2_BYTES32]);
+    expect(deletedAssetList).to.deep.equal([consts.ASSET_1_BYTES32]);
 
     await expectRevert(coverPool.deleteAsset(consts.ASSET_1), "CoverPool: not active asset");
     await expectRevert(coverPool.deleteAsset(consts.ASSET_2), "CoverPool: only 1 asset left");
@@ -169,7 +169,7 @@ describe('CoverPool', () => {
     const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
     await txA.wait();
 
-    await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1], [100], 100, INCIDENT_TIMESTAMP, 0))
+    await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimEnacted');
     await expect(coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1])).to.emit(coverPool, 'CoverCreated');
     
@@ -189,7 +189,7 @@ describe('CoverPool', () => {
     const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
     await txA.wait();
 
-    await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1], [100], 100, INCIDENT_TIMESTAMP, 0))
+    await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimEnacted');
     await coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
 
@@ -207,7 +207,7 @@ describe('CoverPool', () => {
 
   it('Should emit event and enactClaim if called by claimManager', async () => {
     const oldClaimNonce = await coverPool.claimNonce();
-    await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1], [100], 100, INCIDENT_TIMESTAMP, 0))
+    await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimEnacted');
     const [, isActive] = await coverPool.getCoverPoolDetails();
     expect(await coverPool.name()).to.equal(consts.POOL_2);
@@ -217,22 +217,22 @@ describe('CoverPool', () => {
 
   it('Should NOT enactClaim if coverPool nonce not match', async () => {
     const oldClaimNonce = await coverPool.claimNonce();
-    await coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1], [100], 100, INCIDENT_TIMESTAMP, 0);
+    await coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0);
     const [, isActive] = await coverPool.getCoverPoolDetails();
     expect(await coverPool.name()).to.equal(consts.POOL_2);
     expect(isActive).to.equal(true);
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce + 1);
 
-    await expect(coverPool.connect(userAAccount).enactClaim([consts.ASSET_1], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
   });
 
   it('Should NOT enactClaim if have non active asset', async () => {
-    await expectRevert(coverPool.enactClaim([consts.ASSET_1, consts.ASSET_3], [20, 40], 100, INCIDENT_TIMESTAMP, 0), "CoverPool: has non active asset");
+    await expectRevert(coverPool.enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32], [20, 40], 100, INCIDENT_TIMESTAMP, 0), "CoverPool: has non active asset");
   });
   
   it('Should NOT enactClaim if called by non-claimManager', async () => {
     const oldClaimNonce = await coverPool.claimNonce();
-    await expect(coverPool.connect(userAAccount).enactClaim([consts.ASSET_1], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce);
   });
 

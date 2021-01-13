@@ -55,7 +55,7 @@ interface ICoverPoolFactory {
   function createCoverPool(
     string calldata _name,
     bool _isOpenPool,
-    bytes32[] calldata _assetList,
+    string[] calldata _assetList,
     address _collateral,
     uint256 _depositRatio,
     uint48 _expiry,

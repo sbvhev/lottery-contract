@@ -72,8 +72,8 @@ interface ICoverPool {
   ) external;
 
   // access restriction - dev
-  function addAsset(bytes32 _asset) external;
-  function deleteAsset(bytes32 _asset) external;
+  function addAsset(string calldata _asset) external;
+  function deleteAsset(string calldata _asset) external;
   function updateExpiry(uint48 _expiry, string calldata _expiryName, uint8 _status) external;
   function updateCollateral(address _collateral, uint256 _depositRatio, uint8 _status) external;
   function setActive(bool _active) external;

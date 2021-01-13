@@ -72,7 +72,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   function initialize (
     string calldata _coverPoolName,
     bool _isOpenPool,
-    bytes32[] calldata _assetList,
+    string[] calldata _assetList,
     address _collateral,
     uint256 _depositRatio,
     uint48 _expiry,
@@ -81,15 +81,16 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     initializeOwner();
     name = _coverPoolName;
     isOpenPool = _isOpenPool;
-    assetList = _assetList;
     collaterals.push(_collateral);
     collateralStatusMap[_collateral] = CollateralInfo(_depositRatio, 1);
     expiries.push(_expiry);
     expiryInfoMap[_expiry] = ExpiryInfo(_expiryString, 1);
 
     for (uint256 j = 0; j < _assetList.length; j++) {
-      require(assetsMap[_assetList[j]] == 0, "CoverPool: duplicated assets");
-      assetsMap[_assetList[j]] = 1;
+      bytes32 asset = StringHelper.stringToBytes32(_assetList[j]);
+      assetList.push(asset);
+      require(assetsMap[asset] == 0, "CoverPool: duplicated assets");
+      assetsMap[asset] = 1;
     }
 
     // set default delay for redeem
@@ -147,15 +148,16 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice add asset to pool, new asset cannot be deleted asset
-  function addAsset(bytes32 _asset) external override onlyDev {
+  function addAsset(string calldata _asset) external override onlyDev {
+    bytes32 asset = StringHelper.stringToBytes32(_asset);
     require(isOpenPool, "CoverPool: not open pool");
-    require(assetsMap[_asset] != 2, "CoverPool: deleted asset not allowed");
+    require(assetsMap[asset] != 2, "CoverPool: deleted asset not allowed");
 
-    if (assetsMap[_asset] == 0) {
+    if (assetsMap[asset] == 0) {
       // first time adding asset, make sure no other asset adding in prrogress
       require(!isAddingAsset, "CoverPool: last asset adding not complete");
-      assetsMap[_asset] = 1;
-      assetList.push(_asset);
+      assetsMap[asset] = 1;
+      assetList.push(asset);
       isAddingAsset = true;
     }
 
@@ -167,7 +169,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
         // ensure enough gas left to avoid revert all the previous work
         if (startGas < ICoverPoolFactory(owner()).deployGasMin()) return;
         // below call deploys two covToken contracts, if cover already added, call will do nothing
-        ICover(activeCoversCopy[i]).addAsset(_asset);
+        ICover(activeCoversCopy[i]).addAsset(asset);
         startGas = gasleft();
       }
       isAddingAsset = false;
@@ -175,21 +177,22 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice delete asset from pool
-  function deleteAsset(bytes32 _asset) external override onlyDev {
-    require(assetsMap[_asset] == 1, "CoverPool: not active asset");
+  function deleteAsset(string calldata _asset) external override onlyDev {
+    bytes32 asset = StringHelper.stringToBytes32(_asset);
+    require(assetsMap[asset] == 1, "CoverPool: not active asset");
     bytes32[] memory assetListCopy = assetList; // save gas
     require(assetListCopy.length > 1, "CoverPool: only 1 asset left");
 
     bytes32[] memory newAssetList = new bytes32[](assetListCopy.length - 1);
     uint256 newListInd = 0;
     for (uint256 i = 0; i < assetListCopy.length; i++) {
-      if (_asset != assetListCopy[i]) {
+      if (asset != assetListCopy[i]) {
         newAssetList[newListInd] = assetListCopy[i];
         newListInd++;
       } else {
-        assetsMap[_asset] = 2;
-        deletedAssetList.push(_asset);
-        emit AssetUpdated(_asset, false);
+        assetsMap[asset] = 2;
+        deletedAssetList.push(asset);
+        emit AssetUpdated(asset, false);
       }
     }
     assetList = newAssetList;
