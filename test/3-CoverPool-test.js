@@ -57,7 +57,7 @@ describe('CoverPool', () => {
     expect(isActive).to.equal(true);
     expect(claimNonce).to.equal(0);
     expect(claimRedeemDelay).to.equal(2 * 24 * 60 * 60);
-    expect(noclaimRedeemDelay).to.equal(10 * 24 * 60 * 60);
+    expect(noclaimRedeemDelay).to.equal(3 * 24 * 60 * 60);
     expect(assetList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_2_BYTES32]);
     expect(deletedAssetList).to.deep.equal([]);
     expect(collaterals).to.deep.equal([COLLATERAL]);
@@ -79,7 +79,10 @@ describe('CoverPool', () => {
     expect(isActive).to.equal(false);
 
     const newDelay = 10 * 24 * 60 * 60;
-    await coverPool.connect(governanceAccount).updateRedeemDelays(newDelay, newDelay);
+    await expect(coverPool.connect(governanceAccount).setNoclaimRedeemDelay(newDelay))
+      .to.emit(coverPool, 'NoclaimRedeemDelayUpdated');
+    await expect(coverPool.connect(governanceAccount).setClaimRedeemDelay(newDelay))
+          .to.emit(coverPool, 'ClaimRedeemDelayUpdated');
     expect((await coverPool.getRedeemDelays())[0]).to.equal(newDelay);
 
     await expect(coverPool.connect(governanceAccount).updateFees(0, 0)).to.be.reverted;
@@ -95,7 +98,8 @@ describe('CoverPool', () => {
     await expect(coverPool.connect(userAAccount).updateCollateral(NEW_COLLATERAL, 1)).to.be.reverted;
     await expect(coverPool.connect(userAAccount).updateExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1)).to.be.reverted;
     await expect(coverPool.connect(userAAccount).setActive(false)).to.be.reverted;
-    await expect(coverPool.connect(ownerAccount).updateRedeemDelays(10 * 24 * 60 * 60, 0)).to.be.reverted;
+    await expect(coverPool.connect(ownerAccount).setClaimRedeemDelay(10 * 24 * 60 * 60, 0)).to.be.reverted;
+    await expect(coverPool.connect(ownerAccount).setNoclaimRedeemDelay(10 * 24 * 60 * 60, 0)).to.be.reverted;
   });
 
 

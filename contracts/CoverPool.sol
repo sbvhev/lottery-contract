@@ -12,6 +12,7 @@ import "./utils/ReentrancyGuard.sol";
 import "./utils/StringHelper.sol";
 import "./interfaces/ICover.sol";
 import "./interfaces/IOwnable.sol";
+import "./interfaces/IClaimManagement.sol";
 import "./interfaces/ICoverPool.sol";
 import "./interfaces/ICoverPoolFactory.sol";
 
@@ -64,7 +65,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   modifier onlyGov() {
-    require(msg.sender == ICoverPoolFactory(owner()).governance(), "CoverPool: caller not governance");
+    require(msg.sender == _factory().governance(), "CoverPool: caller not governance");
     _;
   }
 
@@ -94,8 +95,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     }
 
     // set default delay for redeem
-    claimRedeemDelay = 2 days;
-    noclaimRedeemDelay = 10 days;
+    claimRedeemDelay = _factory().CLAIM_REDEEM_DELAY_NORMAL();
+    noclaimRedeemDelay = _factory().NOCLAIM_REDEEM_DELAY_NORMAL();
     feeNumerator = 60; // 0.6% yearly rate
     feeDenominator = 10000; // 0 to 65,535
     isActive = true;
@@ -167,7 +168,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       uint256 startGas = gasleft();
       for (uint256 i = 0; i < activeCoversCopy.length; i++) {
         // ensure enough gas left to avoid revert all the previous work
-        if (startGas < ICoverPoolFactory(owner()).deployGasMin()) return;
+        if (startGas < _factory().deployGasMin()) return;
         // below call deploys two covToken contracts, if cover already added, call will do nothing
         ICover(activeCoversCopy[i]).addAsset(asset);
         startGas = gasleft();
@@ -211,7 +212,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       addr = Create2.deploy(0, salt, bytecode);
 
       bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _expiry, _collateral, collateralStatusMap[_collateral].depositRatio, claimNonce);
-      address coverImpl = ICoverPoolFactory(owner()).coverImpl();
+      address coverImpl = _factory().coverImpl();
       InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
         coverImpl,
         IOwnable(owner()).owner(),
@@ -254,7 +255,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     collateralStatusMap[_collateral] = CollateralInfo(_depositRatio, _status);
   }
 
-  function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external override onlyGov {
+  function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external override {
+    require(msg.sender == _factory().governance(), "CoverPool: caller not governance");
     require(_feeDenominator > 0, "CoverPool: denominator cannot be 0");
     require(_feeDenominator > (_feeNumerator * 10), "CoverPool: must < 10%");
     feeNumerator = _feeNumerator;
@@ -266,8 +268,15 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     isActive = _isActive;
   }
 
-  function updateRedeemDelays(uint256 _claimRedeemDelay, uint256 _noclaimRedeemDelay) external override onlyGov {
+  function setClaimRedeemDelay(uint256 _claimRedeemDelay) external override {
+    require(msg.sender == _factory().governance(), "CoverPool: caller not governance");
+    emit ClaimRedeemDelayUpdated(claimRedeemDelay, _claimRedeemDelay);
     claimRedeemDelay = _claimRedeemDelay;
+  }
+
+  function setNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external override {
+    require(msg.sender == _factory().governance() || msg.sender == _factory().claimManager(), "CoverPool: caller not gov or claimManager");
+    emit NoclaimRedeemDelayUpdated(noclaimRedeemDelay, _noclaimRedeemDelay);
     noclaimRedeemDelay = _noclaimRedeemDelay;
   }
 
@@ -288,7 +297,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   ) external override {
     require(_coverPoolNonce == claimNonce, "CoverPool: nonces do not match");
     require(_payoutAssetList.length == _payoutNumerators.length, "CoverPool: payout asset length don't match");
-    require(msg.sender == ICoverPoolFactory(owner()).claimManager(), "CoverPool: caller not claimManager");
+    ICoverPoolFactory factory = _factory();
+    require(msg.sender == factory.claimManager(), "CoverPool: caller not claimManager");
 
     uint256 totalNum;
     for (uint256 i = 0; i < _payoutAssetList.length; i++) {
@@ -307,6 +317,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       _incidentTimestamp,
       uint48(block.timestamp)
     ));
+    noclaimRedeemDelay = factory.NOCLAIM_REDEEM_DELAY_NORMAL();
     emit ClaimEnacted(_coverPoolNonce);
   }
 
@@ -317,20 +328,13 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == 1, "CoverPool: invalid expiry");
   }
 
-  function _addCover(IERC20 _collateral, address _cover, uint256 _amount) private {
-    uint256 coverBalanceBefore = _collateral.balanceOf(_cover);
-    _collateral.safeTransferFrom(msg.sender, _cover, _amount);
-    uint256 coverBalanceAfter = _collateral.balanceOf(_cover);
-    uint256 received = coverBalanceAfter - coverBalanceBefore;
-    require(received > 0, "CoverPool: collateral transfer failed");
-
-    ICover(_cover).mint(received, msg.sender);
-    emit CoverAdded(_cover, msg.sender, received);
-  }
-
   /// @dev the owner of this contract is CoverPoolFactory contract. The owner of CoverPoolFactory is dev
   function _dev() private view returns (address) {
     return IOwnable(owner()).owner();
+  }
+
+  function _factory() private view returns (ICoverPoolFactory) {
+    return ICoverPoolFactory(owner());
   }
 
   /// @dev generate the cover name. Example: 3POOL_0_DAI_210131
@@ -343,5 +347,16 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       _collateralSymbol, "_",
       expiryInfoMap[_expiry].name
     ));
+  }
+
+  function _addCover(IERC20 _collateral, address _cover, uint256 _amount) private {
+    uint256 coverBalanceBefore = _collateral.balanceOf(_cover);
+    _collateral.safeTransferFrom(msg.sender, _cover, _amount);
+    uint256 coverBalanceAfter = _collateral.balanceOf(_cover);
+    uint256 received = coverBalanceAfter - coverBalanceBefore;
+    require(received > 0, "CoverPool: collateral transfer failed");
+
+    ICover(_cover).mint(received, msg.sender);
+    emit CoverAdded(_cover, msg.sender, received);
   }
 }

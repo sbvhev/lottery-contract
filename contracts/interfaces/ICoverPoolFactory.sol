@@ -16,6 +16,9 @@ interface ICoverPoolFactory {
   event TreasuryUpdated(address _old, address _new);
 
   // state vars
+  function CLAIM_REDEEM_DELAY_NORMAL() external view returns (uint256);
+  function NOCLAIM_REDEEM_DELAY_NORMAL() external view returns (uint256);
+  function NOCLAIM_REDEEM_DELAY_WITH_CLAIM() external view returns (uint256);
   function coverPoolImpl() external view returns (address);
   function coverImpl() external view returns (address);
   function coverERC20Impl() external view returns (address);
