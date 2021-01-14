@@ -138,24 +138,27 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   /**
    * @notice redeem collateral
-   * - if expired and noclaim delay passed, 
-   *     - no accepted claim, redeem with noclaim tokens only
-   *     - accepted claim in the future, redeem with noclaim tokens only
+   * - if there is an accepted claim, but incident time > expiry, redeem with noclaim tokens only if default delay passed
+   * - if expired and noclaim delay passed, no accepted claim, redeem with noclaim tokens only
    * - otherwise, always allow redeem back collateral with all covToken at any give moment
    */
   function redeemCollateral(uint256 _amount) external override nonReentrant {
     ICoverPool coverPool = ICoverPool(owner());
-    (, uint256 noclaimRedeemDelay) = coverPool.getRedeemDelays();
+    (uint256 defaultRedeemDelay, uint256 noclaimRedeemDelay) = coverPool.getRedeemDelays();
 
-    if (block.timestamp >= uint256(expiry) + noclaimRedeemDelay) {
-      if (coverPool.claimNonce() > claimNonce) {
-        ICoverPool.ClaimDetails memory claim = _claimDetails();
-        require(claim.incidentTimestamp > expiry, "Cover: accepted claim, call redeemClaim instead");
+    if (coverPool.claimNonce() > claimNonce) {
+      ICoverPool.ClaimDetails memory claim = _claimDetails();
+      if (claim.incidentTimestamp > expiry && block.timestamp >= uint256(expiry) + defaultRedeemDelay) {
+        // expired, redeem with noclaim tokens only
+        _burnNoclaimAndPay(noclaimCovToken, 1, 1);
+        return;
       }
+    } else if (block.timestamp >= uint256(expiry) + noclaimRedeemDelay) {
+      // expired and noclaim delay passed, no accepted claim, redeem with noclaim tokens only
       _burnNoclaimAndPay(noclaimCovToken, 1, 1);
-    } else {
-      _redeemWithAllCovTokens(coverPool, _amount);
+      return;
     }
+    _redeemWithAllCovTokens(coverPool, _amount);
   }
 
   /// @notice convert last future token to claim token and lastest future token
