@@ -276,8 +276,11 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   function setNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external override {
     require(msg.sender == _factory().governance() || msg.sender == _factory().claimManager(), "CoverPool: caller not gov or claimManager");
-    emit NoclaimRedeemDelayUpdated(noclaimRedeemDelay, _noclaimRedeemDelay);
-    noclaimRedeemDelay = _noclaimRedeemDelay;
+    require(_noclaimRedeemDelay >= defaultRedeemDelay, "CoverPool: cannot be less than default delay");
+    if (_noclaimRedeemDelay != noclaimRedeemDelay) {
+      emit NoclaimRedeemDelayUpdated(noclaimRedeemDelay, _noclaimRedeemDelay);
+      noclaimRedeemDelay = _noclaimRedeemDelay;
+    }
   }
 
   /**
@@ -317,7 +320,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       _incidentTimestamp,
       uint48(block.timestamp)
     ));
-    noclaimRedeemDelay = 3 days;
+    noclaimRedeemDelay = defaultRedeemDelay;
     emit ClaimEnacted(_coverPoolNonce);
   }
 

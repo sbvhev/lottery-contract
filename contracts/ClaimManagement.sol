@@ -62,7 +62,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   }
 
   /// @notice Get whether a pending claim for coverPool `_coverPool` and nonce `_nonce` exists
-  function hasPendingClaim(address _coverPool, uint256 _nonce) external view override returns (bool) {
+  function hasPendingClaim(address _coverPool, uint256 _nonce) public view override returns (bool) {
     Claim[] memory allClaims = coverPoolClaims[_coverPool][_nonce];
     for (uint i = 0; i < allClaims.length; i++) {
       ClaimState state = allClaims[i].state;
@@ -101,6 +101,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     }));
     feeCurrency.safeTransferFrom(msg.sender, address(this), claimFee);
     _updateCoverPoolClaimFee(coverPool);
+    ICoverPool(coverPool).setNoclaimRedeemDelay(10 days);
     emit ClaimUpdate(coverPool, ClaimState.Filed, nonce, coverPoolClaims[coverPool][nonce].length - 1);
   }
 
@@ -129,6 +130,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       feePaid: forceClaimFee,
       description: _description
     }));
+    ICoverPool(coverPool).setNoclaimRedeemDelay(10 days);
     feeCurrency.safeTransferFrom(msg.sender, address(this), forceClaimFee);
     emit ClaimUpdate(coverPool, ClaimState.ForceFiled, nonce, coverPoolClaims[coverPool][nonce].length - 1);
   }
@@ -158,6 +160,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       claim.state = ClaimState.Invalidated;
       claim.decidedTimestamp = uint48(block.timestamp);
       feeCurrency.safeTransfer(treasury, claim.feePaid);
+      _resetNoclaimRedeemDelay(_coverPool, _nonce);
     }
     emit ClaimUpdate({
       coverPool: _coverPool,
@@ -203,6 +206,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       require(totalNum == 0, "COVER_CM: claim denied (default if passed window), but payoutNumerator != 0");
       claim.state = ClaimState.Denied;
       feeCurrency.safeTransfer(treasury, claim.feePaid);
+      _resetNoclaimRedeemDelay(_coverPool, _nonce);
     }
     claim.decidedBy = msg.sender;
     claim.decidedTimestamp = uint48(block.timestamp);
@@ -215,6 +219,13 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
 
   function _getCoverPoolNonce(address _coverPool) private view returns (uint256) {
     return ICoverPool(_coverPool).claimNonce();
+  }
+
+  function _resetNoclaimRedeemDelay(address _coverPool, uint256 _nonce) private {
+    if (!hasPendingClaim(_coverPool, _nonce)) {
+      (uint256 defaultRedeemDelay, ) = ICoverPool(_coverPool).getRedeemDelays();
+      ICoverPool(_coverPool).setNoclaimRedeemDelay(defaultRedeemDelay);
+    }
   }
 
   // The times passed since the claim was filed has to be less than the max claim decision window
