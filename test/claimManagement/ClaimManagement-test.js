@@ -183,9 +183,6 @@ describe("ClaimManagement", function () {
     await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 10, true, EXPLOIT_ASSETS, [100], 100)).to.be.reverted;
     // Should throw if claim is not pending for decideClaim
     await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 0, true, EXPLOIT_ASSETS, [100], 100)).to.be.reverted;
-    // if payoutNumerator != payoutDenominator when allowPartialClaim == false
-    await management.setPartialClaimStatus(false);
-    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, true, EXPLOIT_ASSETS, [95], 100)).to.be.reverted;
     // if payoutNumerator > payoutDenominator
     await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, true, EXPLOIT_ASSETS, [105], 100)).to.be.reverted;
     // if payoutNumerator <= 0 when accepting

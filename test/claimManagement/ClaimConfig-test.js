@@ -21,7 +21,6 @@ describe("ClaimConfig", function () {
     );
     await claimConfig.deployed();
 
-    expect(await claimConfig.allowPartialClaim()).to.equal(true);
     expect(await claimConfig.governance()).to.equal(governanceAddress);
     expect(await claimConfig.treasury()).to.equal(treasuryAddress);
     expect(await claimConfig.defaultCVC()).to.equal(defaultCVC);

@@ -9,7 +9,6 @@ import "../ERC20/IERC20.sol";
  * @author Alan + crypto-pumpkin
  */
 interface IClaimConfig {
-  function allowPartialClaim() external view returns (bool);
   function governance() external view returns (address);
   function treasury() external view returns (address);
   function coverPoolFactory() external view returns (address);
@@ -32,7 +31,6 @@ interface IClaimConfig {
   function addCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external;
   function removeCVCForPool(address _coverPool, address _cvc) external;
   function removeCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external;
-  function setPartialClaimStatus(bool _allowPartialClaim) external;
   function setDefaultCVC(address _cvc) external;
 
   // @dev Only callable by governance
