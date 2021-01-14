@@ -9,7 +9,7 @@ pragma solidity ^0.8.0;
 interface ICoverPool {
   event CoverCreated(address);
   event CoverAdded(address indexed _cover, address _acount, uint256 _amount);
-  event ClaimRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
+  event DefaultRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
   event NoclaimRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
   event ClaimEnacted(uint256 _enactedClaimNonce);
   event AssetUpdated(bytes32 _asset, bool _isAddAsset);
@@ -44,7 +44,7 @@ interface ICoverPool {
   function getAssetList() external view returns (bytes32[] memory _assetList);
   // only affect future Covers, see fees rate for Cover
   function getRedeemFees() external view returns (uint256 _numerator, uint256 _denominator);
-  function getRedeemDelays() external view returns (uint256 _claimRedeemDelay, uint256 _noclaimRedeemDelay);
+  function getRedeemDelays() external view returns (uint256 _defaultRedeemDelay, uint256 _noclaimRedeemDelay);
   function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
   function getCoverPoolDetails()
     external view returns (
@@ -83,6 +83,6 @@ interface ICoverPool {
   function setActive(bool _active) external;
 
   // access restriction - governance
-  function setClaimRedeemDelay(uint256 _claimRedeemDelay) external;
+  function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external;
   function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external;
 }

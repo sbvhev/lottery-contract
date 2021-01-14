@@ -115,10 +115,10 @@ contract ClaimConfig is IClaimConfig, Ownable {
     return coverPoolClaimFee[_coverPool] < baseClaimFee ? baseClaimFee : coverPoolClaimFee[_coverPool];
   }
 
-  /// @notice Get the time window allowed to file after an incident happened, based on the noclaimRedeemDelay of the coverPool - 1hour
+  /// @notice Get the time window allowed to file after an incident happened, based on the defaultRedeemDelay of the coverPool - 1hour
   function getFileClaimWindow(address _coverPool) public view override returns (uint256) {
-    (, uint256 noclaimRedeemDelay) = ICoverPool(_coverPool).getRedeemDelays();
-    return noclaimRedeemDelay - 1 hours;
+    (uint256 defaultRedeemDelay, ) = ICoverPool(_coverPool).getRedeemDelays();
+    return defaultRedeemDelay - 1 hours;
   }
 
   /// @notice Get the CVC list for a pool

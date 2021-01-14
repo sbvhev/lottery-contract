@@ -293,7 +293,7 @@ describe('Cover', function() {
     return amount.mul(num).div(den).mul(duration).div(365 * 24 * 3600);
   }
 
-  it('Should allow redeem partial claim and noclaim after enact 40% claim after claimRedeemDelay ends', async function() {
+  it('Should allow redeem partial claim and noclaim after enact 40% claim after defaultRedeemDelay ends', async function() {
     const [,,,,,, noclaimCovTokenAddress] = await cover.getCoverDetails();
     const noclaimCovToken = CoverERC20.attach(noclaimCovTokenAddress);
     const transferAmount = ETHER_UINT_6;

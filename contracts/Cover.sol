@@ -138,39 +138,24 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   /**
    * @notice redeem collateral
-   * - if expired, there is an accepted claim, but incident time > expiry, redeem with noclaim tokens only
-   * - if expired and noclaim delay passed, no accepted claim, redeem with noclaim tokens only
+   * - if expired and noclaim delay passed, 
+   *     - no accepted claim, redeem with noclaim tokens only
+   *     - accepted claim in the future, redeem with noclaim tokens only
    * - otherwise, always allow redeem back collateral with all covToken at any give moment
    */
   function redeemCollateral(uint256 _amount) external override nonReentrant {
     ICoverPool coverPool = ICoverPool(owner());
     (, uint256 noclaimRedeemDelay) = coverPool.getRedeemDelays();
 
-    if (coverPool.claimNonce() > claimNonce) {
-      ICoverPool.ClaimDetails memory claim = _claimDetails();
-      if (block.timestamp >= uint256(claim.claimEnactedTimestamp) + noclaimRedeemDelay) {
-        // expired, there is an accepted claim, but incident time > expiry, redeem with noclaim tokens only
-        _burnNoclaimAndPay(noclaimCovToken, 1, 1);
-        return;
+    if (block.timestamp >= uint256(expiry) + noclaimRedeemDelay) {
+      if (coverPool.claimNonce() > claimNonce) {
+        ICoverPool.ClaimDetails memory claim = _claimDetails();
+        require(claim.incidentTimestamp > expiry, "Cover: accepted claim, call redeemClaim instead");
       }
-    } else if (block.timestamp >= uint256(expiry) + noclaimRedeemDelay) {
-      // expired and noclaim delay passed, no accepted claim, redeem with noclaim tokens only
       _burnNoclaimAndPay(noclaimCovToken, 1, 1);
-      return;
+    } else {
+      _redeemWithAllCovTokens(coverPool, _amount);
     }
-    _redeemWithAllCovTokens(coverPool, _amount);
-  }
-
-  function _redeemWithAllCovTokens(ICoverPool coverPool, uint256 _amount) private {
-    noclaimCovToken.burnByCover(msg.sender, _amount);
-    _handleLatestFutureToken(msg.sender, _amount, false); // burn
-
-    (bytes32[] memory assetList) = coverPool.getAssetList();
-    for (uint i = 0; i < assetList.length; i++) {
-      ICoverERC20 claimToken = claimCovTokenMap[assetList[i]];
-      claimToken.burnByCover(msg.sender, _amount);
-    }
-    _payCollateral(msg.sender, _amount);
   }
 
   /// @notice convert last future token to claim token and lastest future token
@@ -245,8 +230,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
     ICoverPool.ClaimDetails memory claim = _claimDetails();
     require(claim.incidentTimestamp <= expiry, "Cover: not eligible, redeem collateral instead");
-    (uint256 claimRedeemDelay, ) = coverPool.getRedeemDelays();
-    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + claimRedeemDelay, "Cover: not ready");
+    (uint256 defaultRedeemDelay, ) = coverPool.getRedeemDelays();
+    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + defaultRedeemDelay, "Cover: not ready");
 
     uint256 eligibleAmount;
     for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
@@ -270,6 +255,18 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   /// @notice the owner of this contract is CoverPool contract, the owner of CoverPool is CoverPoolFactory contract
   function _factory() internal view returns (ICoverPoolFactory) {
     return ICoverPoolFactory(IOwnable(owner()).owner());
+  }
+
+  function _redeemWithAllCovTokens(ICoverPool coverPool, uint256 _amount) private {
+    noclaimCovToken.burnByCover(msg.sender, _amount);
+    _handleLatestFutureToken(msg.sender, _amount, false); // burn
+
+    (bytes32[] memory assetList) = coverPool.getAssetList();
+    for (uint i = 0; i < assetList.length; i++) {
+      ICoverERC20 claimToken = claimCovTokenMap[assetList[i]];
+      claimToken.burnByCover(msg.sender, _amount);
+    }
+    _payCollateral(msg.sender, _amount);
   }
 
   function _afterFees(uint256 _amount) private view returns (uint256 afterFees) {

@@ -39,7 +39,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   uint256 private feeNumerator;
   uint256 private feeDenominator;
   // delay # of seconds for redeem with/o. accepted claim, redeemCollateral is not affected
-  uint256 private claimRedeemDelay;
+  uint256 private defaultRedeemDelay;
   uint256 private noclaimRedeemDelay;
 
   // only covers that have never accepted a claim
@@ -95,7 +95,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     }
 
     // set default delay for redeem
-    claimRedeemDelay = 2 days;
+    defaultRedeemDelay = 3 days;
     noclaimRedeemDelay = 3 days;
     feeNumerator = 60; // 0.6% yearly rate
     feeDenominator = 10000; // 0 to 65,535
@@ -118,8 +118,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return (isOpenPool, isActive, claimNonce, collaterals, expiries, assetList, deletedAssetList, activeCovers, allCovers);
   }
 
-  function getRedeemDelays() external view override returns (uint256 _claimRedeemDelay, uint256 _noclaimRedeemDelay) {
-    return (claimRedeemDelay, noclaimRedeemDelay);
+  function getRedeemDelays() external view override returns (uint256 _defaultRedeemDelay, uint256 _noclaimRedeemDelay) {
+    return (defaultRedeemDelay, noclaimRedeemDelay);
   }
 
   function getRedeemFees() external view override returns (uint256 _numerator, uint256 _denominator) {
@@ -268,10 +268,10 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     isActive = _isActive;
   }
 
-  function setClaimRedeemDelay(uint256 _claimRedeemDelay) external override {
+  function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external override {
     require(msg.sender == _factory().governance(), "CoverPool: caller not governance");
-    emit ClaimRedeemDelayUpdated(claimRedeemDelay, _claimRedeemDelay);
-    claimRedeemDelay = _claimRedeemDelay;
+    emit DefaultRedeemDelayUpdated(defaultRedeemDelay, _defaultRedeemDelay);
+    defaultRedeemDelay = _defaultRedeemDelay;
   }
 
   function setNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external override {
