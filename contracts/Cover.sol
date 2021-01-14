@@ -272,19 +272,19 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     _payCollateral(msg.sender, _amount);
   }
 
-  function _afterFees(uint256 _amount) private view returns (uint256 afterFees) {
+  function _afterFees(uint256 _amount) private view returns (uint256 amountAfterFees) {
     uint256 adjustedAmount = _amount * 1e18 / depositRatio;
     uint256 fees = adjustedAmount * feeNumerator * duration / (feeDenominator * 365 days);
-    afterFees = adjustedAmount - fees;
+    amountAfterFees = adjustedAmount - fees;
   }
 
-  function _sendFees(uint256 _amount) private {
+  function _sendFees(uint256 _totalFees) private {
     IERC20 collateralToken = IERC20(collateral);
-    uint256 toTreasury = _amount * 9 / 10;
-    collateralToken.safeTransfer(_factory().treasury(), toTreasury);
+    uint256 feesToTreasury = _totalFees * 9 / 10;
+    collateralToken.safeTransfer(_factory().treasury(), feesToTreasury);
     // owner of this is Pool, owner of pool is Factory, owner of factory is dev
     address dev = IOwnable(IOwnable(owner()).owner()).owner();
-    collateralToken.safeTransfer(dev, _amount - toTreasury);
+    collateralToken.safeTransfer(dev, _totalFees - feesToTreasury);
   }
 
   function _handleLatestFutureToken(address _receiver, uint256 _amount, bool _isMint) private {
