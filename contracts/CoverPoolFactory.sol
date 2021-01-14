@@ -17,9 +17,6 @@ import "./interfaces/ICoverPoolFactory.sol";
 contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
   bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bool,string[],address,uint256,uint48,string)"));
-  uint256 public override constant CLAIM_REDEEM_DELAY_NORMAL = 2 days;
-  uint256 public override constant NOCLAIM_REDEEM_DELAY_NORMAL = 3 days;
-  uint256 public override constant NOCLAIM_REDEEM_DELAY_WITH_CLAIM = 10 days;
 
   address public override coverPoolImpl;
   address public override coverImpl;

@@ -29,9 +29,6 @@ describe('CoverPoolFactory', () => {
     expect(await coverPoolFactory.governance()).to.equal(governanceAddress);
     expect(await coverPoolFactory.treasury()).to.equal(treasuryAddress);
     expect(await coverPoolFactory.deployGasMin()).to.equal(1000000);
-    expect(await coverPoolFactory.CLAIM_REDEEM_DELAY_NORMAL()).to.equal(2 * 24 * 60 * 60);
-    expect(await coverPoolFactory.NOCLAIM_REDEEM_DELAY_NORMAL()).to.equal(3 * 24 * 60 * 60);
-    expect(await coverPoolFactory.NOCLAIM_REDEEM_DELAY_WITH_CLAIM()).to.equal(10 * 24 * 60 * 60);
   });
 
   it('Should emit CoverPoolCreation event', async () => {

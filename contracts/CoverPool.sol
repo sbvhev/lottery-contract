@@ -95,8 +95,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     }
 
     // set default delay for redeem
-    claimRedeemDelay = _factory().CLAIM_REDEEM_DELAY_NORMAL();
-    noclaimRedeemDelay = _factory().NOCLAIM_REDEEM_DELAY_NORMAL();
+    claimRedeemDelay = 2 days;
+    noclaimRedeemDelay = 3 days;
     feeNumerator = 60; // 0.6% yearly rate
     feeDenominator = 10000; // 0 to 65,535
     isActive = true;
@@ -317,7 +317,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       _incidentTimestamp,
       uint48(block.timestamp)
     ));
-    noclaimRedeemDelay = factory.NOCLAIM_REDEEM_DELAY_NORMAL();
+    noclaimRedeemDelay = 3 days;
     emit ClaimEnacted(_coverPoolNonce);
   }
 
