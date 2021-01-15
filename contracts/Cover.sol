@@ -36,7 +36,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   // Yearn_0_DAI_210131
   string private name;
   // e18 created as initialization, cannot be changed, used to decided the collateral to covToken ratio
-  uint256 private depositRatio;
+  uint256 private mintRatio;
   uint256 private duration;
   uint256 private feeNumerator;
   uint256 private feeDenominator;
@@ -53,7 +53,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     string calldata _name,
     uint48 _expiry,
     address _collateral,
-    uint256 _depositRatio,
+    uint256 _mintRatio,
     uint256 _claimNonce
   ) public initializer {
     initializeOwner();
@@ -63,7 +63,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     name = _name;
     expiry = _expiry;
     collateral = _collateral;
-    depositRatio = _depositRatio;
+    mintRatio = _mintRatio;
     claimNonce = _claimNonce;
     duration = uint256(_expiry) - block.timestamp;
 
@@ -77,7 +77,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     require(deployComplete, "Cover: deploy incomplete");
     require(ICoverPool(owner()).claimNonce() == claimNonce, "Cover: claim accepted");
 
-    uint256 adjustedAmount = _amount * depositRatio / 1e18;
+    uint256 adjustedAmount = _amount * mintRatio / 1e18;
     (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
     for (uint i = 0; i < _assetList.length; i++) {
       claimCovTokenMap[_assetList[i]].mint(_receiver, adjustedAmount);
@@ -191,7 +191,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       string memory _name,
       uint48 _expiry,
       address _collateral,
-      uint256 _depositRatio,
+      uint256 _mintRatio,
       uint256 _claimNonce,
       uint256 _duration,
       ICoverERC20 _noclaimCovToken,
@@ -203,7 +203,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     for (uint256 i = 0; i < _assetList.length; i++) {
       claimCovTokens[i] = ICoverERC20(claimCovTokenMap[_assetList[i]]);
     }
-    return (name, expiry, collateral, depositRatio, claimNonce, duration, noclaimCovToken, claimCovTokens, futureCovTokens);
+    return (name, expiry, collateral, mintRatio, claimNonce, duration, noclaimCovToken, claimCovTokens, futureCovTokens);
   }
 
   function getRedeemFees() external view override returns (uint256 _numerator, uint256 _denominator) {
@@ -334,7 +334,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   function _getAmountAfterFees(uint256 _amount) private view returns (uint256 amountAfterFees) {
-    uint256 adjustedAmount = _amount * 1e18 / depositRatio;
+    uint256 adjustedAmount = _amount * 1e18 / mintRatio;
     uint256 fees = adjustedAmount * feeNumerator * duration / (feeDenominator * 365 days);
     amountAfterFees = adjustedAmount - fees;
   }

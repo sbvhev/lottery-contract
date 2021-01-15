@@ -60,7 +60,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
    * @param _extendablePool open pools allow adding new asset
    * @param _assetList risk assets that are covered in this pool
    * @param _collateral the collateral of the pool
-   * @param _depositRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
+   * @param _mintRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
    * @param _expiry expiration date supported for the pool
    * @param _expiryString MONTH_DATE_YEAR, used to create covToken symbols only
    * 
@@ -71,7 +71,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     bool _extendablePool,
     string[] calldata _assetList,
     address _collateral,
-    uint256 _depositRatio,
+    uint256 _mintRatio,
     uint48 _expiry,
     string calldata _expiryString
   ) external override onlyOwner returns (address _addr) {
@@ -80,52 +80,52 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     require(_expiry > block.timestamp, "CoverPoolFactory: expiry in the past");
 
     coverPoolNames.push(_name);
-    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _extendablePool, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
+    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _extendablePool, _assetList, _collateral, _mintRatio, _expiry, _expiryString);
     _addr = address(_deployCoverPool(_name, initData));
     coverPools[_name] = _addr;
     emit CoverPoolCreated(_addr);
   }
 
-  function updateDeployGasMin(uint256 _deployGasMin) external override onlyOwner {
+  function setDeployGasMin(uint256 _deployGasMin) external override onlyOwner {
     require(_deployGasMin > 0, "CoverPoolFactory: min gas cannot be 0");
     deployGasMin = _deployGasMin;
   }
 
   /// @dev update this will only affect coverPools deployed after
-  function updateCoverPoolImpl(address _newImpl) external override onlyOwner {
+  function setCoverPoolImpl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
     emit CoverPoolImplUpdated(coverPoolImpl, _newImpl);
     coverPoolImpl = _newImpl;
   }
 
   /// @dev update this will only affect covers of coverPools deployed after
-  function updateCoverImpl(address _newImpl) external override onlyOwner {
+  function setCoverImpl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
     emit CoverImplUpdated(coverImpl, _newImpl);
     coverImpl = _newImpl;
   }
 
   /// @dev update this will only affect covTokens of covers of coverPools deployed after
-  function updateCoverERC20Impl(address _newImpl) external override onlyOwner {
+  function setCoverERC20Impl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
     emit CoverERC20ImplUpdated(coverERC20Impl, _newImpl);
     coverERC20Impl = _newImpl;
   }
 
-  function updateClaimManager(address _address) external override onlyOwner {
+  function setClaimManager(address _address) external override onlyOwner {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
     emit ClaimManagerUpdated(claimManager, _address);
     claimManager = _address;
   }
 
-  function updateGovernance(address _address) external override onlyGov {
+  function setGovernance(address _address) external override onlyGov {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
     require(_address != owner(), "CoverPoolFactory: governance cannot be owner");
     emit GovernanceUpdated(governance, _address);
     governance = _address;
   }
 
-  function updateTreasury(address _address) external override onlyOwner {
+  function setTreasury(address _address) external override onlyOwner {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
     emit TreasuryUpdated(treasury, _address);
     treasury = _address;

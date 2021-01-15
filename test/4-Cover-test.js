@@ -32,8 +32,8 @@ describe('Cover', function() {
     // deploy coverPool factory
     coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
     await coverPoolFactory.deployed();
-    await coverPoolFactory.updateClaimManager(claimManager.getAddress());
-    // await coverPoolFactory.updateTreasury(treasuryAddress);
+    await coverPoolFactory.setClaimManager(claimManager.getAddress());
+    // await coverPoolFactory.setTreasury(treasuryAddress);
     
     const startTime = await time.latest();
     startTimestamp = startTime.toNumber();
@@ -60,11 +60,11 @@ describe('Cover', function() {
   });
 
   it('Should initialize correct state variables', async function() {
-    const [name, expiry, collateral, depositRatio, claimNonce,, noclaimCovToken, claimCovTokens, futureCovTokens] = await cover.getCoverDetails();
+    const [name, expiry, collateral, mintRatio, claimNonce,, noclaimCovToken, claimCovTokens, futureCovTokens] = await cover.getCoverDetails();
     expect(name).to.equal(NAME);
     expect(expiry).to.equal(TIMESTAMP);
     expect(collateral).to.equal(COLLATERAL);
-    expect(depositRatio).to.equal(consts.DEPOSIT_RATIO);
+    expect(mintRatio).to.equal(consts.DEPOSIT_RATIO);
     expect(claimNonce).to.equal(0);
     expect(await CoverERC20.attach(futureCovTokens[0]).symbol()).to.equal('C_FUT0_' + NAME);
     expect(await CoverERC20.attach(claimCovTokens[0]).symbol()).to.equal('C_Binance_' + NAME);

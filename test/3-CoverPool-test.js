@@ -30,15 +30,15 @@ describe('CoverPool', () => {
     // deploy coverPool factory
     coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
     await coverPoolFactory.deployed();
-    await coverPoolFactory.updateClaimManager(ownerAddress);
+    await coverPoolFactory.setClaimManager(ownerAddress);
 
     // add coverPool through coverPool factory
     const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, true, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0]);
     await tx;
     coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_2));
-    await coverPool.connect(ownerAccount).updateExpiry(consts.ALLOWED_EXPIRYS[1], consts.ALLOWED_EXPIRY_NAMES[1], 1);
+    await coverPool.connect(ownerAccount).setExpiry(consts.ALLOWED_EXPIRYS[1], consts.ALLOWED_EXPIRY_NAMES[1], 1);
     await coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
-    await coverPool.connect(ownerAccount).updateExpiry(consts.ALLOWED_EXPIRYS[2], consts.ALLOWED_EXPIRY_NAMES[2], 1);
+    await coverPool.connect(ownerAccount).setExpiry(consts.ALLOWED_EXPIRYS[2], consts.ALLOWED_EXPIRY_NAMES[2], 1);
     await coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[2]);
 
     // init test account balances
@@ -67,11 +67,11 @@ describe('CoverPool', () => {
   });
 
   it('Should update state variables by the correct authority', async () => {
-    await coverPool.connect(ownerAccount).updateCollateral(NEW_COLLATERAL, consts.DEPOSIT_RATIO, 2);
+    await coverPool.connect(ownerAccount).setCollateral(NEW_COLLATERAL, consts.DEPOSIT_RATIO, 2);
     const [, status] = await coverPool.collateralStatusMap(NEW_COLLATERAL);
     expect(status).to.equal(2);
     
-    await coverPool.connect(ownerAccount).updateExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1);
+    await coverPool.connect(ownerAccount).setExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1);
     expect((await coverPool.expiryInfoMap(NEW_TIMESTAMP)).status).to.equal(1);
 
     await coverPool.connect(ownerAccount).setActive(false);
@@ -85,18 +85,18 @@ describe('CoverPool', () => {
           .to.emit(coverPool, 'DefaultRedeemDelayUpdated');
     expect((await coverPool.getRedeemDelays())[0]).to.equal(newDelay);
 
-    await expect(coverPool.connect(governanceAccount).updateFees(0, 0)).to.be.reverted;
-    await expectRevert(coverPool.connect(governanceAccount).updateFees(1, 1), "CoverPool: must < 10%");
+    await expect(coverPool.connect(governanceAccount).setFees(0, 0)).to.be.reverted;
+    await expectRevert(coverPool.connect(governanceAccount).setFees(1, 1), "CoverPool: must < 10%");
 
-    await coverPool.connect(governanceAccount).updateFees(0, 1);
+    await coverPool.connect(governanceAccount).setFees(0, 1);
     const [feeNumerator, feeDenominator] = await coverPool.getRedeemFees();
     expect(feeNumerator).to.equal(0);
     expect(feeDenominator).to.equal(1);
   });
 
   it('Should NOT update state variables by the wrong authority', async () => {
-    await expect(coverPool.connect(userAAccount).updateCollateral(NEW_COLLATERAL, 1)).to.be.reverted;
-    await expect(coverPool.connect(userAAccount).updateExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).setCollateral(NEW_COLLATERAL, 1)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).setExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1)).to.be.reverted;
     await expect(coverPool.connect(userAAccount).setActive(false)).to.be.reverted;
     await expect(coverPool.connect(ownerAccount).setDefaultRedeemDelay(10 * 24 * 60 * 60, 0)).to.be.reverted;
     await expect(coverPool.connect(ownerAccount).setNoclaimRedeemDelay(10 * 24 * 60 * 60, 0)).to.be.reverted;

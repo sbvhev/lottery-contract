@@ -64,7 +64,7 @@ async function main() {
   console.log(`ClaimManagement owner: ${cmOwner}`);
   
   // assign claimManagement address to be the claimManager of coverPoolFactory
-  await coverPoolFactory.updateClaimManager(claimManagement.address);
+  await coverPoolFactory.setClaimManager(claimManagement.address);
   const cmInFactory = await coverPoolFactory.claimManager();
   console.log(`protocolFactory cm: ${cmInFactory}`);
   

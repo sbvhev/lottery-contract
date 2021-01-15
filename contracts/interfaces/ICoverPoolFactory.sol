@@ -35,18 +35,18 @@ interface ICoverPoolFactory {
   function getCovTokenAddress(string calldata _coverPoolName, uint48 _expiry, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
 
   // access restriction - owner (dev)
-  function updateDeployGasMin(uint256 _deployGasMin) external;
+  function setDeployGasMin(uint256 _deployGasMin) external;
   /// @dev update Impl will only affect contracts deployed after
-  function updateCoverPoolImpl(address _newImpl) external;
-  function updateCoverImpl(address _newImpl) external;
-  function updateCoverERC20Impl(address _newImpl) external;
+  function setCoverPoolImpl(address _newImpl) external;
+  function setCoverImpl(address _newImpl) external;
+  function setCoverERC20Impl(address _newImpl) external;
   /**
    * @notice Create a new Cover Pool
    * @param _name name for pool, e.g. Yearn
    * @param _extendablePool open pools allow adding new asset
    * @param _assetList risk assets that are covered in this pool
    * @param _collateral the collateral of the pool
-   * @param _depositRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
+   * @param _mintRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
    * @param _expiry expiration date supported for the pool
    * @param _expiryString MONTH_DATE_YEAR, used to create covToken symbols only
    * 
@@ -57,13 +57,13 @@ interface ICoverPoolFactory {
     bool _extendablePool,
     string[] calldata _assetList,
     address _collateral,
-    uint256 _depositRatio,
+    uint256 _mintRatio,
     uint48 _expiry,
     string calldata _expiryString
   ) external returns (address);
-  function updateTreasury(address _address) external;
-  function updateClaimManager(address _address) external;
+  function setTreasury(address _address) external;
+  function setClaimManager(address _address) external;
 
   // access restriction - governance
-  function updateGovernance(address _address) external;
+  function setGovernance(address _address) external;
 }  

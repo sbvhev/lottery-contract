@@ -75,7 +75,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     bool _extendablePool,
     string[] calldata _assetList,
     address _collateral,
-    uint256 _depositRatio,
+    uint256 _mintRatio,
     uint48 _expiry,
     string calldata _expiryString
   ) external initializer {
@@ -83,7 +83,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     name = _coverPoolName;
     extendablePool = _extendablePool;
     collaterals.push(_collateral);
-    collateralStatusMap[_collateral] = CollateralInfo(_depositRatio, 1);
+    collateralStatusMap[_collateral] = CollateralInfo(_mintRatio, 1);
     expiries.push(_expiry);
     expiryInfoMap[_expiry] = ExpiryInfo(_expiryString, 1);
 
@@ -192,7 +192,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice update status or add new collateral, call deployCover with collateral and expiry before add cover
-  function updateCollateral(address _collateral, uint256 _depositRatio, uint8 _status) external override onlyDev {
+  function updateCollateral(address _collateral, uint256 _mintRatio, uint8 _status) external override onlyDev {
     require(_collateral != address(0), "CoverPool: address cannot be 0");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
 
@@ -200,7 +200,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     if (collateralStatusMap[_collateral].status == 0) {
       collaterals.push(_collateral);
     }
-    collateralStatusMap[_collateral] = CollateralInfo(_depositRatio, _status);
+    collateralStatusMap[_collateral] = CollateralInfo(_mintRatio, _status);
   }
 
   function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external override {
@@ -314,7 +314,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
       addr = Create2.deploy(0, salt, bytecode);
 
-      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _expiry, _collateral, collateralStatusMap[_collateral].depositRatio, claimNonce);
+      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _expiry, _collateral, collateralStatusMap[_collateral].mintRatio, claimNonce);
       address coverImpl = _factory().coverImpl();
       InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
         coverImpl,

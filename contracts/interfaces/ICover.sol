@@ -27,7 +27,7 @@ interface ICover {
       string memory _name, // Yearn_0_DAI_210131
       uint48 _expiry,
       address _collateral,
-      uint256 _depositRatio,
+      uint256 _mintRatio,
       uint256 _claimNonce,
       uint256 _duration,
       ICoverERC20 _noclaimCovToken,

@@ -41,7 +41,7 @@ describe("ClaimManagement", function () {
     const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, true, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, consts.CM_TIMESTAMPS[0], consts.ALLOWED_EXPIRY_NAMES[0]);
     await tx;
     coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_2));
-    await coverPool.connect(ownerAccount).updateExpiry(consts.CM_TIMESTAMPS[1], consts.ALLOWED_EXPIRY_NAMES[1], 1);
+    await coverPool.connect(ownerAccount).setExpiry(consts.CM_TIMESTAMPS[1], consts.ALLOWED_EXPIRY_NAMES[1], 1);
 
     const ClaimManagement = await ethers.getContractFactory("ClaimManagement");
     management = await ClaimManagement.deploy(
@@ -53,7 +53,7 @@ describe("ClaimManagement", function () {
     await management.deployed();
     
     // set claim manager in coverPool Factory
-    await coverPoolFactory.updateClaimManager(management.address);
+    await coverPoolFactory.setClaimManager(management.address);
     await dai.approve(management.address, await dai.balanceOf(ownerAddress));
   });
 

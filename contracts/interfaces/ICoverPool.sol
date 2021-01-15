@@ -19,7 +19,7 @@ interface ICoverPool {
     uint8 status; // 0 never set; 1 active, 2 inactive
   }
   struct CollateralInfo {
-    uint256 depositRatio;
+    uint256 mintRatio;
     uint8 status; // 0 never set; 1 active, 2 inactive
   }
   struct ClaimDetails {
@@ -36,7 +36,7 @@ interface ICoverPool {
   function isAddingAsset() external view returns (bool);
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   function claimNonce() external view returns (uint256);
-  function collateralStatusMap(address _collateral) external view returns (uint256 _depositRatio, uint8 _status);
+  function collateralStatusMap(address _collateral) external view returns (uint256 _mintRatio, uint8 _status);
   function expiryInfoMap(uint48 _expiry) external view returns (string memory _name, uint8 _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);
 
@@ -78,11 +78,11 @@ interface ICoverPool {
   // access restriction - dev
   function addAsset(string calldata _asset) external;
   function deleteAsset(string calldata _asset) external;
-  function updateExpiry(uint48 _expiry, string calldata _expiryName, uint8 _status) external;
-  function updateCollateral(address _collateral, uint256 _depositRatio, uint8 _status) external;
+  function setExpiry(uint48 _expiry, string calldata _expiryName, uint8 _status) external;
+  function setCollateral(address _collateral, uint256 _mintRatio, uint8 _status) external;
   function setActive(bool _active) external;
 
   // access restriction - governance
   function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external;
-  function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external;
+  function setFees(uint256 _feeNumerator, uint256 _feeDenominator) external;
 }

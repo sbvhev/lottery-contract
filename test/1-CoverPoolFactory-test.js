@@ -39,29 +39,29 @@ describe('CoverPoolFactory', () => {
 
   // test functions with governance access restriction
   it('Should NOT update governance to address(0) by governance', async () => {
-    await expectRevert(coverPoolFactory.connect(governanceAccount).updateGovernance(consts.ADDRESS_ZERO), 'CoverPoolFactory: address cannot be 0');
+    await expectRevert(coverPoolFactory.connect(governanceAccount).setGovernance(consts.ADDRESS_ZERO), 'CoverPoolFactory: address cannot be 0');
   });
 
   it('Should NOT update governance to owner by governance', async () => {
-    await expectRevert(coverPoolFactory.connect(governanceAccount).updateGovernance(ownerAddress), 'CoverPoolFactory: governance cannot be owner');
+    await expectRevert(coverPoolFactory.connect(governanceAccount).setGovernance(ownerAddress), 'CoverPoolFactory: governance cannot be owner');
   });
 
   // test functions with owner access restriction
   it('Should update vars by authorized only', async () => {
     // should only be updated by owner
-    await expect(coverPoolFactory.connect(userAAccount).updateClaimManager(userAAddress)).to.be.reverted;
-    await expect(coverPoolFactory.connect(ownerAccount).updateClaimManager(userAAddress)).to.emit(coverPoolFactory, 'ClaimManagerUpdated');
+    await expect(coverPoolFactory.connect(userAAccount).setClaimManager(userAAddress)).to.be.reverted;
+    await expect(coverPoolFactory.connect(ownerAccount).setClaimManager(userAAddress)).to.emit(coverPoolFactory, 'ClaimManagerUpdated');
     expect(await coverPoolFactory.claimManager()).to.equal(userAAddress);
 
     // should only be updated by owner
-    await coverPoolFactory.connect(ownerAccount).updateDeployGasMin(6000000);
+    await coverPoolFactory.connect(ownerAccount).setDeployGasMin(6000000);
     expect(await coverPoolFactory.deployGasMin()).to.equal(6000000);
-    await expect(coverPoolFactory.connect(ownerAccount).updateTreasury(ownerAddress)).to.emit(coverPoolFactory, 'TreasuryUpdated');
-    await expect(coverPoolFactory.connect(ownerAccount).updateCoverERC20Impl(dai.address)).to.emit(coverPoolFactory, 'CoverERC20ImplUpdated');
-    await expect(coverPoolFactory.connect(ownerAccount).updateCoverImpl(dai.address)).to.emit(coverPoolFactory, 'CoverImplUpdated');
-    await expect(coverPoolFactory.connect(ownerAccount).updateCoverPoolImpl(dai.address)).to.emit(coverPoolFactory, 'CoverPoolImplUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).setTreasury(ownerAddress)).to.emit(coverPoolFactory, 'TreasuryUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).setCoverERC20Impl(dai.address)).to.emit(coverPoolFactory, 'CoverERC20ImplUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).setCoverImpl(dai.address)).to.emit(coverPoolFactory, 'CoverImplUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).setCoverPoolImpl(dai.address)).to.emit(coverPoolFactory, 'CoverPoolImplUpdated');
 
-    await expect(coverPoolFactory.connect(governanceAccount).updateGovernance(userAAddress)).to.emit(coverPoolFactory, 'GovernanceUpdated');
+    await expect(coverPoolFactory.connect(governanceAccount).setGovernance(userAAddress)).to.emit(coverPoolFactory, 'GovernanceUpdated');
   });
 
   it('Should add 2 new coverPools by owner', async () => {
