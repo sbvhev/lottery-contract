@@ -40,7 +40,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   uint256 private duration;
   uint256 private feeNumerator;
   uint256 private feeDenominator;
-  uint256 private totalDebt;
+  uint256 private totalCoverage;
   uint256 public override claimNonce;
 
   ICoverERC20[] private futureCovTokens;
@@ -86,7 +86,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
     noclaimCovToken.mint(_receiver, adjustedAmount);
     _handleLatestFutureToken(_receiver, adjustedAmount, true); // mint
-    totalDebt = totalDebt + adjustedAmount;
+    totalCoverage = totalCoverage + adjustedAmount;
   }
 
   /**
@@ -210,11 +210,11 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   function collectFees() public override {
     IERC20 collateralToken = IERC20(collateral);
-    if (totalDebt == 0) {
+    if (totalCoverage == 0) {
       _sendFees(collateralToken.balanceOf(address(this)));
       return;
     }
-    uint256 feeToCollect = collateralToken.balanceOf(address(this)) - _afterFees(totalDebt);
+    uint256 feeToCollect = collateralToken.balanceOf(address(this)) - _getAmountAfterFees(totalCoverage);
     if (feeToCollect > 10) {
       // minus 1 to avoid dust caused inBalance
       _sendFees(feeToCollect - 1);
@@ -298,8 +298,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   /// @notice transfer collateral (amount - fee) from this contract to recevier, transfer fee to COVER treasury
   function _payCollateral(address _receiver, uint256 _amount) private {
-    totalDebt = totalDebt - _amount;
-    IERC20(collateral).safeTransfer(_receiver, _afterFees(_amount));
+    totalCoverage = totalCoverage - _amount;
+    IERC20(collateral).safeTransfer(_receiver, _getAmountAfterFees(_amount));
     collectFees();
   }
 
@@ -332,7 +332,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     return ICoverERC20(proxyAddr);
   }
 
-  function _afterFees(uint256 _amount) private view returns (uint256 amountAfterFees) {
+  function _getAmountAfterFees(uint256 _amount) private view returns (uint256 amountAfterFees) {
     uint256 adjustedAmount = _amount * 1e18 / depositRatio;
     uint256 fees = adjustedAmount * feeNumerator * duration / (feeDenominator * 365 days);
     amountAfterFees = adjustedAmount - fees;
