@@ -110,11 +110,20 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     _validateCover(_collateral, _expiry);
     require(_amount > 0, "CoverPool: amount <= 0");
 
-    address addr = coverMap[_collateral][_expiry];
-    require(addr != address(0), "CoverPool: cover not deployed yet");
-    require(ICover(addr).deployComplete(), "CoverPool: cover deploy incomplete");
+    address coverAddr = coverMap[_collateral][_expiry];
+    require(coverAddr != address(0), "CoverPool: cover not deployed yet");
+    ICover cover = ICover(coverAddr);
+    require(cover.deployComplete(), "CoverPool: cover deploy incomplete");
 
-    _addCover(IERC20(_collateral), addr, _amount);
+    IERC20 collateral = IERC20(_collateral);
+    uint256 coverBalanceBefore = collateral.balanceOf(coverAddr);
+    collateral.safeTransferFrom(msg.sender, coverAddr, _amount);
+    uint256 coverBalanceAfter = collateral.balanceOf(coverAddr);
+    uint256 received = coverBalanceAfter - coverBalanceBefore;
+    require(received > 0, "CoverPool: collateral transfer failed");
+
+    cover.mint(received, msg.sender);
+    emit CoverAdded(coverAddr, msg.sender, received);
   }
 
   /// @notice add asset to pool, new asset cannot be deleted asset
@@ -333,17 +342,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       _collateralSymbol, "_",
       expiryInfoMap[_expiry].name
     ));
-  }
-
-  function _addCover(IERC20 _collateral, address _cover, uint256 _amount) private {
-    uint256 coverBalanceBefore = _collateral.balanceOf(_cover);
-    _collateral.safeTransferFrom(msg.sender, _cover, _amount);
-    uint256 coverBalanceAfter = _collateral.balanceOf(_cover);
-    uint256 received = coverBalanceAfter - coverBalanceBefore;
-    require(received > 0, "CoverPool: collateral transfer failed");
-
-    ICover(_cover).mint(received, msg.sender);
-    emit CoverAdded(_cover, msg.sender, received);
   }
 
   function _validateCover(address _collateral, uint48 _expiry) private view {
