@@ -178,7 +178,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice update status or add new expiry, call deployCover with collateral and expiry before add cover
-  function updateExpiry(uint48 _expiry, string calldata _expiryString, uint8 _status)
+  function setExpiry(uint48 _expiry, string calldata _expiryString, uint8 _status)
     external override onlyDev
   {
     require(block.timestamp < _expiry, "CoverPool: expiry in the past");
@@ -192,7 +192,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice update status or add new collateral, call deployCover with collateral and expiry before add cover
-  function updateCollateral(address _collateral, uint256 _mintRatio, uint8 _status) external override onlyDev {
+  function setCollateral(address _collateral, uint256 _mintRatio, uint8 _status) external override onlyDev {
     require(_collateral != address(0), "CoverPool: address cannot be 0");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
 
@@ -203,7 +203,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     collateralStatusMap[_collateral] = CollateralInfo(_mintRatio, _status);
   }
 
-  function updateFees(uint256 _feeNumerator, uint256 _feeDenominator) external override {
+  function setFees(uint256 _feeNumerator, uint256 _feeDenominator) external override {
     require(msg.sender == _factory().governance(), "CoverPool: caller not governance");
     require(_feeDenominator > 0, "CoverPool: denominator cannot be 0");
     require(_feeDenominator > (_feeNumerator * 10), "CoverPool: must < 10%");
