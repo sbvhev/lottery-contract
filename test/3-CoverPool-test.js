@@ -117,7 +117,7 @@ describe('CoverPool', () => {
     expect(deletedAssetList).to.deep.equal([consts.ASSET_2_BYTES32]);
 
     await expect(coverPool.addAsset(consts.ASSET_2)).to.be.reverted;
-    await coverPool.addAsset(consts.ASSET_4);
+    await expect(coverPool.addAsset(consts.ASSET_4)).to.emit(coverPool, 'AssetUpdated');
     const [,,,,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
     expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32, consts.ASSET_4_BYTES32]);
 

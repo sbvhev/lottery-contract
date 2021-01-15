@@ -89,8 +89,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
     for (uint256 j = 0; j < _assetList.length; j++) {
       bytes32 asset = StringHelper.stringToBytes32(_assetList[j]);
-      assetList.push(asset);
       require(assetsMap[asset] == 0, "CoverPool: duplicated assets");
+      assetList.push(asset);
       assetsMap[asset] = 1;
     }
 
@@ -135,24 +135,24 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     if (assetsMap[asset] == 0) {
       // first time adding asset, make sure no other asset adding in prrogress
       require(!isAddingAsset, "CoverPool: last asset adding not complete");
+      isAddingAsset = true;
       assetsMap[asset] = 1;
       assetList.push(asset);
-      isAddingAsset = true;
+      emit AssetUpdated(asset, true);
     }
 
     // continue adding asset, this may not be the first time this func is called for the asset
     address[] memory activeCoversCopy = activeCovers; // save gas
-    if (activeCoversCopy.length > 0) {
-      uint256 startGas = gasleft();
-      for (uint256 i = 0; i < activeCoversCopy.length; i++) {
-        // ensure enough gas left to avoid revert all the previous work
-        if (startGas < _factory().deployGasMin()) return;
-        // below call deploys two covToken contracts, if cover already added, call will do nothing
-        ICover(activeCoversCopy[i]).addAsset(asset);
-        startGas = gasleft();
-      }
-      isAddingAsset = false;
+    if (activeCoversCopy.length == 0) return;
+    uint256 startGas = gasleft();
+    for (uint256 i = 0; i < activeCoversCopy.length; i++) {
+      // ensure enough gas left to avoid revert all the previous work
+      if (startGas < _factory().deployGasMin()) return;
+      // below call deploys two covToken contracts, if cover already added, call will do nothing
+      ICover(activeCoversCopy[i]).addAsset(asset);
+      startGas = gasleft();
     }
+    isAddingAsset = false;
   }
 
   /// @notice delete asset from pool
