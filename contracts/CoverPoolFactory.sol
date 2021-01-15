@@ -57,7 +57,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   /**
    * @notice Create a new Cover Pool
    * @param _name name for pool, e.g. Yearn
-   * @param _isOpenPool open pools allow adding new asset
+   * @param _extendablePool open pools allow adding new asset
    * @param _assetList risk assets that are covered in this pool
    * @param _collateral the collateral of the pool
    * @param _depositRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
@@ -68,7 +68,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
    */
   function createCoverPool(
     string calldata _name,
-    bool _isOpenPool,
+    bool _extendablePool,
     string[] calldata _assetList,
     address _collateral,
     uint256 _depositRatio,
@@ -80,7 +80,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     require(_expiry > block.timestamp, "CoverPoolFactory: expiry in the past");
 
     coverPoolNames.push(_name);
-    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _isOpenPool, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
+    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _extendablePool, _assetList, _collateral, _depositRatio, _expiry, _expiryString);
     _addr = address(_deployCoverPool(_name, initData));
     coverPools[_name] = _addr;
     emit CoverPoolCreated(_addr);

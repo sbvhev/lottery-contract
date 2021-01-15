@@ -11,7 +11,7 @@ import "./interfaces/ICoverPool.sol";
  */
 contract ClaimConfig is IClaimConfig, Ownable {
 
-  IERC20 public override feeCurrency = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+  IERC20 public override feeCurrency = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F); // Dai
   address public override governance;
   address public override treasury;
   address public override coverPoolFactory;

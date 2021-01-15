@@ -31,7 +31,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   // only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   bool private isActive;
-  bool private isOpenPool;
+  bool private extendablePool;
   bool public override isAddingAsset;
   string public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
@@ -72,7 +72,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   /// @dev Initialize, called once
   function initialize (
     string calldata _coverPoolName,
-    bool _isOpenPool,
+    bool _extendablePool,
     string[] calldata _assetList,
     address _collateral,
     uint256 _depositRatio,
@@ -81,7 +81,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   ) external initializer {
     initializeOwner();
     name = _coverPoolName;
-    isOpenPool = _isOpenPool;
+    extendablePool = _extendablePool;
     collaterals.push(_collateral);
     collateralStatusMap[_collateral] = CollateralInfo(_depositRatio, 1);
     expiries.push(_expiry);
@@ -120,7 +120,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   /// @notice add asset to pool, new asset cannot be deleted asset
   function addAsset(string calldata _asset) external override onlyDev {
     bytes32 asset = StringHelper.stringToBytes32(_asset);
-    require(isOpenPool, "CoverPool: not open pool");
+    require(extendablePool, "CoverPool: not extendable pool");
     require(assetsMap[asset] != 2, "CoverPool: deleted asset not allowed");
 
     if (assetsMap[asset] == 0) {
@@ -175,7 +175,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     require(block.timestamp < _expiry, "CoverPool: expiry in the past");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
 
-    // status 0 means never added before, inactive expiry status should be 2
+    // status 0 means never added before, inactive status should be 2
     if (expiryInfoMap[_expiry].status == 0) {
       expiries.push(_expiry);
     }
@@ -187,7 +187,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     require(_collateral != address(0), "CoverPool: address cannot be 0");
     require(_status > 0 && _status < 3, "CoverPool: status not in (0, 2]");
 
-    // status 0 means never added before, inactive expiry status should be 2
+    // status 0 means never added before, inactive status should be 2
     if (collateralStatusMap[_collateral].status == 0) {
       collaterals.push(_collateral);
     }
@@ -259,13 +259,12 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       _incidentTimestamp,
       uint48(block.timestamp)
     ));
-    noclaimRedeemDelay = defaultRedeemDelay;
     emit ClaimEnacted(_coverPoolNonce);
   }
 
   function getCoverPoolDetails() external view override
     returns (
-      bool _isOpenPool,
+      bool _extendablePool,
       bool _isActive,
       uint256 _claimNonce,
       address[] memory _collaterals,
@@ -275,7 +274,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       address[] memory _allActiveCovers,
       address[] memory _allCovers)
   {
-    return (isOpenPool, isActive, claimNonce, collaterals, expiries, assetList, deletedAssetList, activeCovers, allCovers);
+    return (extendablePool, isActive, claimNonce, collaterals, expiries, assetList, deletedAssetList, activeCovers, allCovers);
   }
 
   function getRedeemDelays() external view override returns (uint256 _defaultRedeemDelay, uint256 _noclaimRedeemDelay) {

@@ -49,11 +49,11 @@ describe('CoverPool', () => {
   });
 
   it('Should initialize correct state variables', async () => {
-    const [isOpenPool, isActive, claimNonce, collaterals, expiries, assetList, deletedAssetList, allActiveCovers, allCovers] = await coverPool.getCoverPoolDetails();
+    const [extendablePool, isActive, claimNonce, collaterals, expiries, assetList, deletedAssetList, allActiveCovers, allCovers] = await coverPool.getCoverPoolDetails();
     const [defaultRedeemDelay, noclaimRedeemDelay] = await coverPool.getRedeemDelays();
 
     expect(await coverPool.name()).to.equal(consts.POOL_2);
-    expect(isOpenPool).to.equal(true);
+    expect(extendablePool).to.equal(true);
     expect(isActive).to.equal(true);
     expect(claimNonce).to.equal(0);
     expect(defaultRedeemDelay).to.equal(3 * 24 * 60 * 60);

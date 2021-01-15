@@ -165,8 +165,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       require(totalNum == 0, "COVER_CM: claim denied (default if passed window), but payoutNumerator != 0");
       claim.state = ClaimState.Denied;
       feeCurrency.safeTransfer(treasury, claim.feePaid);
-      _resetNoclaimRedeemDelay(_coverPool, _nonce);
     }
+    _resetNoclaimRedeemDelay(_coverPool, _nonce);
     claim.decidedBy = msg.sender;
     claim.decidedTimestamp = uint48(block.timestamp);
     emit ClaimUpdate(_coverPool, claim.state, _nonce, _index);

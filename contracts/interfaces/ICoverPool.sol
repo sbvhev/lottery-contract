@@ -48,7 +48,7 @@ interface ICoverPool {
   function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
   function getCoverPoolDetails()
     external view returns (
-      bool _isOpenPool,
+      bool _extendablePool,
       bool _active,
       uint256 _claimNonce,
       address[] memory _collaterals,
