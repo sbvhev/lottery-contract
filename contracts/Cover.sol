@@ -44,7 +44,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   uint256 public override claimNonce;
 
   ICoverERC20[] private futureCovTokens;
-  ICoverERC20[] private claimCovTokens;
   mapping(bytes32 => ICoverERC20) public override claimCovTokenMap;
   // future token => CLAIM Token
   mapping(ICoverERC20 => ICoverERC20) public override futureCovTokenMap;
@@ -70,7 +69,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
     noclaimCovToken = _createCovToken("NC_");
     futureCovTokens.push(_createCovToken("C_FUT0_"));
-    deployComplete = false;
     deploy();
   }
 
@@ -137,7 +135,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
     string memory assetName = StringHelper.bytes32ToString(_asset);
     ICoverERC20 claimToken = _createCovToken(string(abi.encodePacked("C_", assetName, "_")));
-    claimCovTokens.push(claimToken);
     claimCovTokenMap[_asset] = claimToken;
     futureCovTokenMap[futureCovToken] = claimToken;
 
@@ -201,6 +198,11 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       ICoverERC20[] memory _claimCovTokens,
       ICoverERC20[] memory _futureCovTokens)
   {
+    (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
+    ICoverERC20[] memory claimCovTokens = new ICoverERC20[](_assetList.length);
+    for (uint256 i = 0; i < _assetList.length; i++) {
+      claimCovTokens[i] = ICoverERC20(claimCovTokenMap[_assetList[i]]);
+    }
     return (name, expiry, collateral, depositRatio, claimNonce, duration, noclaimCovToken, claimCovTokens, futureCovTokens);
   }
 
@@ -246,7 +248,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       if (address(claimToken) == address(0)) {
         string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
         claimToken = _createCovToken(string(abi.encodePacked("C_", assetName, "_")));
-        claimCovTokens.push(claimToken);
         claimCovTokenMap[_assetList[i]] = claimToken;
         startGas = gasleft();
       }
