@@ -56,35 +56,12 @@ contract ClaimConfig is IClaimConfig, Ownable {
     defaultCVC = _cvc;
   }
 
-  /// @notice Add CVC group for a coverPool if `_cvc` isn't already added
-  function addCVCForPool(address _coverPool, address _cvc) public override onlyOwner {
-    address[] memory cvcCopy = cvcMap[_coverPool];
-    for (uint i = 0; i < cvcCopy.length; i++) {
-      require(cvcCopy[i] != _cvc, "COVER_CC: cvc exists");
-    }
-    cvcMap[_coverPool].push(_cvc);
-  }
-
   /// @notice Add CVC groups for multiple coverPools
   function addCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external override onlyOwner {
     require(_coverPools.length == _cvcs.length, "COVER_CC: lengths don't match");
     for (uint i = 0; i < _coverPools.length; i++) {
       addCVCForPool(_coverPools[i], _cvcs[i]);
     }
-  }
-
-  function removeCVCForPool(address _coverPool, address _cvc) public override onlyOwner {
-    address[] memory cvcCopy = cvcMap[_coverPool];
-    require(cvcCopy.length > 0, "COVER_CC: cvc is empty");
-    address[] memory newCVC = new address[](cvcCopy.length - 1);
-    uint256 newListInd = 0;
-    for (uint i = 0; i < cvcCopy.length; i++) {
-      if (_cvc != cvcCopy[i]) {
-        newCVC[newListInd] = cvcCopy[i];
-        newListInd++;
-      }
-    }
-    cvcMap[_coverPool] = newCVC;
   }
 
   /// @notice Remove CVC groups for multiple coverPools
@@ -110,20 +87,32 @@ contract ClaimConfig is IClaimConfig, Ownable {
     feeMultiplier = _multiplier;
   }
 
-  /// @notice Get the current claim fee for coverPool `_coverPool`
-  function getCoverPoolClaimFee(address _coverPool) public view override returns (uint256) {
-    return coverPoolClaimFee[_coverPool] < baseClaimFee ? baseClaimFee : coverPoolClaimFee[_coverPool];
-  }
-
-  /// @notice Get the time window allowed to file after an incident happened, based on the defaultRedeemDelay of the coverPool - 1hour
-  function getFileClaimWindow(address _coverPool) public view override returns (uint256) {
-    (uint256 defaultRedeemDelay, ) = ICoverPool(_coverPool).getRedeemDelays();
-    return defaultRedeemDelay - 1 hours;
-  }
-
   /// @notice Get the CVC list for a pool
   function getCVCList(address _coverPool) external view override returns (address[] memory) {
     return cvcMap[_coverPool];
+  }
+
+  /// @notice Add CVC group for a coverPool if `_cvc` isn't already added
+  function addCVCForPool(address _coverPool, address _cvc) public override onlyOwner {
+    address[] memory cvcCopy = cvcMap[_coverPool];
+    for (uint i = 0; i < cvcCopy.length; i++) {
+      require(cvcCopy[i] != _cvc, "COVER_CC: cvc exists");
+    }
+    cvcMap[_coverPool].push(_cvc);
+  }
+
+  function removeCVCForPool(address _coverPool, address _cvc) public override onlyOwner {
+    address[] memory cvcCopy = cvcMap[_coverPool];
+    require(cvcCopy.length > 0, "COVER_CC: cvc is empty");
+    address[] memory newCVC = new address[](cvcCopy.length - 1);
+    uint256 newListInd = 0;
+    for (uint i = 0; i < cvcCopy.length; i++) {
+      if (_cvc != cvcCopy[i]) {
+        newCVC[newListInd] = cvcCopy[i];
+        newListInd++;
+      }
+    }
+    cvcMap[_coverPool] = newCVC;
   }
 
   /// @notice Get whether input address is a member of the CVC group for a pool
@@ -138,6 +127,16 @@ contract ClaimConfig is IClaimConfig, Ownable {
     return false;
   }
 
+  /// @notice Get the current claim fee for coverPool `_coverPool`
+  function getCoverPoolClaimFee(address _coverPool) public view override returns (uint256) {
+    return coverPoolClaimFee[_coverPool] < baseClaimFee ? baseClaimFee : coverPoolClaimFee[_coverPool];
+  }
+
+  /// @notice Get the time window allowed to file after an incident happened, based on the defaultRedeemDelay of the coverPool - 1hour
+  function getFileClaimWindow(address _coverPool) public view override returns (uint256) {
+    (uint256 defaultRedeemDelay, ) = ICoverPool(_coverPool).getRedeemDelays();
+    return defaultRedeemDelay - 1 hours;
+  }
 
   /// @notice Updates fee for coverPool `_coverPool` by multiplying current fee by `feeMultiplier`, capped at `forceClaimFee`
   function _updateCoverPoolClaimFee(address _coverPool) internal {

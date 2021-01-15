@@ -54,46 +54,6 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     initializeOwner();
   }
 
-  function getCoverPools() external view override returns (address[] memory) {
-    string[] memory coverPoolNamesCopy = coverPoolNames;
-    address[] memory coverPoolAddresses = new address[](coverPoolNamesCopy.length);
-    for (uint256 i = 0; i < coverPoolNamesCopy.length; i++) {
-      coverPoolAddresses[i] = coverPools[coverPoolNamesCopy[i]];
-    }
-    return coverPoolAddresses;
-  }
-
-  /// @notice return coverPool contract address, the contract may not be deployed yet
-  function getCoverPoolAddress(string calldata _name) public view override returns (address) {
-    return _computeAddress(keccak256(abi.encodePacked("CoverV2", _name)), address(this));
-  }
-
-  /// @notice return cover contract address, the contract may not be deployed yet
-  function getCoverAddress(
-    string calldata _coverPoolName,
-    uint48 _timestamp,
-    address _collateral,
-    uint256 _claimNonce
-  ) public view override returns (address) {
-    return _computeAddress(
-      keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce)),
-      getCoverPoolAddress(_coverPoolName)
-    );
-  }
-
-  /// @notice return covToken contract address, the contract may not be deployed yet, _prefix example: "C_CURVE", "C_FUT1", or "NC_"
-  function getCovTokenAddress(
-    string calldata _coverPoolName,
-    uint48 _timestamp,
-    address _collateral,
-    uint256 _claimNonce,
-    string memory _prefix
-  ) external view override returns (address) {
-    bytes32 salt = keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce, _prefix));
-    address deployer = getCoverAddress(_coverPoolName, _timestamp, _collateral, _claimNonce);
-    return BasicProxyLib.computeProxyAddress(coverERC20Impl, salt, deployer);
-  }
-
   /**
    * @notice Create a new Cover Pool
    * @param _name name for pool, e.g. Yearn
@@ -169,6 +129,47 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
     emit TreasuryUpdated(treasury, _address);
     treasury = _address;
+  }
+
+
+  function getCoverPools() external view override returns (address[] memory) {
+    string[] memory coverPoolNamesCopy = coverPoolNames;
+    address[] memory coverPoolAddresses = new address[](coverPoolNamesCopy.length);
+    for (uint256 i = 0; i < coverPoolNamesCopy.length; i++) {
+      coverPoolAddresses[i] = coverPools[coverPoolNamesCopy[i]];
+    }
+    return coverPoolAddresses;
+  }
+
+  /// @notice return covToken contract address, the contract may not be deployed yet, _prefix example: "C_CURVE", "C_FUT1", or "NC_"
+  function getCovTokenAddress(
+    string calldata _coverPoolName,
+    uint48 _timestamp,
+    address _collateral,
+    uint256 _claimNonce,
+    string memory _prefix
+  ) external view override returns (address) {
+    bytes32 salt = keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce, _prefix));
+    address deployer = getCoverAddress(_coverPoolName, _timestamp, _collateral, _claimNonce);
+    return BasicProxyLib.computeProxyAddress(coverERC20Impl, salt, deployer);
+  }
+
+  /// @notice return coverPool contract address, the contract may not be deployed yet
+  function getCoverPoolAddress(string calldata _name) public view override returns (address) {
+    return _computeAddress(keccak256(abi.encodePacked("CoverV2", _name)), address(this));
+  }
+
+  /// @notice return cover contract address, the contract may not be deployed yet
+  function getCoverAddress(
+    string calldata _coverPoolName,
+    uint48 _timestamp,
+    address _collateral,
+    uint256 _claimNonce
+  ) public view override returns (address) {
+    return _computeAddress(
+      keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce)),
+      getCoverPoolAddress(_coverPoolName)
+    );
   }
 
   function _deployCoverPool(string calldata _name, bytes memory _initData) private returns (address payable _proxyAddr) {

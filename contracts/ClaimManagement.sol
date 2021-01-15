@@ -32,47 +32,6 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     initializeOwner();
   }
 
-  function getCoverPoolClaims(address _coverPool, uint256 _nonce, uint256 _index) external view override returns (Claim memory) {
-    return coverPoolClaims[_coverPool][_nonce][_index];
-  }
-
-  /// @notice Get all claims for coverPool `_coverPool` and nonce `_nonce` in state `_state`
-  function getAllClaimsByState(address _coverPool, uint256 _nonce, ClaimState _state)
-    external view override returns (Claim[] memory)
-  {
-    Claim[] memory allClaims = coverPoolClaims[_coverPool][_nonce];
-    uint256 count;
-    Claim[] memory temp = new Claim[](allClaims.length);
-    for (uint i = 0; i < allClaims.length; i++) {
-      if (allClaims[i].state == _state) {
-        temp[count] = allClaims[i];
-        count++;
-      }
-    }
-    Claim[] memory claimsByState = new Claim[](count);
-    for (uint i = 0; i < count; i++) {
-      claimsByState[i] = temp[i];
-    }
-    return claimsByState;
-  }
-
-  /// @notice Get all claims for coverPool `_coverPool` and nonce `_nonce`
-  function getAllClaimsByNonce(address _coverPool, uint256 _nonce) external view override returns (Claim[] memory) {
-    return coverPoolClaims[_coverPool][_nonce];
-  }
-
-  /// @notice Get whether a pending claim for coverPool `_coverPool` and nonce `_nonce` exists
-  function hasPendingClaim(address _coverPool, uint256 _nonce) public view override returns (bool) {
-    Claim[] memory allClaims = coverPoolClaims[_coverPool][_nonce];
-    for (uint i = 0; i < allClaims.length; i++) {
-      ClaimState state = allClaims[i].state;
-      if (state == ClaimState.Filed || state == ClaimState.ForceFiled || state == ClaimState.Validated) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   /// @notice File a claim for a Cover Pool, `_incidentTimestamp` must be within the past 3 days
   function fileClaim(
     string calldata _coverPoolName,
@@ -213,12 +172,45 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     emit ClaimUpdate(_coverPool, claim.state, _nonce, _index);
   }
 
-  function _getCoverPoolAddr(string calldata _coverPoolName) private view returns (address) {
-    return ICoverPoolFactory(coverPoolFactory).coverPools(_coverPoolName);
+  function getCoverPoolClaims(address _coverPool, uint256 _nonce, uint256 _index) external view override returns (Claim memory) {
+    return coverPoolClaims[_coverPool][_nonce][_index];
   }
 
-  function _getCoverPoolNonce(address _coverPool) private view returns (uint256) {
-    return ICoverPool(_coverPool).claimNonce();
+  /// @notice Get all claims for coverPool `_coverPool` and nonce `_nonce` in state `_state`
+  function getAllClaimsByState(address _coverPool, uint256 _nonce, ClaimState _state)
+    external view override returns (Claim[] memory)
+  {
+    Claim[] memory allClaims = coverPoolClaims[_coverPool][_nonce];
+    uint256 count;
+    Claim[] memory temp = new Claim[](allClaims.length);
+    for (uint i = 0; i < allClaims.length; i++) {
+      if (allClaims[i].state == _state) {
+        temp[count] = allClaims[i];
+        count++;
+      }
+    }
+    Claim[] memory claimsByState = new Claim[](count);
+    for (uint i = 0; i < count; i++) {
+      claimsByState[i] = temp[i];
+    }
+    return claimsByState;
+  }
+
+  /// @notice Get all claims for coverPool `_coverPool` and nonce `_nonce`
+  function getAllClaimsByNonce(address _coverPool, uint256 _nonce) external view override returns (Claim[] memory) {
+    return coverPoolClaims[_coverPool][_nonce];
+  }
+
+  /// @notice Get whether a pending claim for coverPool `_coverPool` and nonce `_nonce` exists
+  function hasPendingClaim(address _coverPool, uint256 _nonce) public view override returns (bool) {
+    Claim[] memory allClaims = coverPoolClaims[_coverPool][_nonce];
+    for (uint i = 0; i < allClaims.length; i++) {
+      ClaimState state = allClaims[i].state;
+      if (state == ClaimState.Filed || state == ClaimState.ForceFiled || state == ClaimState.Validated) {
+        return true;
+      }
+    }
+    return false;
   }
 
   function _resetNoclaimRedeemDelay(address _coverPool, uint256 _nonce) private {
@@ -226,6 +218,14 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       (uint256 defaultRedeemDelay, ) = ICoverPool(_coverPool).getRedeemDelays();
       ICoverPool(_coverPool).setNoclaimRedeemDelay(defaultRedeemDelay);
     }
+  }
+
+  function _getCoverPoolAddr(string calldata _coverPoolName) private view returns (address) {
+    return ICoverPoolFactory(coverPoolFactory).coverPools(_coverPoolName);
+  }
+
+  function _getCoverPoolNonce(address _coverPool) private view returns (uint256) {
+    return ICoverPool(_coverPool).claimNonce();
   }
 
   // The times passed since the claim was filed has to be less than the max claim decision window

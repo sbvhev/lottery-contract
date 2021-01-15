@@ -103,37 +103,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     deployCover(_collateral, _expiry);
   }
 
-  function getCoverPoolDetails() external view override
-    returns (
-      bool _isOpenPool,
-      bool _isActive,
-      uint256 _claimNonce,
-      address[] memory _collaterals,
-      uint48[] memory _expiries,
-      bytes32[] memory _assetList,
-      bytes32[] memory _deletedAssetList,
-      address[] memory _allActiveCovers,
-      address[] memory _allCovers)
-  {
-    return (isOpenPool, isActive, claimNonce, collaterals, expiries, assetList, deletedAssetList, activeCovers, allCovers);
-  }
-
-  function getRedeemDelays() external view override returns (uint256 _defaultRedeemDelay, uint256 _noclaimRedeemDelay) {
-    return (defaultRedeemDelay, noclaimRedeemDelay);
-  }
-
-  function getRedeemFees() external view override returns (uint256 _numerator, uint256 _denominator) {
-    return (feeNumerator, feeDenominator);
-  }
-
-  function getAssetList() external view override returns (bytes32[] memory _assetList) {
-    return assetList;
-  }
-
-  function getClaimDetails(uint256 _nonce) external view override returns (ClaimDetails memory) {
-    return claimDetails[_nonce];
-  }
-
   /// @notice add coverage (with expiry) for sender, cover must be deployed first
   function addCover(address _collateral, uint48 _expiry, uint256 _amount)
     external override nonReentrant
@@ -197,36 +166,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       }
     }
     assetList = newAssetList;
-  }
-
-  /// @notice Will only deploy or complete existing deployment if necessary, safe to call
-  function deployCover(address _collateral, uint48 _expiry) public override returns (address addr) {
-    addr = coverMap[_collateral][_expiry];
-
-    // Deploy new cover contract if not exist or if claim accepted
-    if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
-      _validateCover(_collateral, _expiry);
-      string memory coverName = _getCoverName(_expiry, IERC20(_collateral).symbol());
-      bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
-      bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
-      addr = Create2.deploy(0, salt, bytecode);
-
-      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _expiry, _collateral, collateralStatusMap[_collateral].depositRatio, claimNonce);
-      address coverImpl = _factory().coverImpl();
-      InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
-        coverImpl,
-        IOwnable(owner()).owner(),
-        initData
-      );
-      activeCovers.push(addr);
-      allCovers.push(addr);
-      coverMap[_collateral][_expiry] = addr;
-      emit CoverCreated(addr);
-    }
-
-    if (!ICover(addr).deployComplete()) {
-      ICover(addr).deploy();
-    }
   }
 
   /// @notice update status or add new expiry, call deployCover with collateral and expiry before add cover
@@ -324,20 +263,65 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     emit ClaimEnacted(_coverPoolNonce);
   }
 
-  function _validateCover(address _collateral, uint48 _expiry) private view {
-    require(isActive, "CoverPool: pool not active");
-    require(!isAddingAsset, "CoverPool: waiting to complete adding asset");
-    require(collateralStatusMap[_collateral].status == 1, "CoverPool: invalid collateral");
-    require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == 1, "CoverPool: invalid expiry");
+  function getCoverPoolDetails() external view override
+    returns (
+      bool _isOpenPool,
+      bool _isActive,
+      uint256 _claimNonce,
+      address[] memory _collaterals,
+      uint48[] memory _expiries,
+      bytes32[] memory _assetList,
+      bytes32[] memory _deletedAssetList,
+      address[] memory _allActiveCovers,
+      address[] memory _allCovers)
+  {
+    return (isOpenPool, isActive, claimNonce, collaterals, expiries, assetList, deletedAssetList, activeCovers, allCovers);
   }
 
-  /// @dev the owner of this contract is CoverPoolFactory contract. The owner of CoverPoolFactory is dev
-  function _dev() private view returns (address) {
-    return IOwnable(owner()).owner();
+  function getRedeemDelays() external view override returns (uint256 _defaultRedeemDelay, uint256 _noclaimRedeemDelay) {
+    return (defaultRedeemDelay, noclaimRedeemDelay);
   }
 
-  function _factory() private view returns (ICoverPoolFactory) {
-    return ICoverPoolFactory(owner());
+  function getRedeemFees() external view override returns (uint256 _numerator, uint256 _denominator) {
+    return (feeNumerator, feeDenominator);
+  }
+
+  function getAssetList() external view override returns (bytes32[] memory _assetList) {
+    return assetList;
+  }
+
+  function getClaimDetails(uint256 _nonce) external view override returns (ClaimDetails memory) {
+    return claimDetails[_nonce];
+  }
+
+  /// @notice Will only deploy or complete existing deployment if necessary, safe to call
+  function deployCover(address _collateral, uint48 _expiry) public override returns (address addr) {
+    addr = coverMap[_collateral][_expiry];
+
+    // Deploy new cover contract if not exist or if claim accepted
+    if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
+      _validateCover(_collateral, _expiry);
+      string memory coverName = _getCoverName(_expiry, IERC20(_collateral).symbol());
+      bytes memory bytecode = type(InitializableAdminUpgradeabilityProxy).creationCode;
+      bytes32 salt = keccak256(abi.encodePacked(name, _expiry, _collateral, claimNonce));
+      addr = Create2.deploy(0, salt, bytecode);
+
+      bytes memory initData = abi.encodeWithSelector(COVER_INIT_SIGNITURE, coverName, _expiry, _collateral, collateralStatusMap[_collateral].depositRatio, claimNonce);
+      address coverImpl = _factory().coverImpl();
+      InitializableAdminUpgradeabilityProxy(payable(addr)).initialize(
+        coverImpl,
+        IOwnable(owner()).owner(),
+        initData
+      );
+      activeCovers.push(addr);
+      allCovers.push(addr);
+      coverMap[_collateral][_expiry] = addr;
+      emit CoverCreated(addr);
+    }
+
+    if (!ICover(addr).deployComplete()) {
+      ICover(addr).deploy();
+    }
   }
 
   /// @dev generate the cover name. Example: 3POOL_0_DAI_210131
@@ -362,4 +346,21 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     ICover(_cover).mint(received, msg.sender);
     emit CoverAdded(_cover, msg.sender, received);
   }
+
+  function _validateCover(address _collateral, uint48 _expiry) private view {
+    require(isActive, "CoverPool: pool not active");
+    require(!isAddingAsset, "CoverPool: waiting to complete adding asset");
+    require(collateralStatusMap[_collateral].status == 1, "CoverPool: invalid collateral");
+    require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == 1, "CoverPool: invalid expiry");
+  }
+
+  /// @dev the owner of this contract is CoverPoolFactory contract. The owner of CoverPoolFactory is dev
+  function _dev() private view returns (address) {
+    return IOwnable(owner()).owner();
+  }
+
+  function _factory() private view returns (ICoverPoolFactory) {
+    return ICoverPoolFactory(owner());
+  }
+
 }

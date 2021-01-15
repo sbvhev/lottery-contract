@@ -74,6 +74,106 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     deploy();
   }
 
+  /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
+  function mint(uint256 _amount, address _receiver) external override onlyOwner {
+    require(deployComplete, "Cover: deploy incomplete");
+    require(ICoverPool(owner()).claimNonce() == claimNonce, "Cover: claim accepted");
+
+    uint256 adjustedAmount = _amount * depositRatio / 1e18;
+    (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
+    for (uint i = 0; i < _assetList.length; i++) {
+      claimCovTokenMap[_assetList[i]].mint(_receiver, adjustedAmount);
+    }
+    noclaimCovToken.mint(_receiver, adjustedAmount);
+    _handleLatestFutureToken(_receiver, adjustedAmount, true); // mint
+    totalDebt = totalDebt + adjustedAmount;
+  }
+
+  /**
+   * @notice redeem collateral
+   * - if there is an accepted claim, but incident time > expiry, redeem with noclaim tokens only if default delay passed
+   * - if expired and noclaim delay passed, no accepted claim, redeem with noclaim tokens only
+   * - otherwise, always allow redeem back collateral with all covToken at any give moment
+   */
+  function redeemCollateral(uint256 _amount) external override nonReentrant {
+    ICoverPool coverPool = ICoverPool(owner());
+    (uint256 defaultRedeemDelay, uint256 noclaimRedeemDelay) = coverPool.getRedeemDelays();
+
+    if (coverPool.claimNonce() > claimNonce) {
+      ICoverPool.ClaimDetails memory claim = _claimDetails();
+      if (claim.incidentTimestamp > expiry && block.timestamp >= uint256(expiry) + defaultRedeemDelay) {
+        // expired, redeem with noclaim tokens only
+        _burnNoclaimAndPay(noclaimCovToken, 1, 1);
+        return;
+      }
+    } else if (block.timestamp >= uint256(expiry) + noclaimRedeemDelay) {
+      // expired and noclaim delay passed, no accepted claim, redeem with noclaim tokens only
+      _burnNoclaimAndPay(noclaimCovToken, 1, 1);
+      return;
+    }
+    _redeemWithAllCovTokens(coverPool, _amount);
+  }
+
+  function convertAll(ICoverERC20[] calldata _futureTokens) external override {
+    for (uint256 i = 0; i < _futureTokens.length; i++) {
+      convert(_futureTokens[i]);
+    }
+  }
+
+  /**
+   * @notice called by owner (CoverPool) only, when a new asset is added to pool the first time
+   * - create a new claim token for asset
+   * - point the current latest (last one in futureCovTokens) to newly created claim token
+   * - create a new future token and push to futureCovTokens
+   */
+  function addAsset(bytes32 _asset) external override onlyOwner {
+    if (block.timestamp >= expiry) return;
+    // make sure new asset has not already been added
+    if (address(claimCovTokenMap[_asset]) != address(0)) return;
+
+    ICoverERC20[] memory futureCovTokensCopy = futureCovTokens; // save gas
+    uint256 len = futureCovTokensCopy.length;
+    ICoverERC20 futureCovToken = futureCovTokensCopy[len - 1];
+
+    string memory assetName = StringHelper.bytes32ToString(_asset);
+    ICoverERC20 claimToken = _createCovToken(string(abi.encodePacked("C_", assetName, "_")));
+    claimCovTokens.push(claimToken);
+    claimCovTokenMap[_asset] = claimToken;
+    futureCovTokenMap[futureCovToken] = claimToken;
+
+    string memory nextFutureTokenName = string(abi.encodePacked("C_FUT", StringHelper.uintToString(len), "_"));
+    futureCovTokens.push(_createCovToken(nextFutureTokenName));
+  }
+
+  /// @notice redeem when there is an accepted claim
+  function redeemClaim() external override nonReentrant {
+    ICoverPool coverPool = ICoverPool(owner());
+    require(coverPool.claimNonce() > claimNonce, "Cover: no claim accepted");
+
+    ICoverPool.ClaimDetails memory claim = _claimDetails();
+    require(claim.incidentTimestamp <= expiry, "Cover: not eligible, redeem collateral instead");
+    (uint256 defaultRedeemDelay, ) = coverPool.getRedeemDelays();
+    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + defaultRedeemDelay, "Cover: not ready");
+
+    uint256 eligibleAmount;
+    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
+      ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
+      uint256 amount = covToken.balanceOf(msg.sender);
+      eligibleAmount = eligibleAmount + amount * claim.payoutNumerators[i] / claim.payoutDenominator;
+      covToken.burnByCover(msg.sender, amount);
+    }
+
+    if (claim.payoutTotalNum < claim.payoutDenominator) {
+      uint256 amount = noclaimCovToken.balanceOf(msg.sender);
+      uint256 payoutAmount = amount * (claim.payoutDenominator - claim.payoutTotalNum) / claim.payoutDenominator;
+      eligibleAmount = eligibleAmount + payoutAmount;
+      noclaimCovToken.burnByCover(msg.sender, amount);
+    }
+
+    require(eligibleAmount > 0, "Cover: low covToken balance");
+    _payCollateral(msg.sender, eligibleAmount);
+  }
+
   function viewClaimable(address _account) external view override returns (uint256 eligibleAmount) {
     ICoverPool.ClaimDetails memory claim = _claimDetails();
     for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
@@ -121,46 +221,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
   }
 
-  /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
-  function mint(uint256 _amount, address _receiver) external override onlyOwner {
-    require(deployComplete, "Cover: deploy incomplete");
-    require(ICoverPool(owner()).claimNonce() == claimNonce, "Cover: claim accepted");
-
-    uint256 adjustedAmount = _amount * depositRatio / 1e18;
-    (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
-    for (uint i = 0; i < _assetList.length; i++) {
-      claimCovTokenMap[_assetList[i]].mint(_receiver, adjustedAmount);
-    }
-    noclaimCovToken.mint(_receiver, adjustedAmount);
-    _handleLatestFutureToken(_receiver, adjustedAmount, true); // mint
-    totalDebt = totalDebt + adjustedAmount;
-  }
-
-  /**
-   * @notice redeem collateral
-   * - if there is an accepted claim, but incident time > expiry, redeem with noclaim tokens only if default delay passed
-   * - if expired and noclaim delay passed, no accepted claim, redeem with noclaim tokens only
-   * - otherwise, always allow redeem back collateral with all covToken at any give moment
-   */
-  function redeemCollateral(uint256 _amount) external override nonReentrant {
-    ICoverPool coverPool = ICoverPool(owner());
-    (uint256 defaultRedeemDelay, uint256 noclaimRedeemDelay) = coverPool.getRedeemDelays();
-
-    if (coverPool.claimNonce() > claimNonce) {
-      ICoverPool.ClaimDetails memory claim = _claimDetails();
-      if (claim.incidentTimestamp > expiry && block.timestamp >= uint256(expiry) + defaultRedeemDelay) {
-        // expired, redeem with noclaim tokens only
-        _burnNoclaimAndPay(noclaimCovToken, 1, 1);
-        return;
-      }
-    } else if (block.timestamp >= uint256(expiry) + noclaimRedeemDelay) {
-      // expired and noclaim delay passed, no accepted claim, redeem with noclaim tokens only
-      _burnNoclaimAndPay(noclaimCovToken, 1, 1);
-      return;
-    }
-    _redeemWithAllCovTokens(coverPool, _amount);
-  }
-
   /// @notice convert last future token to claim token and lastest future token
   function convert(ICoverERC20 _futureToken) public override {
     ICoverERC20 claimCovToken = futureCovTokenMap[_futureToken];
@@ -170,37 +230,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     _futureToken.burnByCover(msg.sender, amount);
     claimCovToken.mint(msg.sender, amount);
     _handleLatestFutureToken(msg.sender, amount, true);
-  }
-
-  function convertAll(ICoverERC20[] calldata _futureTokens) external override {
-    for (uint256 i = 0; i < _futureTokens.length; i++) {
-      convert(_futureTokens[i]);
-    }
-  }
-
-  /**
-   * @notice called by owner (CoverPool) only, when a new asset is added to pool the first time
-   * - create a new claim token for asset
-   * - point the current latest (last one in futureCovTokens) to newly created claim token
-   * - create a new future token and push to futureCovTokens
-   */
-  function addAsset(bytes32 _asset) external override onlyOwner {
-    if (block.timestamp >= expiry) return;
-    // make sure new asset has not already been added
-    if (address(claimCovTokenMap[_asset]) != address(0)) return;
-
-    ICoverERC20[] memory futureCovTokensCopy = futureCovTokens; // save gas
-    uint256 len = futureCovTokensCopy.length;
-    ICoverERC20 futureCovToken = futureCovTokensCopy[len - 1];
-
-    string memory assetName = StringHelper.bytes32ToString(_asset);
-    ICoverERC20 claimToken = _createCovToken(string(abi.encodePacked("C_", assetName, "_")));
-    claimCovTokens.push(claimToken);
-    claimCovTokenMap[_asset] = claimToken;
-    futureCovTokenMap[futureCovToken] = claimToken;
-
-    string memory nextFutureTokenName = string(abi.encodePacked("C_FUT", StringHelper.uintToString(len), "_"));
-    futureCovTokens.push(_createCovToken(nextFutureTokenName));
   }
 
   /**
@@ -226,38 +255,14 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     emit CoverDeployCompleted();
   }
 
-  /// @notice redeem when there is an accepted claim
-  function redeemClaim() external override nonReentrant {
-    ICoverPool coverPool = ICoverPool(owner());
-    require(coverPool.claimNonce() > claimNonce, "Cover: no claim accepted");
-
-    ICoverPool.ClaimDetails memory claim = _claimDetails();
-    require(claim.incidentTimestamp <= expiry, "Cover: not eligible, redeem collateral instead");
-    (uint256 defaultRedeemDelay, ) = coverPool.getRedeemDelays();
-    require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + defaultRedeemDelay, "Cover: not ready");
-
-    uint256 eligibleAmount;
-    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
-      ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
-      uint256 amount = covToken.balanceOf(msg.sender);
-      eligibleAmount = eligibleAmount + amount * claim.payoutNumerators[i] / claim.payoutDenominator;
-      covToken.burnByCover(msg.sender, amount);
-    }
-
-    if (claim.payoutTotalNum < claim.payoutDenominator) {
-      uint256 amount = noclaimCovToken.balanceOf(msg.sender);
-      uint256 payoutAmount = amount * (claim.payoutDenominator - claim.payoutTotalNum) / claim.payoutDenominator;
-      eligibleAmount = eligibleAmount + payoutAmount;
-      noclaimCovToken.burnByCover(msg.sender, amount);
-    }
-
-    require(eligibleAmount > 0, "Cover: low covToken balance");
-    _payCollateral(msg.sender, eligibleAmount);
-  }
-
   /// @notice the owner of this contract is CoverPool contract, the owner of CoverPool is CoverPoolFactory contract
   function _factory() internal view returns (ICoverPoolFactory) {
     return ICoverPoolFactory(IOwnable(owner()).owner());
+  }
+
+  // get the claim details for the corresponding nonce from coverPool contract
+  function _claimDetails() internal view returns (ICoverPool.ClaimDetails memory) {
+    return ICoverPool(owner()).getClaimDetails(claimNonce);
   }
 
   function _redeemWithAllCovTokens(ICoverPool coverPool, uint256 _amount) private {
@@ -270,12 +275,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       claimToken.burnByCover(msg.sender, _amount);
     }
     _payCollateral(msg.sender, _amount);
-  }
-
-  function _afterFees(uint256 _amount) private view returns (uint256 amountAfterFees) {
-    uint256 adjustedAmount = _amount * 1e18 / depositRatio;
-    uint256 fees = adjustedAmount * feeNumerator * duration / (feeDenominator * 365 days);
-    amountAfterFees = adjustedAmount - fees;
   }
 
   function _sendFees(uint256 _totalFees) private {
@@ -318,11 +317,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     _payCollateral(msg.sender, payoutAmount);
   }
 
-  // get the claim details for the corresponding nonce from coverPool contract
-  function _claimDetails() internal view returns (ICoverPool.ClaimDetails memory) {
-    return ICoverPool(owner()).getClaimDetails(claimNonce);
-  }
-
   /// @dev Emits CovTokenCreated
   function _createCovToken(string memory _prefix) private returns (ICoverERC20) {
     uint8 decimals = uint8(IERC20(collateral).decimals());
@@ -336,5 +330,11 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
     emit CovTokenCreated(proxyAddr);
     return ICoverERC20(proxyAddr);
+  }
+
+  function _afterFees(uint256 _amount) private view returns (uint256 amountAfterFees) {
+    uint256 adjustedAmount = _amount * 1e18 / depositRatio;
+    uint256 fees = adjustedAmount * feeNumerator * duration / (feeDenominator * 365 days);
+    amountAfterFees = adjustedAmount - fees;
   }
 }
