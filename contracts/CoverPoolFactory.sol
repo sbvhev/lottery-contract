@@ -19,6 +19,8 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
   bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bool,string[],address,uint256,uint48,string)"));
 
+  bool public override paused;
+  address public override responder;
   address public override coverPoolImpl;
   address public override coverImpl;
   address public override coverERC20Impl;
@@ -83,6 +85,12 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     emit CoverPoolCreated(_addr);
   }
 
+  function setPaused(bool _paused) external override {
+    require(msg.sender == owner() || msg.sender == responder, "CoverPoolFactory: caller not owner or responder");
+    emit PausedStatusUpdated(paused, _paused);
+    paused = _paused;
+  }
+
   function setDeployGasMin(uint256 _deployGasMin) external override onlyOwner {
     require(_deployGasMin > 0, "CoverPoolFactory: min gas cannot be 0");
     deployGasMin = _deployGasMin;
@@ -111,21 +119,27 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
   function setClaimManager(address _address) external override onlyOwner {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
-    emit ClaimManagerUpdated(claimManager, _address);
+    emit AddressUpdated('claimManager', claimManager, _address);
     claimManager = _address;
   }
 
   function setGovernance(address _address) external override onlyOwner {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
     require(_address != owner(), "CoverPoolFactory: governance cannot be owner");
-    emit GovernanceUpdated(governance, _address);
+    emit AddressUpdated('governance', governance, _address);
     governance = _address;
   }
 
   function setTreasury(address _address) external override onlyOwner {
     require(_address != address(0), "CoverPoolFactory: address cannot be 0");
-    emit TreasuryUpdated(treasury, _address);
+    emit AddressUpdated('treasury', treasury, _address);
     treasury = _address;
+  }
+
+  function setResponder(address _address) external override onlyOwner {
+    require(_address != address(0), "CoverPoolFactory: address cannot be 0");
+    emit AddressUpdated('responder', responder, _address);
+    responder = _address;
   }
 
   function getCoverPools() external view override returns (address[] memory) {

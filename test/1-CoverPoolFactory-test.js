@@ -29,6 +29,7 @@ describe('CoverPoolFactory', () => {
     expect(await coverPoolFactory.governance()).to.equal(governanceAddress);
     expect(await coverPoolFactory.treasury()).to.equal(treasuryAddress);
     expect(await coverPoolFactory.deployGasMin()).to.equal(1000000);
+    expect(await coverPoolFactory.paused()).to.equal(false);
   });
 
   it('Should emit CoverPoolCreation event', async () => {
@@ -50,18 +51,22 @@ describe('CoverPoolFactory', () => {
   it('Should update vars by authorized only', async () => {
     // should only be updated by owner
     await expect(coverPoolFactory.connect(userAAccount).setClaimManager(userAAddress)).to.be.reverted;
-    await expect(coverPoolFactory.connect(ownerAccount).setClaimManager(userAAddress)).to.emit(coverPoolFactory, 'ClaimManagerUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).setClaimManager(userAAddress)).to.emit(coverPoolFactory, 'AddressUpdated');
     expect(await coverPoolFactory.claimManager()).to.equal(userAAddress);
 
     // should only be updated by owner
     await coverPoolFactory.connect(ownerAccount).setDeployGasMin(6000000);
     expect(await coverPoolFactory.deployGasMin()).to.equal(6000000);
-    await expect(coverPoolFactory.connect(ownerAccount).setTreasury(ownerAddress)).to.emit(coverPoolFactory, 'TreasuryUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).setTreasury(ownerAddress)).to.emit(coverPoolFactory, 'AddressUpdated');
     await expect(coverPoolFactory.connect(ownerAccount).setCoverERC20Impl(dai.address)).to.emit(coverPoolFactory, 'ImplUpdated');
     await expect(coverPoolFactory.connect(ownerAccount).setCoverImpl(dai.address)).to.emit(coverPoolFactory, 'ImplUpdated');
     await expect(coverPoolFactory.connect(ownerAccount).setCoverPoolImpl(dai.address)).to.emit(coverPoolFactory, 'ImplUpdated');
 
-    await expect(coverPoolFactory.setGovernance(userAAddress)).to.emit(coverPoolFactory, 'GovernanceUpdated');
+    await expect(coverPoolFactory.setGovernance(userAAddress)).to.emit(coverPoolFactory, 'AddressUpdated');
+
+    await expect(coverPoolFactory.connect(ownerAccount).setResponder(userAAddress)).to.emit(coverPoolFactory, 'AddressUpdated');
+    await expect(coverPoolFactory.connect(userAAccount).setPaused(true)).to.emit(coverPoolFactory, 'PausedStatusUpdated');
+    expect(await coverPoolFactory.paused()).to.equal(false);
   });
 
   it('Should add 2 new coverPools by owner', async () => {

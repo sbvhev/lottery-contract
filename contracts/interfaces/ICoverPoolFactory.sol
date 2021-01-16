@@ -8,12 +8,13 @@ pragma solidity ^0.8.0;
  */
 interface ICoverPoolFactory {
   event CoverPoolCreated(address _addr);
-  event ImplUpdated(string _name, address _old, address _new);
-  event GovernanceUpdated(address _old, address _new);
-  event ClaimManagerUpdated(address _old, address _new);
-  event TreasuryUpdated(address _old, address _new);
+  event ImplUpdated(string _type, address _old, address _new);
+  event AddressUpdated(string _type, address _old, address _new);
+  event PausedStatusUpdated(bool _old, bool _new);
 
   // state vars
+  function paused() external view returns (bool);
+  function responder() external view returns (address);
   function coverPoolImpl() external view returns (address);
   function coverImpl() external view returns (address);
   function coverERC20Impl() external view returns (address);
@@ -32,7 +33,11 @@ interface ICoverPoolFactory {
   /// @notice _prefix example: "C_CURVE", "C_FUT1", or "NC_"
   function getCovTokenAddress(string calldata _coverPoolName, uint48 _expiry, address _collateral, uint256 _claimNonce, string memory _prefix) external view returns (address);
 
+  // access restriction - owner (dev) & responder
+  function setPaused(bool _paused) external;
+
   // access restriction - owner (dev)
+  function setResponder(address _responder) external;
   function setDeployGasMin(uint256 _deployGasMin) external;
   /// @dev update Impl will only affect contracts deployed after
   function setCoverPoolImpl(address _newImpl) external;
