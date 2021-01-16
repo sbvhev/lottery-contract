@@ -29,9 +29,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   bytes4 private constant COVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint48,address,uint256,uint256)"));
 
-  // only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
-  bool private isActive;
   bool private extendablePool;
+  // only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
+  bool private active;
   bool public override isAddingAsset;
   string public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
@@ -102,7 +102,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     defaultRedeemDelay = 3 days;
     noclaimRedeemDelay = 3 days;
     yearlyFeeRate = 0.006 ether; // 0.6% yearly rate
-    isActive = true;
+    active = true;
     deployCover(_collateral, _expiry);
   }
 
@@ -213,8 +213,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   // update status of coverPool, if false, will pause new cover creation
-  function setActive(bool _isActive) external override onlyDev {
-    isActive = _isActive;
+  function setActive(bool _active) external override onlyDev {
+    active = _active;
   }
 
   function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external override {
@@ -342,7 +342,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   function _validateCover(address _collateral, uint48 _expiry) private view {
-    require(isActive, "CoverPool: pool not active");
+    require(active, "CoverPool: pool not active");
     require(!isAddingAsset, "CoverPool: waiting to complete adding asset");
     require(collateralStatusMap[_collateral].status == 1, "CoverPool: invalid collateral");
     require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == 1, "CoverPool: invalid expiry");
