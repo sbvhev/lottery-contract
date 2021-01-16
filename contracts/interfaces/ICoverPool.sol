@@ -72,8 +72,13 @@ interface ICoverPool {
     uint48 _incidentTimestamp,
     uint256 _coverPoolNonce
   ) external;
+
   // CM and Gov only
   function setNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external;
+
+  // access restriction - governance
+  function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external;
+  function setYearlyFeeRate(uint256 _yearlyFeeRate) external;
 
   // access restriction - dev
   function addRisk(string calldata _risk) external;
@@ -81,8 +86,4 @@ interface ICoverPool {
   function setExpiry(uint48 _expiry, string calldata _expiryName, uint8 _status) external;
   function setCollateral(address _collateral, uint256 _mintRatio, uint8 _status) external;
   function setActive(bool _active) external;
-
-  // access restriction - governance
-  function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external;
-  function setYearlyFeeRate(uint256 _yearlyFeeRate) external;
 }
