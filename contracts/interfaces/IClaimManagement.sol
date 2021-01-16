@@ -11,17 +11,17 @@ interface IClaimManagement {
 
   enum ClaimState { Filed, ForceFiled, Validated, Invalidated, Accepted, Denied }
   struct Claim {
-    ClaimState state; // Current state of claim
     address filedBy; // Address of user who filed claim
     address decidedBy; // Address of the CVC who decided claim
-    bytes32[] payoutAssetList;
-    uint256[] payoutNumerators; // Numerators of percent to payout
-    uint256 payoutDenominator; // Denominator of percent to payout
     uint48 filedTimestamp; // Timestamp of submitted claim
     uint48 incidentTimestamp; // Timestamp of the incident the claim is filed for
     uint48 decidedTimestamp; // Timestamp when claim outcome is decided
-    uint256 feePaid; // Fee paid to file the claim
     string description;
+    ClaimState state; // Current state of claim
+    uint256 feePaid; // Fee paid to file the claim
+    uint256 payoutDenominator; // Denominator of percent to payout
+    bytes32[] payoutAssetList;
+    uint256[] payoutNumerators; // Numerators of percent to payout
   }
 
   function getCoverPoolClaims(address _coverPool, uint256 _nonce, uint256 _index) external view returns (Claim memory);

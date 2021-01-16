@@ -47,17 +47,17 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     uint256 nonce = _getCoverPoolNonce(coverPool);
     uint256 claimFee = getCoverPoolClaimFee(coverPool);
     coverPoolClaims[coverPool][nonce].push(Claim({
-      state: ClaimState.Filed,
       filedBy: msg.sender,
       decidedBy: address(0),
-      payoutAssetList: _exploitAssets,
-      payoutNumerators: new uint256[](_exploitAssets.length),
-      payoutDenominator: 1,
       filedTimestamp: uint48(block.timestamp),
       incidentTimestamp: _incidentTimestamp,
       decidedTimestamp: 0,
+      description: _description,
+      state: ClaimState.Filed,
       feePaid: claimFee,
-      description: _description
+      payoutDenominator: 1,
+      payoutAssetList: _exploitAssets,
+      payoutNumerators: new uint256[](_exploitAssets.length)
     }));
     feeCurrency.safeTransferFrom(msg.sender, address(this), claimFee);
     _updateCoverPoolClaimFee(coverPool);
@@ -78,17 +78,17 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
 
     uint256 nonce = _getCoverPoolNonce(coverPool);
     coverPoolClaims[coverPool][nonce].push(Claim({
-      state: ClaimState.ForceFiled,
       filedBy: msg.sender,
       decidedBy: address(0),
-      payoutAssetList: _exploitAssets,
-      payoutNumerators: new uint256[](_exploitAssets.length),
-      payoutDenominator: 1,
       filedTimestamp: uint48(block.timestamp),
       incidentTimestamp: _incidentTimestamp,
       decidedTimestamp: 0,
+      description: _description,
+      state: ClaimState.ForceFiled,
       feePaid: forceClaimFee,
-      description: _description
+      payoutDenominator: 1,
+      payoutAssetList: _exploitAssets,
+      payoutNumerators: new uint256[](_exploitAssets.length)
     }));
     ICoverPool(coverPool).setNoclaimRedeemDelay(10 days);
     feeCurrency.safeTransferFrom(msg.sender, address(this), forceClaimFee);
