@@ -63,7 +63,5 @@ interface ICoverPoolFactory {
   ) external returns (address);
   function setTreasury(address _address) external;
   function setClaimManager(address _address) external;
-
-  // access restriction - governance
   function setGovernance(address _address) external;
 }  

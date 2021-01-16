@@ -39,11 +39,11 @@ describe('CoverPoolFactory', () => {
 
   // test functions with governance access restriction
   it('Should NOT update governance to address(0) by governance', async () => {
-    await expectRevert(coverPoolFactory.connect(governanceAccount).setGovernance(consts.ADDRESS_ZERO), 'CoverPoolFactory: address cannot be 0');
+    await expectRevert(coverPoolFactory.setGovernance(consts.ADDRESS_ZERO), 'CoverPoolFactory: address cannot be 0');
   });
 
   it('Should NOT update governance to owner by governance', async () => {
-    await expectRevert(coverPoolFactory.connect(governanceAccount).setGovernance(ownerAddress), 'CoverPoolFactory: governance cannot be owner');
+    await expectRevert(coverPoolFactory.setGovernance(ownerAddress), 'CoverPoolFactory: governance cannot be owner');
   });
 
   // test functions with owner access restriction
@@ -61,7 +61,7 @@ describe('CoverPoolFactory', () => {
     await expect(coverPoolFactory.connect(ownerAccount).setCoverImpl(dai.address)).to.emit(coverPoolFactory, 'CoverImplUpdated');
     await expect(coverPoolFactory.connect(ownerAccount).setCoverPoolImpl(dai.address)).to.emit(coverPoolFactory, 'CoverPoolImplUpdated');
 
-    await expect(coverPoolFactory.connect(governanceAccount).setGovernance(userAAddress)).to.emit(coverPoolFactory, 'GovernanceUpdated');
+    await expect(coverPoolFactory.setGovernance(userAAddress)).to.emit(coverPoolFactory, 'GovernanceUpdated');
   });
 
   it('Should add 2 new coverPools by owner', async () => {
