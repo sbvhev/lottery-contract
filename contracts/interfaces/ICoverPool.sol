@@ -12,7 +12,7 @@ interface ICoverPool {
   event DefaultRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
   event NoclaimRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
   event ClaimEnacted(uint256 _enactedClaimNonce);
-  event AssetUpdated(bytes32 _asset, bool _isAddAsset);
+  event RiskUpdated(bytes32 _risk, bool _isAddRisk);
 
   struct ExpiryInfo {
     string name;
@@ -33,7 +33,7 @@ interface ICoverPool {
 
   // state vars
   function name() external view returns (string memory);
-  function isAddingAsset() external view returns (bool);
+  function isAddingRisk() external view returns (bool);
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   function claimNonce() external view returns (uint256);
   // yearlyFeeRate is 1e18
@@ -76,8 +76,8 @@ interface ICoverPool {
   function setNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external;
 
   // access restriction - dev
-  function addAsset(string calldata _asset) external;
-  function deleteAsset(string calldata _asset) external;
+  function addRisk(string calldata _risk) external;
+  function deleteRisk(string calldata _risk) external;
   function setExpiry(uint48 _expiry, string calldata _expiryName, uint8 _status) external;
   function setCollateral(address _collateral, uint256 _mintRatio, uint8 _status) external;
   function setActive(bool _active) external;

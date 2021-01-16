@@ -17,7 +17,7 @@ interface ICover {
   /// @notice created as initialization, cannot be changed
   function claimNonce() external view returns (uint256);
   function feeRate() external view returns (uint256);
-  function claimCovTokenMap(bytes32 _asset) external view returns (ICoverERC20 _claimCovToken);
+  function claimCovTokenMap(bytes32 _risk) external view returns (ICoverERC20 _claimCovToken);
   function futureCovTokenMap(ICoverERC20 _futureCovToken) external view returns (ICoverERC20 _claimCovToken);
 
   // extra view
@@ -49,5 +49,5 @@ interface ICover {
 
   // access restriction - owner (CoverPool)
   function mint(uint256 _amount, address _receiver) external;
-  function addAsset(bytes32 _asset) external;
+  function addRisk(bytes32 _risk) external;
 }

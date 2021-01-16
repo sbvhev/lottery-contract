@@ -112,9 +112,9 @@ describe('Cover', function() {
     expect(noclaimCovTokenAddress).to.equal(computedNoclaimCovTokenAddress);
   });
 
-  it('Should add asset, convert, mint, and redeem with new active tokens only', async function() {
-    await expect(coverPool.addAsset(consts.ASSET_4)).to.emit(cover, 'CovTokenCreated');
-    await expect(coverPool.addAsset(consts.ASSET_5)).to.emit(cover, 'CovTokenCreated');
+  it('Should add risk, convert, mint, and redeem with new active tokens only', async function() {
+    await expect(coverPool.addRisk(consts.ASSET_4)).to.emit(cover, 'CovTokenCreated');
+    await expect(coverPool.addRisk(consts.ASSET_5)).to.emit(cover, 'CovTokenCreated');
     const [,,,,,,noclaimCovTokenAddress, claimCovTokens, futureCovTokens] = await cover.getCoverDetails();
     const noclaimCovToken = CoverERC20.attach(noclaimCovTokenAddress);
     const futureCovToken = CoverERC20.attach(futureCovTokens[futureCovTokens.length - 1]);
@@ -155,9 +155,9 @@ describe('Cover', function() {
     expect(await dai.balanceOf(userAAddress)).to.equal(userABal.add(ETHER_UINT_10).sub(fees));
   });
 
-  it('Should delete asset, mint, and redeem with active tokens only', async function() {
-    await coverPool.deleteAsset(consts.ASSET_2);
-    await expectRevert(coverPool.addAsset(consts.ASSET_2), "CoverPool: deleted asset not allowed");
+  it('Should delete risk, mint, and redeem with active tokens only', async function() {
+    await coverPool.deleteRisk(consts.ASSET_2);
+    await expectRevert(coverPool.addRisk(consts.ASSET_2), "CoverPool: deleted risk not allowed");
 
     await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
     const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.ASSET_1_BYTES32));

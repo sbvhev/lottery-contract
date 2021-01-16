@@ -117,23 +117,23 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   /**
-   * @notice called by owner (CoverPool) only, when a new asset is added to pool the first time
-   * - create a new claim token for asset
+   * @notice called by owner (CoverPool) only, when a new risk is added to pool the first time
+   * - create a new claim token for risk
    * - point the current latest (last one in futureCovTokens) to newly created claim token
    * - create a new future token and push to futureCovTokens
    */
-  function addAsset(bytes32 _asset) external override onlyOwner {
+  function addRisk(bytes32 _risk) external override onlyOwner {
     if (block.timestamp >= expiry) return;
-    // make sure new asset has not already been added
-    if (address(claimCovTokenMap[_asset]) != address(0)) return;
+    // make sure new risk has not already been added
+    if (address(claimCovTokenMap[_risk]) != address(0)) return;
 
     ICoverERC20[] memory futureCovTokensCopy = futureCovTokens; // save gas
     uint256 len = futureCovTokensCopy.length;
     ICoverERC20 futureCovToken = futureCovTokensCopy[len - 1];
 
-    string memory assetName = StringHelper.bytes32ToString(_asset);
-    ICoverERC20 claimToken = _createCovToken(string(abi.encodePacked("C_", assetName, "_")));
-    claimCovTokenMap[_asset] = claimToken;
+    string memory riskName = StringHelper.bytes32ToString(_risk);
+    ICoverERC20 claimToken = _createCovToken(string(abi.encodePacked("C_", riskName, "_")));
+    claimCovTokenMap[_risk] = claimToken;
     futureCovTokenMap[futureCovToken] = claimToken;
 
     string memory nextFutureTokenName = string(abi.encodePacked("C_FUT", StringHelper.uintToString(len), "_"));
@@ -249,8 +249,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       if (startGas < _factory().deployGasMin()) return;
       ICoverERC20 claimToken = claimCovTokenMap[_riskList[i]];
       if (address(claimToken) == address(0)) {
-        string memory assetName = StringHelper.bytes32ToString(_riskList[i]);
-        claimToken = _createCovToken(string(abi.encodePacked("C_", assetName, "_")));
+        string memory riskName = StringHelper.bytes32ToString(_riskList[i]);
+        claimToken = _createCovToken(string(abi.encodePacked("C_", riskName, "_")));
         claimCovTokenMap[_riskList[i]] = claimToken;
         startGas = gasleft();
       }

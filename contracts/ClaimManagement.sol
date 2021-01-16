@@ -36,7 +36,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   /// @notice File a claim for a Cover Pool, `_incidentTimestamp` must be within the past 3 days
   function fileClaim(
     string calldata _coverPoolName,
-    bytes32[] calldata _exploitAssets,
+    bytes32[] calldata _exploitRisks,
     uint48 _incidentTimestamp,
     string calldata _description
   ) external override {
@@ -56,8 +56,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       state: ClaimState.Filed,
       feePaid: claimFee,
       payoutDenominator: 1,
-      payoutRiskList: _exploitAssets,
-      payoutNumerators: new uint256[](_exploitAssets.length)
+      payoutRiskList: _exploitRisks,
+      payoutNumerators: new uint256[](_exploitRisks.length)
     }));
     feeCurrency.safeTransferFrom(msg.sender, address(this), claimFee);
     _updateCoverPoolClaimFee(coverPool);
@@ -68,7 +68,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   /// @notice Force file a claim for a Cover Pool, `_incidentTimestamp` must be within the past 3 days.    
   function forceFileClaim(
     string calldata _coverPoolName,
-    bytes32[] calldata _exploitAssets,
+    bytes32[] calldata _exploitRisks,
     uint48 _incidentTimestamp,
     string calldata _description
   ) external override {
@@ -87,8 +87,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       state: ClaimState.ForceFiled,
       feePaid: forceClaimFee,
       payoutDenominator: 1,
-      payoutRiskList: _exploitAssets,
-      payoutNumerators: new uint256[](_exploitAssets.length)
+      payoutRiskList: _exploitRisks,
+      payoutNumerators: new uint256[](_exploitRisks.length)
     }));
     ICoverPool(coverPool).setNoclaimRedeemDelay(10 days);
     feeCurrency.safeTransferFrom(msg.sender, address(this), forceClaimFee);
@@ -136,11 +136,11 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     uint256 _nonce,
     uint256 _index,
     bool _claimIsAccepted,
-    bytes32[] calldata _exploitAssets,
+    bytes32[] calldata _exploitRisks,
     uint256[] calldata _payoutNumerators,
     uint256 _payoutDenominator
   ) external override {
-    require(_exploitAssets.length == _payoutNumerators.length, "CoverPool: payout assets len don't match");
+    require(_exploitRisks.length == _payoutNumerators.length, "CoverPool: payout risks len don't match");
     require(isCVCMember(_coverPool, msg.sender), "COVER_CM: !cvc");
     require(_nonce == _getCoverPoolNonce(_coverPool), "COVER_CM: wrong nonce");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
@@ -156,7 +156,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       require(totalNum > 0 && totalNum <= _payoutDenominator, "CoverPool: payout % is not in (0%, 100%]");
 
       claim.state = ClaimState.Accepted;
-      claim.payoutRiskList = _exploitAssets;
+      claim.payoutRiskList = _exploitRisks;
       claim.payoutNumerators = _payoutNumerators;
       claim.payoutDenominator = _payoutDenominator;
       feeCurrency.safeTransfer(claim.filedBy, claim.feePaid);

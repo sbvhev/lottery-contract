@@ -27,7 +27,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   address public override treasury; // receive fees collected
   address public override governance;
   address public override claimManager;
-  /// @notice min gas left requirement before continue deployments (when creating new Cover or adding assets to CoverPool)
+  /// @notice min gas left requirement before continue deployments (when creating new Cover or adding risks to CoverPool)
   uint256 public override deployGasMin = 1000000;
   // not all coverPools are active
   string[] private coverPoolNames;
@@ -57,7 +57,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   /**
    * @notice Create a new Cover Pool
    * @param _name name for pool, e.g. Yearn
-   * @param _extendablePool extendable pools allow adding new asset
+   * @param _extendablePool extendable pools allow adding new risk
    * @param _riskList list of underlying that are covered in the pool
    * @param _collateral the collateral of the pool
    * @param _mintRatio must be 18 decimals, in (0, + infinity), 1.5 means 1 collateral mints 1.5 covTokens

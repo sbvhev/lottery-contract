@@ -28,13 +28,13 @@ interface IClaimManagement {
   
   function fileClaim(
     string calldata _coverPoolName,
-    bytes32[] calldata _exploitAssets,
+    bytes32[] calldata _exploitRisks,
     uint48 _incidentTimestamp,
     string calldata _description
   ) external;
   function forceFileClaim(
     string calldata _coverPoolName,
-    bytes32[] calldata _exploitAssets,
+    bytes32[] calldata _exploitRisks,
     uint48 _incidentTimestamp,
     string calldata _description
   ) external;
@@ -48,7 +48,7 @@ interface IClaimManagement {
     uint256 _nonce,
     uint256 _index,
     bool _claimIsAccepted,
-    bytes32[] calldata _exploitAssets,
+    bytes32[] calldata _exploitRisks,
     uint256[] calldata _payoutNumerators,
     uint256 _payoutDenominator
   ) external;

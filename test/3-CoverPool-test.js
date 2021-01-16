@@ -101,7 +101,7 @@ describe('CoverPool', () => {
     await expect(coverPool.connect(ownerAccount).setNoclaimRedeemDelay(10 * 24 * 60 * 60, 0)).to.be.reverted;
   });
 
-  it('Should add and delete asset for open pool', async () => {
+  it('Should add and delete risk for open pool', async () => {
     expect(await coverPoolFactory
       .createCoverPool(consts.POOL_3, true, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);  
@@ -110,20 +110,20 @@ describe('CoverPool', () => {
     const coverPool = CoverPool.attach(coverPoolAddr);
     expect(await coverPool.name()).to.equal(consts.POOL_3);
 
-    await coverPool.deleteAsset(consts.ASSET_2);
+    await coverPool.deleteRisk(consts.ASSET_2);
     const [,,,,,riskList, deletedRiskList] = await coverPool.getCoverPoolDetails();
     expect(riskList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32]);
     expect(deletedRiskList).to.deep.equal([consts.ASSET_2_BYTES32]);
 
-    await expect(coverPool.addAsset(consts.ASSET_2)).to.be.reverted;
-    await expect(coverPool.addAsset(consts.ASSET_4)).to.emit(coverPool, 'AssetUpdated');
+    await expect(coverPool.addRisk(consts.ASSET_2)).to.be.reverted;
+    await expect(coverPool.addRisk(consts.ASSET_4)).to.emit(coverPool, 'RiskUpdated');
     const [,,,,,riskListAfterAdd] = await coverPool.getCoverPoolDetails();
     expect(riskListAfterAdd).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32, consts.ASSET_4_BYTES32]);
 
-    await coverPool.deleteAsset(consts.ASSET_4);
+    await coverPool.deleteRisk(consts.ASSET_4);
   });
 
-  it('Should ONLY delete, NOT add asset for close pool', async () => {
+  it('Should ONLY delete, NOT add risk for close pool', async () => {
     expect(await coverPoolFactory
       .createCoverPool(consts.POOL_3, false, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);  
@@ -132,25 +132,25 @@ describe('CoverPool', () => {
     const coverPool = CoverPool.attach(coverPoolAddr);
     expect(await coverPool.name()).to.equal(consts.POOL_3);
 
-    await coverPool.deleteAsset(consts.ASSET_2);
+    await coverPool.deleteRisk(consts.ASSET_2);
     const [,,,,,riskList, deletedRiskList] = await coverPool.getCoverPoolDetails();
     expect(riskList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32]);
     expect(deletedRiskList).to.deep.equal([consts.ASSET_2_BYTES32]);
 
-    await expect(coverPool.addAsset(consts.ASSET_2)).to.be.reverted;
-    await expect(coverPool.addAsset(consts.ASSET_4)).to.be.reverted;
+    await expect(coverPool.addRisk(consts.ASSET_2)).to.be.reverted;
+    await expect(coverPool.addRisk(consts.ASSET_4)).to.be.reverted;
     const [,,,,,riskListAfterAdd] = await coverPool.getCoverPoolDetails();
     expect(riskListAfterAdd).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32]);
   });
 
-  it('Should delete asset from pool correctly', async () => {
-    await expect(coverPool.deleteAsset(consts.ASSET_1)).to.emit(coverPool, 'AssetUpdated');
+  it('Should delete risk from pool correctly', async () => {
+    await expect(coverPool.deleteRisk(consts.ASSET_1)).to.emit(coverPool, 'RiskUpdated');
     const [,,,,, riskList, deletedRiskList] = await coverPool.getCoverPoolDetails();
     expect(riskList).to.deep.equal([consts.ASSET_2_BYTES32]);
     expect(deletedRiskList).to.deep.equal([consts.ASSET_1_BYTES32]);
 
-    await expectRevert(coverPool.deleteAsset(consts.ASSET_1), "CoverPool: not active asset");
-    await expectRevert(coverPool.deleteAsset(consts.ASSET_2), "CoverPool: only 1 asset left");
+    await expectRevert(coverPool.deleteRisk(consts.ASSET_1), "CoverPool: not active risk");
+    await expectRevert(coverPool.deleteRisk(consts.ASSET_2), "CoverPool: only 1 risk left");
   });
 
   it('Should add cover for userA and emit event', async () => {
@@ -228,8 +228,8 @@ describe('CoverPool', () => {
     await expect(coverPool.connect(userAAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
   });
 
-  it('Should NOT enactClaim if have non active asset', async () => {
-    await expectRevert(coverPool.enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32], [20, 40], 100, INCIDENT_TIMESTAMP, 0), "CoverPool: has non active asset");
+  it('Should NOT enactClaim if have non active risk', async () => {
+    await expectRevert(coverPool.enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32], [20, 40], 100, INCIDENT_TIMESTAMP, 0), "CoverPool: has non active risk");
   });
   
   it('Should NOT enactClaim if called by non-claimManager', async () => {

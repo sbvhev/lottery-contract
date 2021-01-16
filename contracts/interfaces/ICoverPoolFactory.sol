@@ -21,7 +21,7 @@ interface ICoverPoolFactory {
   function treasury() external view returns (address);
   function governance() external view returns (address);
   function claimManager() external view returns (address);
-  /// @notice min gas left requirement before continue deployments (when creating new Cover or adding assets to CoverPool)
+  /// @notice min gas left requirement before continue deployments (when creating new Cover or adding risks to CoverPool)
   function deployGasMin() external view returns (uint256);
   function coverPools(string calldata _coverPoolName) external view returns (address);
 
@@ -46,8 +46,8 @@ interface ICoverPoolFactory {
   /**
    * @notice Create a new Cover Pool
    * @param _name name for pool, e.g. Yearn
-   * @param _extendablePool open pools allow adding new asset
-   * @param _riskList risk assets that are covered in this pool
+   * @param _extendablePool open pools allow adding new risk
+   * @param _riskList risk risks that are covered in this pool
    * @param _collateral the collateral of the pool
    * @param _mintRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
    * @param _expiry expiration date supported for the pool

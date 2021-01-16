@@ -21,8 +21,8 @@ import "./interfaces/ICoverPoolFactory.sol";
  * @author crypto-pumpkin
  * 
  * Pool types:
- * - extendable pool: allowed to add and delete asset
- * - non-extendable pool: NOT allowed to add asset, but allowed to delete asset
+ * - extendable pool: allowed to add and delete risk
+ * - non-extendable pool: NOT allowed to add risk, but allowed to delete risk
  */
 contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
@@ -32,7 +32,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   bool private extendablePool;
   // only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   bool private active;
-  bool public override isAddingAsset;
+  bool public override isAddingRisk;
   string public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
@@ -41,18 +41,17 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   uint256 private defaultRedeemDelay;
   uint256 private noclaimRedeemDelay;
 
-  // only covers that have never accepted a claim
   address[] private activeCovers;
   address[] private allCovers;
   uint48[] private expiries;
-  // list of active assets in cover pool
+  // list of active risks in cover pool
   bytes32[] private riskList;
   bytes32[] private deletedRiskList;
   address[] private collaterals;
   // [claimNonce] => accepted ClaimDetails
   ClaimDetails[] private claimDetails;
-  // assetName => status. 0 never added; 1 active, 2 inactive/deleted
-  mapping(bytes32 => uint8) private assetsMap;
+  // riskName => status. 0 never added; 1 active, 2 inactive/deleted
+  mapping(bytes32 => uint8) private riskMap;
   mapping(address => CollateralInfo) public override collateralStatusMap;
   mapping(uint48 => ExpiryInfo) public override expiryInfoMap;
   // collateral => timestamp => coverAddress, most recent (might be expired) cover created for the collateral and timestamp combination
@@ -92,10 +91,10 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     expiryInfoMap[_expiry] = ExpiryInfo(_expiryString, 1);
 
     for (uint256 j = 0; j < _riskList.length; j++) {
-      bytes32 asset = StringHelper.stringToBytes32(_riskList[j]);
-      require(assetsMap[asset] == 0, "CoverPool: duplicated assets");
-      riskList.push(asset);
-      assetsMap[asset] = 1;
+      bytes32 risk = StringHelper.stringToBytes32(_riskList[j]);
+      require(riskMap[risk] == 0, "CoverPool: duplicated risks");
+      riskList.push(risk);
+      riskMap[risk] = 1;
     }
 
     // set default delay for redeem
@@ -129,22 +128,22 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     emit CoverAdded(coverAddr, msg.sender, received);
   }
 
-  /// @notice add asset to pool, new asset cannot be deleted asset
-  function addAsset(string calldata _asset) external override onlyDev {
-    bytes32 asset = StringHelper.stringToBytes32(_asset);
+  /// @notice add risk to pool, new risk cannot be deleted risk
+  function addRisk(string calldata _risk) external override onlyDev {
+    bytes32 risk = StringHelper.stringToBytes32(_risk);
     require(extendablePool, "CoverPool: not extendable pool");
-    require(assetsMap[asset] != 2, "CoverPool: deleted asset not allowed");
+    require(riskMap[risk] != 2, "CoverPool: deleted risk not allowed");
 
-    if (assetsMap[asset] == 0) {
-      // first time adding asset, make sure no other asset adding in prrogress
-      require(!isAddingAsset, "CoverPool: last asset adding not complete");
-      isAddingAsset = true;
-      assetsMap[asset] = 1;
-      riskList.push(asset);
-      emit AssetUpdated(asset, true);
+    if (riskMap[risk] == 0) {
+      // first time adding risk, make sure no other risk adding in prrogress
+      require(!isAddingRisk, "CoverPool: last risk adding not complete");
+      isAddingRisk = true;
+      riskMap[risk] = 1;
+      riskList.push(risk);
+      emit RiskUpdated(risk, true);
     }
 
-    // continue adding asset, this may not be the first time this func is called for the asset
+    // continue adding risk, this may not be the first time this func is called for the risk
     address[] memory activeCoversCopy = activeCovers; // save gas
     if (activeCoversCopy.length == 0) return;
     uint256 startGas = gasleft();
@@ -152,29 +151,29 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       // ensure enough gas left to avoid revert all the previous work
       if (startGas < _factory().deployGasMin()) return;
       // below call deploys two covToken contracts, if cover already added, call will do nothing
-      ICover(activeCoversCopy[i]).addAsset(asset);
+      ICover(activeCoversCopy[i]).addRisk(risk);
       startGas = gasleft();
     }
-    isAddingAsset = false;
+    isAddingRisk = false;
   }
 
-  /// @notice delete asset from pool
-  function deleteAsset(string calldata _asset) external override onlyDev {
-    bytes32 asset = StringHelper.stringToBytes32(_asset);
-    require(assetsMap[asset] == 1, "CoverPool: not active asset");
+  /// @notice delete risk from pool
+  function deleteRisk(string calldata _risk) external override onlyDev {
+    bytes32 risk = StringHelper.stringToBytes32(_risk);
+    require(riskMap[risk] == 1, "CoverPool: not active risk");
     bytes32[] memory riskListCopy = riskList; // save gas
-    require(riskListCopy.length > 1, "CoverPool: only 1 asset left");
+    require(riskListCopy.length > 1, "CoverPool: only 1 risk left");
 
     bytes32[] memory newRiskList = new bytes32[](riskListCopy.length - 1);
     uint256 newListInd = 0;
     for (uint256 i = 0; i < riskListCopy.length; i++) {
-      if (asset != riskListCopy[i]) {
+      if (risk != riskListCopy[i]) {
         newRiskList[newListInd] = riskListCopy[i];
         newListInd++;
       } else {
-        assetsMap[asset] = 2;
-        deletedRiskList.push(asset);
-        emit AssetUpdated(asset, false);
+        riskMap[risk] = 2;
+        deletedRiskList.push(risk);
+        emit RiskUpdated(risk, false);
       }
     }
     riskList = newRiskList;
@@ -248,13 +247,13 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint256 _coverPoolNonce
   ) external override {
     require(_coverPoolNonce == claimNonce, "CoverPool: nonces do not match");
-    require(_payoutRiskList.length == _payoutNumerators.length, "CoverPool: payout asset length don't match");
+    require(_payoutRiskList.length == _payoutNumerators.length, "CoverPool: payout risk length don't match");
     ICoverPoolFactory factory = _factory();
     require(msg.sender == factory.claimManager(), "CoverPool: caller not claimManager");
 
     uint256 totalNum;
     for (uint256 i = 0; i < _payoutRiskList.length; i++) {
-      require(assetsMap[_payoutRiskList[i]] == 1, "CoverPool: has non active asset");
+      require(riskMap[_payoutRiskList[i]] == 1, "CoverPool: has non active risk");
       totalNum = totalNum + _payoutNumerators[i];
     }
     require(totalNum <= _payoutDenominator && totalNum > 0, "CoverPool: payout % is not in (0%, 100%]");
@@ -343,7 +342,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   function _validateCover(address _collateral, uint48 _expiry) private view {
     require(active, "CoverPool: pool not active");
-    require(!isAddingAsset, "CoverPool: waiting to complete adding asset");
+    require(!isAddingRisk, "CoverPool: waiting to complete adding risk");
     require(collateralStatusMap[_collateral].status == 1, "CoverPool: invalid collateral");
     require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == 1, "CoverPool: invalid expiry");
   }
