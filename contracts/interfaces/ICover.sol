@@ -16,24 +16,24 @@ interface ICover {
   function deployComplete() external view returns (bool);
   /// @notice created as initialization, cannot be changed
   function claimNonce() external view returns (uint256);
+  function feeRate() external view returns (uint256);
   function claimCovTokenMap(bytes32 _asset) external view returns (ICoverERC20 _claimCovToken);
   function futureCovTokenMap(ICoverERC20 _futureCovToken) external view returns (ICoverERC20 _claimCovToken);
 
   // extra view
-  function getRedeemFees() external view returns (uint256 _numerator, uint256 _denominator);
   function viewClaimable(address _account) external view returns (uint256 _eligibleCovTokenAmount);
   function getCoverDetails()
-    external view returns (
+    external view
+    returns (
       string memory _name, // Yearn_0_DAI_210131
       uint48 _expiry,
       address _collateral,
       uint256 _mintRatio,
+      uint256 _feeRate,
       uint256 _claimNonce,
-      uint256 _duration,
       ICoverERC20 _noclaimCovToken,
       ICoverERC20[] memory _claimCovTokens,
-      ICoverERC20[] memory _futureCovTokens
-    );
+      ICoverERC20[] memory _futureCovTokens);
 
   // user action
   function collectFees() external;
