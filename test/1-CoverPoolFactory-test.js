@@ -66,7 +66,7 @@ describe('CoverPoolFactory', () => {
 
     await expect(coverPoolFactory.connect(ownerAccount).setResponder(userAAddress)).to.emit(coverPoolFactory, 'AddressUpdated');
     await expect(coverPoolFactory.connect(userAAccount).setPaused(true)).to.emit(coverPoolFactory, 'PausedStatusUpdated');
-    expect(await coverPoolFactory.paused()).to.equal(false);
+    expect(await coverPoolFactory.paused()).to.equal(true);
   });
 
   it('Should add 2 new coverPools by owner', async () => {
