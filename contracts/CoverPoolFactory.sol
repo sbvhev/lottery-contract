@@ -45,6 +45,11 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     address _governance,
     address _treasury
   ) {
+    require(Address.isContract(_coverPoolImpl), "CoverPoolFactory: _coverPoolImpl is not a contract");
+    require(Address.isContract(_coverImpl), "CoverPoolFactory: _coverImpl is not a contract");
+    require(Address.isContract(_coverERC20Impl), "CoverPoolFactory: _coverERC20Impl is not a contract");
+    require(_governance != address(0), "CoverPoolFactory: governance cannot be 0");
+    require(_treasury != address(0), "CoverPoolFactory: treasury cannot be 0");
     coverPoolImpl = _coverPoolImpl;
     coverImpl = _coverImpl;
     coverERC20Impl = _coverERC20Impl;

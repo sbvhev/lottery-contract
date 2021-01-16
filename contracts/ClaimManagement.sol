@@ -24,6 +24,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     );
     require(_treasury != address(0), "COVER_CM: treasury cannot be 0");
     require(_coverPoolFactory != address(0), "COVER_CM: coverPool factory cannot be 0");
+    require(_defaultCVC != address(0), "COVER_CM: defaultCVC cannot be 0");
     governance = _governance;
     treasury = _treasury;
     coverPoolFactory = _coverPoolFactory;
