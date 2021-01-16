@@ -33,7 +33,7 @@ interface ICoverPool {
 
   // state vars
   function name() external view returns (string memory);
-  function isAddingRisk() external view returns (bool);
+  function addingRiskWIP() external view returns (bool);
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   function claimNonce() external view returns (uint256);
   // yearlyFeeRate is 1e18

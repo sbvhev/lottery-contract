@@ -32,7 +32,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   bool private extendablePool;
   // only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   bool private active;
-  bool public override isAddingRisk;
+  bool public override addingRiskWIP;
   string public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
@@ -128,7 +128,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     emit CoverAdded(coverAddr, msg.sender, received);
   }
 
-  /// @notice add risk to pool, new risk cannot be deleted risk
+  /// @notice add risk to pool, new risk cannot be previously deleted risk
   function addRisk(string calldata _risk) external override onlyDev {
     bytes32 risk = StringHelper.stringToBytes32(_risk);
     require(extendablePool, "CoverPool: not extendable pool");
@@ -136,8 +136,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
     if (riskMap[risk] == 0) {
       // first time adding risk, make sure no other risk adding in prrogress
-      require(!isAddingRisk, "CoverPool: last risk adding not complete");
-      isAddingRisk = true;
+      require(!addingRiskWIP, "CoverPool: last risk adding not complete");
+      addingRiskWIP = true;
       riskMap[risk] = 1;
       riskList.push(risk);
       emit RiskUpdated(risk, true);
@@ -154,7 +154,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       ICover(activeCoversCopy[i]).addRisk(risk);
       startGas = gasleft();
     }
-    isAddingRisk = false;
+    addingRiskWIP = false;
   }
 
   /// @notice delete risk from pool
@@ -342,7 +342,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   function _validateCover(address _collateral, uint48 _expiry) private view {
     require(active, "CoverPool: pool not active");
-    require(!isAddingRisk, "CoverPool: waiting to complete adding risk");
+    require(!addingRiskWIP, "CoverPool: waiting to complete adding risk");
     require(collateralStatusMap[_collateral].status == 1, "CoverPool: invalid collateral");
     require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == 1, "CoverPool: invalid expiry");
   }
