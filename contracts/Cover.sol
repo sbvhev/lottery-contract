@@ -334,6 +334,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   function _getAmountAfterFees(uint256 _amount) private view returns (uint256 amountAfterFees) {
+    // mintRatio is 1e18
     uint256 adjustedAmount = _amount * 1e18 / mintRatio;
     uint256 fees = adjustedAmount * feeNumerator * duration / (feeDenominator * 365 days);
     amountAfterFees = adjustedAmount - fees;
