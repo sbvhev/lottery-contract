@@ -8,6 +8,7 @@ describe('CoverPool', () => {
   const INCIDENT_TIMESTAMP = 1580515200000;
   const ETHER_UINT_10 = ethers.utils.parseEther('10');
   const ETHER_UINT_9 = ethers.utils.parseEther('9');
+  const feeRate = ethers.utils.parseEther('0.006');
 
   let ownerAddress, ownerAccount, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
   let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
@@ -53,6 +54,7 @@ describe('CoverPool', () => {
     const [defaultRedeemDelay, noclaimRedeemDelay] = await coverPool.getRedeemDelays();
 
     expect(await coverPool.name()).to.equal(consts.POOL_2);
+    expect(await coverPool.yearlyFeeRate()).to.equal(feeRate);
     expect(extendablePool).to.equal(true);
     expect(isActive).to.equal(true);
     expect(claimNonce).to.equal(0);
@@ -85,13 +87,10 @@ describe('CoverPool', () => {
           .to.emit(coverPool, 'DefaultRedeemDelayUpdated');
     expect((await coverPool.getRedeemDelays())[0]).to.equal(newDelay);
 
-    await expect(coverPool.connect(governanceAccount).setFees(0, 0)).to.be.reverted;
-    await expectRevert(coverPool.connect(governanceAccount).setFees(1, 1), "CoverPool: must < 10%");
+    await expectRevert(coverPool.connect(governanceAccount).setYearlyFeeRate(ethers.utils.parseEther('0.11')), "CoverPool: must < 10%");
 
-    await coverPool.connect(governanceAccount).setFees(0, 1);
-    const [feeNumerator, feeDenominator] = await coverPool.getRedeemFees();
-    expect(feeNumerator).to.equal(0);
-    expect(feeDenominator).to.equal(1);
+    await coverPool.connect(governanceAccount).setYearlyFeeRate(0);
+    expect(await coverPool.yearlyFeeRate()).to.equal(0);
   });
 
   it('Should NOT update state variables by the wrong authority', async () => {
@@ -185,7 +184,7 @@ describe('CoverPool', () => {
 
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
-    expect(await dai.balanceOf(coverAddress)).to.equal(ETHER_UINT_10);
+    expect(await dai.balanceOf(coverAddress)).to.not.equal(0);
   });
 
   it('Should create new cover for userB on existing contract when accepted claim', async () => {
@@ -205,7 +204,7 @@ describe('CoverPool', () => {
 
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
     expect(coverAddress).to.not.equal(consts.ADDRESS_ZERO);
-    expect(await dai.balanceOf(coverAddress)).to.equal(ETHER_UINT_10);
+    expect(await dai.balanceOf(coverAddress)).to.not.equal(0);
   });
 
   it('Should emit event and enactClaim if called by claimManager', async () => {

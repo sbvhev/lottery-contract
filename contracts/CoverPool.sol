@@ -21,8 +21,8 @@ import "./interfaces/ICoverPoolFactory.sol";
  * @author crypto-pumpkin
  * 
  * Pool types:
- * - open pool: allow add and delete asset
- * - close pool: NOT allow add asset, but allow delete asset
+ * - extendable pool: allowed to add and delete asset
+ * - non-extendable pool: NOT allowed to add asset, but allowed to delete asset
  */
 contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
@@ -36,8 +36,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   string public override name;
   // nonce of for the coverPool's claim status, it also indicates count of accepted claim in the past
   uint256 public override claimNonce;
-  uint256 private feeNumerator;
-  uint256 private feeDenominator;
+  uint256 public override yearlyFeeRate;
   // delay # of seconds for redeem with/o. accepted claim, redeemCollateral is not affected
   uint256 private defaultRedeemDelay;
   uint256 private noclaimRedeemDelay;
@@ -69,6 +68,11 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     _;
   }
 
+  modifier onlyNotPaused() {
+    require(!_factory().paused(), "CoverPool: paused");
+    _;
+  }
+
   /// @dev Initialize, called once
   function initialize (
     string calldata _coverPoolName,
@@ -97,15 +101,14 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     // set default delay for redeem
     defaultRedeemDelay = 3 days;
     noclaimRedeemDelay = 3 days;
-    feeNumerator = 60; // 0.6% yearly rate
-    feeDenominator = 10000; // 0 to 65,535
+    yearlyFeeRate = 0.006 ether; // 0.6% yearly rate
     isActive = true;
     deployCover(_collateral, _expiry);
   }
 
   /// @notice add coverage (with expiry) for sender, cover must be deployed first
   function addCover(address _collateral, uint48 _expiry, uint256 _amount)
-    external override nonReentrant
+    external override nonReentrant onlyNotPaused
   {
     _validateCover(_collateral, _expiry);
     require(_amount > 0, "CoverPool: amount <= 0");
@@ -203,12 +206,10 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     collateralStatusMap[_collateral] = CollateralInfo(_mintRatio, _status);
   }
 
-  function setFees(uint256 _feeNumerator, uint256 _feeDenominator) external override {
+  function setYearlyFeeRate(uint256 _yearlyFeeRate) external override {
     require(msg.sender == _factory().governance(), "CoverPool: caller not governance");
-    require(_feeDenominator > 0, "CoverPool: denominator cannot be 0");
-    require(_feeDenominator > (_feeNumerator * 10), "CoverPool: must < 10%");
-    feeNumerator = _feeNumerator;
-    feeDenominator = _feeDenominator;
+    require(_yearlyFeeRate <= 0.1 ether, "CoverPool: must < 10%");
+    yearlyFeeRate = _yearlyFeeRate;
   }
 
   // update status of coverPool, if false, will pause new cover creation
@@ -290,10 +291,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return (defaultRedeemDelay, noclaimRedeemDelay);
   }
 
-  function getRedeemFees() external view override returns (uint256 _numerator, uint256 _denominator) {
-    return (feeNumerator, feeDenominator);
-  }
-
   function getAssetList() external view override returns (bytes32[] memory _assetList) {
     return assetList;
   }
@@ -359,5 +356,4 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   function _factory() private view returns (ICoverPoolFactory) {
     return ICoverPoolFactory(owner());
   }
-
 }

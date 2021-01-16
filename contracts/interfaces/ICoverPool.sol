@@ -36,14 +36,14 @@ interface ICoverPool {
   function isAddingAsset() external view returns (bool);
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   function claimNonce() external view returns (uint256);
+  // yearlyFeeRate is 1e18
+  function yearlyFeeRate() external view returns (uint256);
   function collateralStatusMap(address _collateral) external view returns (uint256 _mintRatio, uint8 _status);
   function expiryInfoMap(uint48 _expiry) external view returns (string memory _name, uint8 _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);
 
   // extra view
   function getAssetList() external view returns (bytes32[] memory _assetList);
-  // only affect future Covers, see fees rate for Cover
-  function getRedeemFees() external view returns (uint256 _numerator, uint256 _denominator);
   function getRedeemDelays() external view returns (uint256 _defaultRedeemDelay, uint256 _noclaimRedeemDelay);
   function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
   function getCoverPoolDetails()
@@ -84,5 +84,5 @@ interface ICoverPool {
 
   // access restriction - governance
   function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external;
-  function setFees(uint256 _feeNumerator, uint256 _feeDenominator) external;
+  function setYearlyFeeRate(uint256 _yearlyFeeRate) external;
 }
