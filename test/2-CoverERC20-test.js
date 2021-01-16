@@ -37,7 +37,7 @@ describe('CoverERC20', function() {
 
   it('Should deploy with correct name, symbol, decimals, totalSupply, balanceOf, permit nonce and domainSeparator', async function() {
     expect(await coverERC20.name()).to.equal('Cover Protocol covToken');
-    expect(await coverERC20.decimals()).to.equal(18);
+    expect(await coverERC20.decimals()).to.equal(8);
     expect(await coverERC20.symbol()).to.equal(COV_TOKEN_SYMBOL);
     expect(await coverERC20.totalSupply()).to.equal(A_BALANCE.add(B_BALANCE));
     expect(await coverERC20.balanceOf(ownerAddress)).to.equal(0);
