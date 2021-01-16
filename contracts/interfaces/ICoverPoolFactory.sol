@@ -7,10 +7,8 @@ pragma solidity ^0.8.0;
  * @author crypto-pumpkin
  */
 interface ICoverPoolFactory {
-  event CoverPoolCreated(address);
-  event CoverPoolImplUpdated(address _old, address _new);
-  event CoverImplUpdated(address _old, address _new);
-  event CoverERC20ImplUpdated(address _old, address _new);
+  event CoverPoolCreated(address _addr);
+  event ImplUpdated(string _name, address _old, address _new);
   event GovernanceUpdated(address _old, address _new);
   event ClaimManagerUpdated(address _old, address _new);
   event TreasuryUpdated(address _old, address _new);

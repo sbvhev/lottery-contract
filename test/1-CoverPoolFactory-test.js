@@ -57,9 +57,9 @@ describe('CoverPoolFactory', () => {
     await coverPoolFactory.connect(ownerAccount).setDeployGasMin(6000000);
     expect(await coverPoolFactory.deployGasMin()).to.equal(6000000);
     await expect(coverPoolFactory.connect(ownerAccount).setTreasury(ownerAddress)).to.emit(coverPoolFactory, 'TreasuryUpdated');
-    await expect(coverPoolFactory.connect(ownerAccount).setCoverERC20Impl(dai.address)).to.emit(coverPoolFactory, 'CoverERC20ImplUpdated');
-    await expect(coverPoolFactory.connect(ownerAccount).setCoverImpl(dai.address)).to.emit(coverPoolFactory, 'CoverImplUpdated');
-    await expect(coverPoolFactory.connect(ownerAccount).setCoverPoolImpl(dai.address)).to.emit(coverPoolFactory, 'CoverPoolImplUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).setCoverERC20Impl(dai.address)).to.emit(coverPoolFactory, 'ImplUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).setCoverImpl(dai.address)).to.emit(coverPoolFactory, 'ImplUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).setCoverPoolImpl(dai.address)).to.emit(coverPoolFactory, 'ImplUpdated');
 
     await expect(coverPoolFactory.setGovernance(userAAddress)).to.emit(coverPoolFactory, 'GovernanceUpdated');
   });

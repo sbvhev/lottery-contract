@@ -13,6 +13,7 @@ import "./interfaces/ICoverPoolFactory.sol";
 /**
  * @title CoverPoolFactory contract, manages all the coverPools for Cover Protocol
  * @author crypto-pumpkin
+ * Using string (instead of bytes32) for all inputs for operation convinience at the expenses of a slightly highly cost
  */
 contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
@@ -21,16 +22,13 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   address public override coverPoolImpl;
   address public override coverImpl;
   address public override coverERC20Impl;
-
-  address public override treasury;
+  address public override treasury; // receive fees collected
   address public override governance;
   address public override claimManager;
   /// @notice min gas left requirement before continue deployments (when creating new Cover or adding assets to CoverPool)
   uint256 public override deployGasMin = 1000000;
-
   // not all coverPools are active
   string[] private coverPoolNames;
-
   mapping(string => address) public override coverPools;
 
   constructor (
@@ -57,30 +55,29 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   /**
    * @notice Create a new Cover Pool
    * @param _name name for pool, e.g. Yearn
-   * @param _extendablePool open pools allow adding new asset
-   * @param _assetList risk assets that are covered in this pool
+   * @param _extendablePool extendable pools allow adding new asset
+   * @param _riskList list of underlying that are covered in the pool
    * @param _collateral the collateral of the pool
-   * @param _mintRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
+   * @param _mintRatio must be 18 decimals, in (0, + infinity), 1.5 means 1 collateral mints 1.5 covTokens
    * @param _expiry expiration date supported for the pool
    * @param _expiryString MONTH_DATE_YEAR, used to create covToken symbols only
-   * 
-   * Emits CoverPoolCreated, add a supported coverPool in COVER
+   * Emits CoverPoolCreated
    */
   function createCoverPool(
     string calldata _name,
     bool _extendablePool,
-    string[] calldata _assetList,
+    string[] calldata _riskList,
     address _collateral,
     uint256 _mintRatio,
     uint48 _expiry,
     string calldata _expiryString
   ) external override onlyOwner returns (address _addr) {
     require(coverPools[_name] == address(0), "CoverPoolFactory: coverPool exists");
-    require(_assetList.length > 0, "CoverPoolFactory: no asset passed for pool");
+    require(_riskList.length > 0, "CoverPoolFactory: no risk underlying passed for pool");
     require(_expiry > block.timestamp, "CoverPoolFactory: expiry in the past");
 
     coverPoolNames.push(_name);
-    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _extendablePool, _assetList, _collateral, _mintRatio, _expiry, _expiryString);
+    bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _extendablePool, _riskList, _collateral, _mintRatio, _expiry, _expiryString);
     _addr = address(_deployCoverPool(_name, initData));
     coverPools[_name] = _addr;
     emit CoverPoolCreated(_addr);
@@ -94,21 +91,21 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   /// @dev update this will only affect coverPools deployed after
   function setCoverPoolImpl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
-    emit CoverPoolImplUpdated(coverPoolImpl, _newImpl);
+    emit ImplUpdated('CoverPool', coverPoolImpl, _newImpl);
     coverPoolImpl = _newImpl;
   }
 
   /// @dev update this will only affect covers of coverPools deployed after
   function setCoverImpl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
-    emit CoverImplUpdated(coverImpl, _newImpl);
+    emit ImplUpdated('Cover', coverImpl, _newImpl);
     coverImpl = _newImpl;
   }
 
   /// @dev update this will only affect covTokens of covers of coverPools deployed after
   function setCoverERC20Impl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
-    emit CoverERC20ImplUpdated(coverERC20Impl, _newImpl);
+    emit ImplUpdated('CoverERC20', coverERC20Impl, _newImpl);
     coverERC20Impl = _newImpl;
   }
 
@@ -130,7 +127,6 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     emit TreasuryUpdated(treasury, _address);
     treasury = _address;
   }
-
 
   function getCoverPools() external view override returns (address[] memory) {
     string[] memory coverPoolNamesCopy = coverPoolNames;

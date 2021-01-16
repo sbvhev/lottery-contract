@@ -4,7 +4,8 @@
 The essense of Cover is CoverPools. Each CoverPool consists of multiple risky underlying to be covered. If any of the risky underlying of a pool experience an exploit (as per claims guidelines), all active coverages (Cover) of the CoverPool will be paid out up to 100%.
 
 The following are the elements of the V2.
-* **CoverPoolFactory** is the contract for owners 
+* **CoverPoolFactory** is the contract that creates CoverPools. It also stores information that are common to all V2 contracts, like logic contract implementation addresses, addresses of multi-sigs, claim manager addresses etc.
+
 
 ## Development
 * run `npm install` to install all node dependencies
