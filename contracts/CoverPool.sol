@@ -46,8 +46,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   address[] private allCovers;
   uint48[] private expiries;
   // list of active assets in cover pool
-  bytes32[] private assetList;
-  bytes32[] private deletedAssetList;
+  bytes32[] private riskList;
+  bytes32[] private deletedRiskList;
   address[] private collaterals;
   // [claimNonce] => accepted ClaimDetails
   ClaimDetails[] private claimDetails;
@@ -77,7 +77,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   function initialize (
     string calldata _coverPoolName,
     bool _extendablePool,
-    string[] calldata _assetList,
+    string[] calldata _riskList,
     address _collateral,
     uint256 _mintRatio,
     uint48 _expiry,
@@ -91,10 +91,10 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     expiries.push(_expiry);
     expiryInfoMap[_expiry] = ExpiryInfo(_expiryString, 1);
 
-    for (uint256 j = 0; j < _assetList.length; j++) {
-      bytes32 asset = StringHelper.stringToBytes32(_assetList[j]);
+    for (uint256 j = 0; j < _riskList.length; j++) {
+      bytes32 asset = StringHelper.stringToBytes32(_riskList[j]);
       require(assetsMap[asset] == 0, "CoverPool: duplicated assets");
-      assetList.push(asset);
+      riskList.push(asset);
       assetsMap[asset] = 1;
     }
 
@@ -140,7 +140,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       require(!isAddingAsset, "CoverPool: last asset adding not complete");
       isAddingAsset = true;
       assetsMap[asset] = 1;
-      assetList.push(asset);
+      riskList.push(asset);
       emit AssetUpdated(asset, true);
     }
 
@@ -162,22 +162,22 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   function deleteAsset(string calldata _asset) external override onlyDev {
     bytes32 asset = StringHelper.stringToBytes32(_asset);
     require(assetsMap[asset] == 1, "CoverPool: not active asset");
-    bytes32[] memory assetListCopy = assetList; // save gas
-    require(assetListCopy.length > 1, "CoverPool: only 1 asset left");
+    bytes32[] memory riskListCopy = riskList; // save gas
+    require(riskListCopy.length > 1, "CoverPool: only 1 asset left");
 
-    bytes32[] memory newAssetList = new bytes32[](assetListCopy.length - 1);
+    bytes32[] memory newRiskList = new bytes32[](riskListCopy.length - 1);
     uint256 newListInd = 0;
-    for (uint256 i = 0; i < assetListCopy.length; i++) {
-      if (asset != assetListCopy[i]) {
-        newAssetList[newListInd] = assetListCopy[i];
+    for (uint256 i = 0; i < riskListCopy.length; i++) {
+      if (asset != riskListCopy[i]) {
+        newRiskList[newListInd] = riskListCopy[i];
         newListInd++;
       } else {
         assetsMap[asset] = 2;
-        deletedAssetList.push(asset);
+        deletedRiskList.push(asset);
         emit AssetUpdated(asset, false);
       }
     }
-    assetList = newAssetList;
+    riskList = newRiskList;
   }
 
   /// @notice update status or add new expiry, call deployCover with collateral and expiry before add cover
@@ -241,20 +241,20 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
    * Emit ClaimAccepted
    */
   function enactClaim(
-    bytes32[] calldata _payoutAssetList,
+    bytes32[] calldata _payoutRiskList,
     uint256[] calldata _payoutNumerators,
     uint256 _payoutDenominator,
     uint48 _incidentTimestamp,
     uint256 _coverPoolNonce
   ) external override {
     require(_coverPoolNonce == claimNonce, "CoverPool: nonces do not match");
-    require(_payoutAssetList.length == _payoutNumerators.length, "CoverPool: payout asset length don't match");
+    require(_payoutRiskList.length == _payoutNumerators.length, "CoverPool: payout asset length don't match");
     ICoverPoolFactory factory = _factory();
     require(msg.sender == factory.claimManager(), "CoverPool: caller not claimManager");
 
     uint256 totalNum;
-    for (uint256 i = 0; i < _payoutAssetList.length; i++) {
-      require(assetsMap[_payoutAssetList[i]] == 1, "CoverPool: has non active asset");
+    for (uint256 i = 0; i < _payoutRiskList.length; i++) {
+      require(assetsMap[_payoutRiskList[i]] == 1, "CoverPool: has non active asset");
       totalNum = totalNum + _payoutNumerators[i];
     }
     require(totalNum <= _payoutDenominator && totalNum > 0, "CoverPool: payout % is not in (0%, 100%]");
@@ -262,7 +262,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     claimNonce = claimNonce + 1;
     delete activeCovers;
     claimDetails.push(ClaimDetails(
-      _payoutAssetList,
+      _payoutRiskList,
       _payoutNumerators,
       totalNum,
       _payoutDenominator,
@@ -275,24 +275,24 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   function getCoverPoolDetails() external view override
     returns (
       bool _extendablePool,
-      bool _isActive,
+      bool _active,
       uint256 _claimNonce,
       address[] memory _collaterals,
       uint48[] memory _expiries,
-      bytes32[] memory _assetList,
-      bytes32[] memory _deletedAssetList,
+      bytes32[] memory _riskList,
+      bytes32[] memory _deletedRiskList,
       address[] memory _allActiveCovers,
       address[] memory _allCovers)
   {
-    return (extendablePool, isActive, claimNonce, collaterals, expiries, assetList, deletedAssetList, activeCovers, allCovers);
+    return (extendablePool, active, claimNonce, collaterals, expiries, riskList, deletedRiskList, activeCovers, allCovers);
   }
 
   function getRedeemDelays() external view override returns (uint256 _defaultRedeemDelay, uint256 _noclaimRedeemDelay) {
     return (defaultRedeemDelay, noclaimRedeemDelay);
   }
 
-  function getAssetList() external view override returns (bytes32[] memory _assetList) {
-    return assetList;
+  function getRiskList() external view override returns (bytes32[] memory _riskList) {
+    return riskList;
   }
 
   function getClaimDetails(uint256 _nonce) external view override returns (ClaimDetails memory) {

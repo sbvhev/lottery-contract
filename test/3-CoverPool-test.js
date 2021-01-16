@@ -50,18 +50,18 @@ describe('CoverPool', () => {
   });
 
   it('Should initialize correct state variables', async () => {
-    const [extendablePool, isActive, claimNonce, collaterals, expiries, assetList, deletedAssetList, allActiveCovers, allCovers] = await coverPool.getCoverPoolDetails();
+    const [extendablePool, active, claimNonce, collaterals, expiries, riskList, deletedRiskList, allActiveCovers, allCovers] = await coverPool.getCoverPoolDetails();
     const [defaultRedeemDelay, noclaimRedeemDelay] = await coverPool.getRedeemDelays();
 
     expect(await coverPool.name()).to.equal(consts.POOL_2);
     expect(await coverPool.yearlyFeeRate()).to.equal(feeRate);
     expect(extendablePool).to.equal(true);
-    expect(isActive).to.equal(true);
+    expect(active).to.equal(true);
     expect(claimNonce).to.equal(0);
     expect(defaultRedeemDelay).to.equal(3 * 24 * 60 * 60);
     expect(noclaimRedeemDelay).to.equal(3 * 24 * 60 * 60);
-    expect(assetList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_2_BYTES32]);
-    expect(deletedAssetList).to.deep.equal([]);
+    expect(riskList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_2_BYTES32]);
+    expect(deletedRiskList).to.deep.equal([]);
     expect(collaterals).to.deep.equal([COLLATERAL]);
     expect(expiries).to.deep.equal(consts.ALLOWED_EXPIRYS);
     expect(allCovers.length).to.equal(3);
@@ -111,14 +111,14 @@ describe('CoverPool', () => {
     expect(await coverPool.name()).to.equal(consts.POOL_3);
 
     await coverPool.deleteAsset(consts.ASSET_2);
-    const [,,,,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
-    expect(assetList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32]);
-    expect(deletedAssetList).to.deep.equal([consts.ASSET_2_BYTES32]);
+    const [,,,,,riskList, deletedRiskList] = await coverPool.getCoverPoolDetails();
+    expect(riskList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32]);
+    expect(deletedRiskList).to.deep.equal([consts.ASSET_2_BYTES32]);
 
     await expect(coverPool.addAsset(consts.ASSET_2)).to.be.reverted;
     await expect(coverPool.addAsset(consts.ASSET_4)).to.emit(coverPool, 'AssetUpdated');
-    const [,,,,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
-    expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32, consts.ASSET_4_BYTES32]);
+    const [,,,,,riskListAfterAdd] = await coverPool.getCoverPoolDetails();
+    expect(riskListAfterAdd).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32, consts.ASSET_4_BYTES32]);
 
     await coverPool.deleteAsset(consts.ASSET_4);
   });
@@ -133,21 +133,21 @@ describe('CoverPool', () => {
     expect(await coverPool.name()).to.equal(consts.POOL_3);
 
     await coverPool.deleteAsset(consts.ASSET_2);
-    const [,,,,,assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
-    expect(assetList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32]);
-    expect(deletedAssetList).to.deep.equal([consts.ASSET_2_BYTES32]);
+    const [,,,,,riskList, deletedRiskList] = await coverPool.getCoverPoolDetails();
+    expect(riskList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32]);
+    expect(deletedRiskList).to.deep.equal([consts.ASSET_2_BYTES32]);
 
     await expect(coverPool.addAsset(consts.ASSET_2)).to.be.reverted;
     await expect(coverPool.addAsset(consts.ASSET_4)).to.be.reverted;
-    const [,,,,,assetListAfterAdd] = await coverPool.getCoverPoolDetails();
-    expect(assetListAfterAdd).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32]);
+    const [,,,,,riskListAfterAdd] = await coverPool.getCoverPoolDetails();
+    expect(riskListAfterAdd).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32]);
   });
 
   it('Should delete asset from pool correctly', async () => {
     await expect(coverPool.deleteAsset(consts.ASSET_1)).to.emit(coverPool, 'AssetUpdated');
-    const [,,,,, assetList, deletedAssetList] = await coverPool.getCoverPoolDetails();
-    expect(assetList).to.deep.equal([consts.ASSET_2_BYTES32]);
-    expect(deletedAssetList).to.deep.equal([consts.ASSET_1_BYTES32]);
+    const [,,,,, riskList, deletedRiskList] = await coverPool.getCoverPoolDetails();
+    expect(riskList).to.deep.equal([consts.ASSET_2_BYTES32]);
+    expect(deletedRiskList).to.deep.equal([consts.ASSET_1_BYTES32]);
 
     await expectRevert(coverPool.deleteAsset(consts.ASSET_1), "CoverPool: not active asset");
     await expectRevert(coverPool.deleteAsset(consts.ASSET_2), "CoverPool: only 1 asset left");

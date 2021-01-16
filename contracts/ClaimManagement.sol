@@ -56,7 +56,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       state: ClaimState.Filed,
       feePaid: claimFee,
       payoutDenominator: 1,
-      payoutAssetList: _exploitAssets,
+      payoutRiskList: _exploitAssets,
       payoutNumerators: new uint256[](_exploitAssets.length)
     }));
     feeCurrency.safeTransferFrom(msg.sender, address(this), claimFee);
@@ -87,7 +87,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       state: ClaimState.ForceFiled,
       feePaid: forceClaimFee,
       payoutDenominator: 1,
-      payoutAssetList: _exploitAssets,
+      payoutRiskList: _exploitAssets,
       payoutNumerators: new uint256[](_exploitAssets.length)
     }));
     ICoverPool(coverPool).setNoclaimRedeemDelay(10 days);
@@ -156,12 +156,12 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       require(totalNum > 0 && totalNum <= _payoutDenominator, "CoverPool: payout % is not in (0%, 100%]");
 
       claim.state = ClaimState.Accepted;
-      claim.payoutAssetList = _exploitAssets;
+      claim.payoutRiskList = _exploitAssets;
       claim.payoutNumerators = _payoutNumerators;
       claim.payoutDenominator = _payoutDenominator;
       feeCurrency.safeTransfer(claim.filedBy, claim.feePaid);
       _resetCoverPoolClaimFee(_coverPool);
-      ICoverPool(_coverPool).enactClaim(claim.payoutAssetList, claim.payoutNumerators, claim.payoutDenominator, claim.incidentTimestamp, _nonce);
+      ICoverPool(_coverPool).enactClaim(claim.payoutRiskList, claim.payoutNumerators, claim.payoutDenominator, claim.incidentTimestamp, _nonce);
     } else {
       require(totalNum == 0, "COVER_CM: claim denied (default if passed window), but payoutNumerator != 0");
       claim.state = ClaimState.Denied;

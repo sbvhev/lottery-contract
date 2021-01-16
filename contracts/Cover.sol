@@ -75,9 +75,9 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     require(ICoverPool(owner()).claimNonce() == claimNonce, "Cover: claim accepted");
 
     uint256 adjustedAmount = _amount * mintRatio / 1e18;
-    (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
-    for (uint i = 0; i < _assetList.length; i++) {
-      claimCovTokenMap[_assetList[i]].mint(_receiver, adjustedAmount);
+    (bytes32[] memory _riskList) = ICoverPool(owner()).getRiskList();
+    for (uint i = 0; i < _riskList.length; i++) {
+      claimCovTokenMap[_riskList[i]].mint(_receiver, adjustedAmount);
     }
     noclaimCovToken.mint(_receiver, adjustedAmount);
     _handleLatestFutureToken(_receiver, adjustedAmount, true); // mint
@@ -151,8 +151,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + defaultRedeemDelay, "Cover: not ready");
 
     uint256 eligibleAmount;
-    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
-      ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
+    for (uint256 i = 0; i < claim.payoutRiskList.length; i++) {
+      ICoverERC20 covToken = claimCovTokenMap[claim.payoutRiskList[i]];
       uint256 amount = covToken.balanceOf(msg.sender);
       eligibleAmount = eligibleAmount + amount * claim.payoutNumerators[i] / claim.payoutDenominator;
       covToken.burnByCover(msg.sender, amount);
@@ -171,8 +171,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   function viewClaimable(address _account) external view override returns (uint256 eligibleAmount) {
     ICoverPool.ClaimDetails memory claim = _claimDetails();
-    for (uint256 i = 0; i < claim.payoutAssetList.length; i++) {
-      ICoverERC20 covToken = claimCovTokenMap[claim.payoutAssetList[i]];
+    for (uint256 i = 0; i < claim.payoutRiskList.length; i++) {
+      ICoverERC20 covToken = claimCovTokenMap[claim.payoutRiskList[i]];
       uint256 amount = covToken.balanceOf(_account);
       eligibleAmount = eligibleAmount + amount * claim.payoutNumerators[i] / claim.payoutDenominator;
     }
@@ -196,10 +196,10 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       ICoverERC20[] memory _claimCovTokens,
       ICoverERC20[] memory _futureCovTokens)
   {
-    (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
-    ICoverERC20[] memory claimCovTokens = new ICoverERC20[](_assetList.length);
-    for (uint256 i = 0; i < _assetList.length; i++) {
-      claimCovTokens[i] = ICoverERC20(claimCovTokenMap[_assetList[i]]);
+    (bytes32[] memory _riskList) = ICoverPool(owner()).getRiskList();
+    ICoverERC20[] memory claimCovTokens = new ICoverERC20[](_riskList.length);
+    for (uint256 i = 0; i < _riskList.length; i++) {
+      claimCovTokens[i] = ICoverERC20(claimCovTokenMap[_riskList[i]]);
     }
     return (name, expiry, collateral, mintRatio, feeRate, claimNonce, noclaimCovToken, claimCovTokens, futureCovTokens);
   }
@@ -243,15 +243,15 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
    */
   function deploy() public override {
     require(!deployComplete, "Cover: deploy completed");
-    (bytes32[] memory _assetList) = ICoverPool(owner()).getAssetList();
+    (bytes32[] memory _riskList) = ICoverPool(owner()).getRiskList();
     uint256 startGas = gasleft();
-    for (uint256 i = 0; i < _assetList.length; i++) {
+    for (uint256 i = 0; i < _riskList.length; i++) {
       if (startGas < _factory().deployGasMin()) return;
-      ICoverERC20 claimToken = claimCovTokenMap[_assetList[i]];
+      ICoverERC20 claimToken = claimCovTokenMap[_riskList[i]];
       if (address(claimToken) == address(0)) {
-        string memory assetName = StringHelper.bytes32ToString(_assetList[i]);
+        string memory assetName = StringHelper.bytes32ToString(_riskList[i]);
         claimToken = _createCovToken(string(abi.encodePacked("C_", assetName, "_")));
-        claimCovTokenMap[_assetList[i]] = claimToken;
+        claimCovTokenMap[_riskList[i]] = claimToken;
         startGas = gasleft();
       }
     }
@@ -273,9 +273,9 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     noclaimCovToken.burnByCover(msg.sender, _amount);
     _handleLatestFutureToken(msg.sender, _amount, false); // burn
 
-    (bytes32[] memory assetList) = coverPool.getAssetList();
-    for (uint i = 0; i < assetList.length; i++) {
-      ICoverERC20 claimToken = claimCovTokenMap[assetList[i]];
+    (bytes32[] memory riskList) = coverPool.getRiskList();
+    for (uint i = 0; i < riskList.length; i++) {
+      ICoverERC20 claimToken = claimCovTokenMap[riskList[i]];
       claimToken.burnByCover(msg.sender, _amount);
     }
     _payCollateral(msg.sender, _amount);

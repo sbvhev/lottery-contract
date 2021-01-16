@@ -47,7 +47,7 @@ interface ICoverPoolFactory {
    * @notice Create a new Cover Pool
    * @param _name name for pool, e.g. Yearn
    * @param _extendablePool open pools allow adding new asset
-   * @param _assetList risk assets that are covered in this pool
+   * @param _riskList risk assets that are covered in this pool
    * @param _collateral the collateral of the pool
    * @param _mintRatio 18 decimals, in (0, + infinity) the deposit ratio for the collateral the pool, 1.5 means =  1 collateral mints 1.5 CLAIM/NOCLAIM tokens
    * @param _expiry expiration date supported for the pool
@@ -58,7 +58,7 @@ interface ICoverPoolFactory {
   function createCoverPool(
     string calldata _name,
     bool _extendablePool,
-    string[] calldata _assetList,
+    string[] calldata _riskList,
     address _collateral,
     uint256 _mintRatio,
     uint48 _expiry,

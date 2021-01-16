@@ -20,7 +20,7 @@ interface IClaimManagement {
     ClaimState state; // Current state of claim
     uint256 feePaid; // Fee paid to file the claim
     uint256 payoutDenominator; // Denominator of percent to payout
-    bytes32[] payoutAssetList;
+    bytes32[] payoutRiskList;
     uint256[] payoutNumerators; // Numerators of percent to payout
   }
 
