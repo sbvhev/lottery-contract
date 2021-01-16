@@ -231,7 +231,16 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     require(amount > 0, "Cover: insufficient balance");
     _futureToken.burnByCover(msg.sender, amount);
     claimCovToken.mint(msg.sender, amount);
-    _handleLatestFutureToken(msg.sender, amount, true);
+
+    // mint next future covTokens
+    ICoverERC20[] memory futureCovTokensCopy = futureCovTokens;
+    for (uint256 i = 0; i < futureCovTokensCopy.length; i++) {
+      if (futureCovTokensCopy[i] == _futureToken) {
+        ICoverERC20 futureCovToken = futureCovTokensCopy[i + 1];
+        futureCovToken.mint(msg.sender, amount);
+        return;
+      }
+    }
   }
 
   /**

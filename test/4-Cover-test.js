@@ -107,18 +107,23 @@ describe('Cover', function() {
 
   it('Should add asset, convert, mint, and redeem with new active tokens only', async function() {
     await expect(coverPool.addAsset(consts.ASSET_4)).to.emit(cover, 'CovTokenCreated');
+    await expect(coverPool.addAsset(consts.ASSET_5)).to.emit(cover, 'CovTokenCreated');
     const [,,,,,,noclaimCovTokenAddress, claimCovTokens, futureCovTokens] = await cover.getCoverDetails();
     const noclaimCovToken = CoverERC20.attach(noclaimCovTokenAddress);
     const futureCovToken = CoverERC20.attach(futureCovTokens[futureCovTokens.length - 1]);
-    const lastFutureToken = CoverERC20.attach(futureCovTokens[futureCovTokens.length - 2]);
+    const middleFutureToken = CoverERC20.attach(futureCovTokens[futureCovTokens.length - 2]);
+    const lastFutureToken = CoverERC20.attach(futureCovTokens[futureCovTokens.length - 3]);
     // 2nd to the last future token points to newly created claim token
-    expect(await cover.futureCovTokenMap(lastFutureToken.address)).to.equal(claimCovTokens[claimCovTokens.length - 1]);
+    expect(await cover.futureCovTokenMap(lastFutureToken.address)).to.equal(claimCovTokens[claimCovTokens.length - 2]);
+    expect(await cover.futureCovTokenMap(middleFutureToken.address)).to.equal(claimCovTokens[claimCovTokens.length - 1]);
 
     // verify convert for userA
     expect(await futureCovToken.balanceOf(userAAddress)).to.equal(0);
     expect(await lastFutureToken.balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
-    await cover.connect(userAAccount).convert(lastFutureToken.address);
+    // await cover.connect(userAAccount).convert(lastFutureToken.address);
+    await cover.connect(userAAccount).convertAll([lastFutureToken.address, middleFutureToken.address]);
     expect(await lastFutureToken.balanceOf(userAAddress)).to.equal(0);
+    expect(await middleFutureToken.balanceOf(userAAddress)).to.equal(0);
     expect(await futureCovToken.balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
     
     await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
@@ -128,7 +133,7 @@ describe('Cover', function() {
       expect(await claimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20);
       expect(await claimCovToken.balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
     }
-    expect(futureCovTokens.length).to.equal(2);
+    expect(futureCovTokens.length).to.equal(3);
     expect(await futureCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20);
 
     const userABal = await dai.balanceOf(userAAddress);
