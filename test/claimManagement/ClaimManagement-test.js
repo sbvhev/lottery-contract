@@ -88,11 +88,11 @@ describe("ClaimManagement", function () {
   // fileClaim
   it("Should file a claim for incident correctly", async function () {
     expect(await management.getCoverPoolClaimFee(coverPool.address)).to.equal(ethers.utils.parseEther("40"));
-    await expect(management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp + 5000), DESC).to.be.reverted;
-    await expect(management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp - 10000000, DESC)).to.be.reverted;
-    await expect(management.fileClaim(BOGEY_PROTOCOL, EXPLOIT_ASSETS, timestamp), DESC).to.be.reverted;
+    await expect(management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp + 5000), DESC, false).to.be.reverted;
+    await expect(management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp - 10000000, DESC, false)).to.be.reverted;
+    await expect(management.fileClaim(BOGEY_PROTOCOL, EXPLOIT_ASSETS, timestamp), DESC, false).to.be.reverted;
 
-    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC, false);
     const [defaultDelay, noclaimDelay] = await coverPool.getRedeemDelays();
     expect([defaultDelay.toNumber(), noclaimDelay.toNumber()]).to.deep.equal([3 * DAY, 10 * DAY]);
     const claim = await management.getCoverPoolClaims(coverPool.address, 0, 0);
@@ -116,7 +116,7 @@ describe("ClaimManagement", function () {
 
   it("Should cost 80 dai to file next claim", async function () {
     expect(await management.getCoverPoolClaimFee(coverPool.address)).to.equal(ethers.utils.parseEther("80"));
-    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC, false);
     expect(await dai.balanceOf(ownerAddress)).to.equal(ethers.utils.parseEther("4880"));
     let filedClaims = await management.getAllClaimsByState(coverPool.address, 0, state.filed);
     expect(filedClaims.length).to.equal(2);
@@ -124,7 +124,7 @@ describe("ClaimManagement", function () {
 
   it("Should file a forced claim", async function () {
     const userBal = await dai.balanceOf(ownerAddress);
-    await management.forceFileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC, true);
     const [defaultDelay, noclaimDelay] = await coverPool.getRedeemDelays();
     expect([defaultDelay.toNumber(), noclaimDelay.toNumber()]).to.deep.equal([3 * DAY, 10 * DAY]);
     expect(await dai.balanceOf(ownerAddress)).to.equal(userBal.sub(ethers.utils.parseEther("500")));
@@ -170,10 +170,10 @@ describe("ClaimManagement", function () {
   });
 
   it("Should file and validate more claims for further testing", async function () {
-    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC, false);
     await management.connect(governanceAccount).validateClaim(coverPool.address, 0, 3, true);
 
-    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC, false);
     await management.connect(governanceAccount).validateClaim(coverPool.address, 0, 4, true);
   });
   // decideClaim
@@ -207,7 +207,7 @@ describe("ClaimManagement", function () {
   });
 
   it("Should file new claims under nonce = 1", async function () {
-    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC, false);
     expect(await management.getCoverPoolClaims(coverPool.address, 1, 0)).to.exist;
   });
 
@@ -232,8 +232,8 @@ describe("ClaimManagement", function () {
 
   // edge cases
   it("Should file 2 new claims", async function () {
-    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
-    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC, false);
+    await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC, false);
   });
   
   it("Should revert if try to validate claim with payoutNumerator > 0 after window passed", async function () {

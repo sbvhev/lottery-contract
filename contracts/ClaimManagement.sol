@@ -20,11 +20,11 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   constructor(address _governance, address _treasury, address _coverPoolFactory, address _defaultCVC) {
     require(
       _governance != msg.sender && _governance != address(0), 
-      "COVER_CC: governance cannot be owner or 0"
+      "ClaimManagement: governance cannot be owner or 0"
     );
-    require(_treasury != address(0), "COVER_CM: treasury cannot be 0");
-    require(_coverPoolFactory != address(0), "COVER_CM: coverPool factory cannot be 0");
-    require(_defaultCVC != address(0), "COVER_CM: defaultCVC cannot be 0");
+    require(_treasury != address(0), "ClaimManagement: treasury cannot be 0");
+    require(_coverPoolFactory != address(0), "ClaimManagement: coverPool factory cannot be 0");
+    require(_defaultCVC != address(0), "ClaimManagement: defaultCVC cannot be 0");
     governance = _governance;
     treasury = _treasury;
     coverPoolFactory = _coverPoolFactory;
@@ -33,19 +33,24 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     initializeOwner();
   }
 
-  /// @notice File a claim for a Cover Pool, `_incidentTimestamp` must be within the past 3 days
+  /// @notice File a claim for a Cover Pool, `_incidentTimestamp` must be within allowed time window
   function fileClaim(
     string calldata _coverPoolName,
     bytes32[] calldata _exploitRisks,
     uint48 _incidentTimestamp,
-    string calldata _description
+    string calldata _description,
+    bool isForceFile
   ) external override {
     address coverPool = _getCoverPoolAddr(_coverPoolName);
-    require(coverPool != address(0), "COVER_CM: pool not found");
-    require(block.timestamp - _incidentTimestamp <= getFileClaimWindow(coverPool), "COVER_CM: time passed window");
+    require(coverPool != address(0), "ClaimManagement: pool not found");
+    require(block.timestamp - _incidentTimestamp <= getFileClaimWindow(coverPool), "ClaimManagement: time passed window");
 
+    ICoverPool(coverPool).setNoclaimRedeemDelay(10 days);
     uint256 nonce = _getCoverPoolNonce(coverPool);
-    uint256 claimFee = getCoverPoolClaimFee(coverPool);
+    uint256 claimFee = isForceFile ? forceClaimFee : getCoverPoolClaimFee(coverPool);
+    feeCurrency.safeTransferFrom(msg.sender, address(this), claimFee);
+    _updateCoverPoolClaimFee(coverPool);
+    ClaimState state = isForceFile ? ClaimState.ForceFiled : ClaimState.Filed;
     coverPoolClaims[coverPool][nonce].push(Claim({
       filedBy: msg.sender,
       decidedBy: address(0),
@@ -53,44 +58,12 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       incidentTimestamp: _incidentTimestamp,
       decidedTimestamp: 0,
       description: _description,
-      state: ClaimState.Filed,
+      state: state,
       feePaid: claimFee,
       payoutRiskList: _exploitRisks,
       payoutRates: new uint256[](_exploitRisks.length)
     }));
-    feeCurrency.safeTransferFrom(msg.sender, address(this), claimFee);
-    _updateCoverPoolClaimFee(coverPool);
-    ICoverPool(coverPool).setNoclaimRedeemDelay(10 days);
-    emit ClaimUpdate(coverPool, ClaimState.Filed, nonce, coverPoolClaims[coverPool][nonce].length - 1);
-  }
-
-  /// @notice Force file a claim for a Cover Pool, `_incidentTimestamp` must be within the past 3 days.    
-  function forceFileClaim(
-    string calldata _coverPoolName,
-    bytes32[] calldata _exploitRisks,
-    uint48 _incidentTimestamp,
-    string calldata _description
-  ) external override {
-    address coverPool = _getCoverPoolAddr(_coverPoolName);
-    require(coverPool != address(0), "COVER_CM: pool not found");
-    require(block.timestamp - _incidentTimestamp <= getFileClaimWindow(coverPool), "COVER_CM: time passed window");
-
-    uint256 nonce = _getCoverPoolNonce(coverPool);
-    coverPoolClaims[coverPool][nonce].push(Claim({
-      filedBy: msg.sender,
-      decidedBy: address(0),
-      filedTimestamp: uint48(block.timestamp),
-      incidentTimestamp: _incidentTimestamp,
-      decidedTimestamp: 0,
-      description: _description,
-      state: ClaimState.ForceFiled,
-      feePaid: forceClaimFee,
-      payoutRiskList: _exploitRisks,
-      payoutRates: new uint256[](_exploitRisks.length)
-    }));
-    ICoverPool(coverPool).setNoclaimRedeemDelay(10 days);
-    feeCurrency.safeTransferFrom(msg.sender, address(this), forceClaimFee);
-    emit ClaimUpdate(coverPool, ClaimState.ForceFiled, nonce, coverPoolClaims[coverPool][nonce].length - 1);
+    emit ClaimUpdate(coverPool, state, nonce, coverPoolClaims[coverPool][nonce].length - 1);
   }
 
   /**
@@ -99,7 +72,6 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
    * @param _nonce uint256: nonce of the coverPool
    * @param _index uint256: index of the claim
    * @param _claimIsValid bool: true if claim is valid and passed to CVC, false otherwise
-   *   
    * Emits ClaimUpdate
    */
   function validateClaim(
@@ -109,8 +81,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     bool _claimIsValid
   ) external override onlyGov {
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
-    require(_nonce == _getCoverPoolNonce(_coverPool), "COVER_CM: wrong nonce");
-    require(claim.state == ClaimState.Filed, "COVER_CM: claim not filed");
+    require(_nonce == _getCoverPoolNonce(_coverPool), "ClaimManagement: wrong nonce");
+    require(claim.state == ClaimState.Filed, "ClaimManagement: claim not filed");
     if (_claimIsValid) {
       claim.state = ClaimState.Validated;
       _resetCoverPoolClaimFee(_coverPool);
@@ -138,13 +110,13 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     uint256[] calldata _payoutRates
   ) external override {
     require(_exploitRisks.length == _payoutRates.length, "CoverPool: payout risks len don't match");
-    require(isCVCMember(_coverPool, msg.sender), "COVER_CM: !cvc");
-    require(_nonce == _getCoverPoolNonce(_coverPool), "COVER_CM: wrong nonce");
+    require(isCVCMember(_coverPool, msg.sender), "ClaimManagement: !cvc");
+    require(_nonce == _getCoverPoolNonce(_coverPool), "ClaimManagement: wrong nonce");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
     require(
         claim.state == ClaimState.Validated || 
         claim.state == ClaimState.ForceFiled, 
-        "COVER_CM: claim not validated or forceFiled"
+        "ClaimManagement: claim not validated or forceFiled"
       );
 
     // Max decision claim window passed, claim is default to Denied
@@ -159,7 +131,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       _resetCoverPoolClaimFee(_coverPool);
       ICoverPool(_coverPool).enactClaim(claim.payoutRiskList, claim.payoutRates, claim.incidentTimestamp, _nonce);
     } else {
-      require(totalRates == 0, "COVER_CM: claim denied (default if passed window), but payoutNumerator != 0");
+      require(totalRates == 0, "ClaimManagement: claim denied (default if passed window), but payoutNumerator != 0");
       claim.state = ClaimState.Denied;
       feeCurrency.safeTransfer(treasury, claim.feePaid);
     }

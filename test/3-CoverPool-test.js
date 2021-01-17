@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { expectRevert, time, BN } = require("@openzeppelin/test-helpers");
 const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
-describe('CoverPool', () => {
+xdescribe('CoverPool', () => {
   const NEW_TIMESTAMP = 2556057500000;
   const NEW_TIMESTAMP_NAME = ethers.utils.formatBytes32String('2040_12_31');
   const INCIDENT_TIMESTAMP = 1580515200000;

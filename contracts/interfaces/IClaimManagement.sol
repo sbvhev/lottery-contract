@@ -29,13 +29,8 @@ interface IClaimManagement {
     string calldata _coverPoolName,
     bytes32[] calldata _exploitRisks,
     uint48 _incidentTimestamp,
-    string calldata _description
-  ) external;
-  function forceFileClaim(
-    string calldata _coverPoolName,
-    bytes32[] calldata _exploitRisks,
-    uint48 _incidentTimestamp,
-    string calldata _description
+    string calldata _description,
+    bool _isForceFile
   ) external;
   
   // @dev Only callable by owner when auditor is voting
