@@ -7,7 +7,7 @@ describe('CoverPool', () => {
   const NEW_TIMESTAMP_NAME = ethers.utils.formatBytes32String('2040_12_31');
   const INCIDENT_TIMESTAMP = 1580515200000;
   const ETHER_UINT_10 = ethers.utils.parseEther('10');
-  const ETHER_UINT_9 = ethers.utils.parseEther('9');
+  const ETHER_UINT_1 = ethers.utils.parseEther('1');
   const feeRate = ethers.utils.parseEther('0.006');
 
   let ownerAddress, ownerAccount, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
@@ -171,7 +171,7 @@ describe('CoverPool', () => {
     const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
     await txA.wait();
 
-    await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0))
+    await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [ETHER_UINT_1], INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimEnacted');
     await expect(coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1])).to.emit(coverPool, 'CoverCreated');
     
@@ -191,7 +191,7 @@ describe('CoverPool', () => {
     const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
     await txA.wait();
 
-    await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0))
+    await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [ETHER_UINT_1], INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimEnacted');
     await coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
 
@@ -209,7 +209,7 @@ describe('CoverPool', () => {
 
   it('Should emit event and enactClaim if called by claimManager', async () => {
     const oldClaimNonce = await coverPool.claimNonce();
-    await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0))
+    await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [ETHER_UINT_1], INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimEnacted');
     const [, active] = await coverPool.getCoverPoolDetails();
     expect(await coverPool.name()).to.equal(consts.POOL_2);
@@ -219,22 +219,22 @@ describe('CoverPool', () => {
 
   it('Should NOT enactClaim if coverPool nonce not match', async () => {
     const oldClaimNonce = await coverPool.claimNonce();
-    await coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0);
+    await coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [ETHER_UINT_1], INCIDENT_TIMESTAMP, 0);
     const [, active] = await coverPool.getCoverPoolDetails();
     expect(await coverPool.name()).to.equal(consts.POOL_2);
     expect(active).to.equal(true);
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce + 1);
 
-    await expect(coverPool.connect(userAAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).enactClaim([consts.ASSET_1_BYTES32], [ETHER_UINT_1], INCIDENT_TIMESTAMP, 0)).to.be.reverted;
   });
 
   it('Should NOT enactClaim if have non active risk', async () => {
-    await expectRevert(coverPool.enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32], [20, 40], 100, INCIDENT_TIMESTAMP, 0), "CoverPool: has non active risk");
+    await expectRevert(coverPool.enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32], [ethers.utils.parseEther('0.2'), ethers.utils.parseEther('0.4')], INCIDENT_TIMESTAMP, 0), "CoverPool: has non active risk");
   });
   
   it('Should NOT enactClaim if called by non-claimManager', async () => {
     const oldClaimNonce = await coverPool.claimNonce();
-    await expect(coverPool.connect(userAAccount).enactClaim([consts.ASSET_1_BYTES32], [100], 100, INCIDENT_TIMESTAMP, 0)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).enactClaim([consts.ASSET_1_BYTES32], [ETHER_UINT_1], INCIDENT_TIMESTAMP, 0)).to.be.reverted;
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce);
   });
 

@@ -235,36 +235,32 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
    * @dev enact accepted claim, all covers are to be paid out
    *  - increment claimNonce
    *  - delete activeCovers list
-   *  - only COVER claim manager can call this function
-   *
    * Emit ClaimAccepted
    */
   function enactClaim(
     bytes32[] calldata _payoutRiskList,
-    uint256[] calldata _payoutNumerators,
-    uint256 _payoutDenominator,
+    uint256[] calldata _payoutRates,
     uint48 _incidentTimestamp,
     uint256 _coverPoolNonce
   ) external override {
     require(_coverPoolNonce == claimNonce, "CoverPool: nonces do not match");
-    require(_payoutRiskList.length == _payoutNumerators.length, "CoverPool: payout risk length don't match");
+    require(_payoutRiskList.length == _payoutRates.length, "CoverPool: payout risk length don't match");
     ICoverPoolFactory factory = _factory();
     require(msg.sender == factory.claimManager(), "CoverPool: caller not claimManager");
 
     uint256 totalNum;
     for (uint256 i = 0; i < _payoutRiskList.length; i++) {
       require(riskMap[_payoutRiskList[i]] == 1, "CoverPool: has non active risk");
-      totalNum = totalNum + _payoutNumerators[i];
+      totalNum = totalNum + _payoutRates[i];
     }
-    require(totalNum <= _payoutDenominator && totalNum > 0, "CoverPool: payout % is not in (0%, 100%]");
+    require(totalNum <= 1 ether && totalNum > 0, "CoverPool: payout % is not in (0%, 100%]");
 
     claimNonce = claimNonce + 1;
     delete activeCovers;
     claimDetails.push(ClaimDetails(
       _payoutRiskList,
-      _payoutNumerators,
+      _payoutRates,
       totalNum,
-      _payoutDenominator,
       _incidentTimestamp,
       uint48(block.timestamp)
     ));

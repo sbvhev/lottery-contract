@@ -99,12 +99,12 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       ICoverPool.ClaimDetails memory claim = _claimDetails();
       if (claim.incidentTimestamp > expiry && block.timestamp >= uint256(expiry) + defaultRedeemDelay) {
         // expired, redeem with noclaim tokens only
-        _burnNoclaimAndPay(noclaimCovToken, 1, 1);
+        _burnNoclaimAndPay(noclaimCovToken, 1e18);
         return;
       }
     } else if (block.timestamp >= uint256(expiry) + noclaimRedeemDelay) {
       // expired and noclaim delay passed, no accepted claim, redeem with noclaim tokens only
-      _burnNoclaimAndPay(noclaimCovToken, 1, 1);
+      _burnNoclaimAndPay(noclaimCovToken, 1e18);
       return;
     }
     _redeemWithAllCovTokens(coverPool, _amount);
@@ -154,13 +154,13 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     for (uint256 i = 0; i < claim.payoutRiskList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutRiskList[i]];
       uint256 amount = covToken.balanceOf(msg.sender);
-      eligibleAmount = eligibleAmount + amount * claim.payoutNumerators[i] / claim.payoutDenominator;
+      eligibleAmount = eligibleAmount + amount * claim.payoutRates[i] / 1e18;
       covToken.burnByCover(msg.sender, amount);
     }
 
-    if (claim.payoutTotalNum < claim.payoutDenominator) {
+    if (claim.payoutTotalRate < 1e18) {
       uint256 amount = noclaimCovToken.balanceOf(msg.sender);
-      uint256 payoutAmount = amount * (claim.payoutDenominator - claim.payoutTotalNum) / claim.payoutDenominator;
+      uint256 payoutAmount = amount * (1e18 - claim.payoutTotalRate) / 1e18;
       eligibleAmount = eligibleAmount + payoutAmount;
       noclaimCovToken.burnByCover(msg.sender, amount);
     }
@@ -174,11 +174,11 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     for (uint256 i = 0; i < claim.payoutRiskList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutRiskList[i]];
       uint256 amount = covToken.balanceOf(_account);
-      eligibleAmount = eligibleAmount + amount * claim.payoutNumerators[i] / claim.payoutDenominator;
+      eligibleAmount = eligibleAmount + amount * claim.payoutRates[i] / 1e18;
     }
-    if (claim.payoutTotalNum < claim.payoutDenominator) {
+    if (claim.payoutTotalRate < 1e18) {
       uint256 amount = noclaimCovToken.balanceOf(_account);
-      uint256 payoutAmount = amount * (claim.payoutDenominator - claim.payoutTotalNum) / claim.payoutDenominator;
+      uint256 payoutAmount = amount * (1e18 - claim.payoutTotalRate) / 1e18;
       eligibleAmount = eligibleAmount + payoutAmount;
     }
   }
@@ -309,14 +309,13 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   /// @notice burn covToken and pay sender
   function _burnNoclaimAndPay(
     ICoverERC20 _covToken,
-    uint256 _payoutNumerator,
-    uint256 _payoutDenominator
+    uint256 _payoutRate
   ) private {
     uint256 amount = _covToken.balanceOf(msg.sender);
     require(amount > 0, "Cover: low covToken balance");
 
     _covToken.burnByCover(msg.sender, amount);
-    uint256 payoutAmount = amount * _payoutNumerator / _payoutDenominator;
+    uint256 payoutAmount = amount * _payoutRate / 1e18;
     _payCollateral(msg.sender, payoutAmount);
   }
 

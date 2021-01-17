@@ -24,9 +24,8 @@ interface ICoverPool {
   }
   struct ClaimDetails {
     bytes32[] payoutRiskList;
-    uint256[] payoutNumerators;
-    uint256 payoutTotalNum;
-    uint256 payoutDenominator;
+    uint256[] payoutRates;
+    uint256 payoutTotalRate;
     uint48 incidentTimestamp;
     uint48 claimEnactedTimestamp;
   }
@@ -67,8 +66,7 @@ interface ICoverPool {
   // access restriction - claimManager
   function enactClaim(
     bytes32[] calldata _payoutRiskList,
-    uint256[] calldata _payoutNumerators,
-    uint256 _payoutDenominator,
+    uint256[] calldata _payoutRates,
     uint48 _incidentTimestamp,
     uint256 _coverPoolNonce
   ) external;

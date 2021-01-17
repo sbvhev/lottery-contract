@@ -55,9 +55,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       description: _description,
       state: ClaimState.Filed,
       feePaid: claimFee,
-      payoutDenominator: 1,
       payoutRiskList: _exploitRisks,
-      payoutNumerators: new uint256[](_exploitRisks.length)
+      payoutRates: new uint256[](_exploitRisks.length)
     }));
     feeCurrency.safeTransferFrom(msg.sender, address(this), claimFee);
     _updateCoverPoolClaimFee(coverPool);
@@ -86,9 +85,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       description: _description,
       state: ClaimState.ForceFiled,
       feePaid: forceClaimFee,
-      payoutDenominator: 1,
       payoutRiskList: _exploitRisks,
-      payoutNumerators: new uint256[](_exploitRisks.length)
+      payoutRates: new uint256[](_exploitRisks.length)
     }));
     ICoverPool(coverPool).setNoclaimRedeemDelay(10 days);
     feeCurrency.safeTransferFrom(msg.sender, address(this), forceClaimFee);
@@ -137,10 +135,9 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     uint256 _index,
     bool _claimIsAccepted,
     bytes32[] calldata _exploitRisks,
-    uint256[] calldata _payoutNumerators,
-    uint256 _payoutDenominator
+    uint256[] calldata _payoutRates
   ) external override {
-    require(_exploitRisks.length == _payoutNumerators.length, "CoverPool: payout risks len don't match");
+    require(_exploitRisks.length == _payoutRates.length, "CoverPool: payout risks len don't match");
     require(isCVCMember(_coverPool, msg.sender), "COVER_CM: !cvc");
     require(_nonce == _getCoverPoolNonce(_coverPool), "COVER_CM: wrong nonce");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
@@ -151,19 +148,18 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       );
 
     // Max decision claim window passed, claim is default to Denied
-    uint256 totalNum = _getTotalNum(_payoutNumerators);
+    uint256 totalRates = _getTotalNum(_payoutRates);
     if (_claimIsAccepted && !_isDecisionWindowPassed(claim)) {
-      require(totalNum > 0 && totalNum <= _payoutDenominator, "CoverPool: payout % is not in (0%, 100%]");
+      require(totalRates > 0 && totalRates <= 1 ether, "CoverPool: payout % is not in (0%, 100%]");
 
       claim.state = ClaimState.Accepted;
       claim.payoutRiskList = _exploitRisks;
-      claim.payoutNumerators = _payoutNumerators;
-      claim.payoutDenominator = _payoutDenominator;
+      claim.payoutRates = _payoutRates;
       feeCurrency.safeTransfer(claim.filedBy, claim.feePaid);
       _resetCoverPoolClaimFee(_coverPool);
-      ICoverPool(_coverPool).enactClaim(claim.payoutRiskList, claim.payoutNumerators, claim.payoutDenominator, claim.incidentTimestamp, _nonce);
+      ICoverPool(_coverPool).enactClaim(claim.payoutRiskList, claim.payoutRates, claim.incidentTimestamp, _nonce);
     } else {
-      require(totalNum == 0, "COVER_CM: claim denied (default if passed window), but payoutNumerator != 0");
+      require(totalRates == 0, "COVER_CM: claim denied (default if passed window), but payoutNumerator != 0");
       claim.state = ClaimState.Denied;
       feeCurrency.safeTransfer(treasury, claim.feePaid);
     }
@@ -234,9 +230,9 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     return block.timestamp - claim.filedTimestamp > maxClaimDecisionWindow - 1 hours;
   }
 
-  function _getTotalNum(uint256[] calldata _payoutNumerators) private pure returns (uint256 _totalNum) {
-    for (uint256 i = 0; i < _payoutNumerators.length; i++) {
-      _totalNum = _totalNum + _payoutNumerators[i];
+  function _getTotalNum(uint256[] calldata _payoutRates) private pure returns (uint256 _totalRates) {
+    for (uint256 i = 0; i < _payoutRates.length; i++) {
+      _totalRates = _totalRates + _payoutRates[i];
     }
   }
 } 

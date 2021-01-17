@@ -19,9 +19,8 @@ interface IClaimManagement {
     string description;
     ClaimState state; // Current state of claim
     uint256 feePaid; // Fee paid to file the claim
-    uint256 payoutDenominator; // Denominator of percent to payout
     bytes32[] payoutRiskList;
-    uint256[] payoutNumerators; // Numerators of percent to payout
+    uint256[] payoutRates; // Numerators of percent to payout
   }
 
   function getCoverPoolClaims(address _coverPool, uint256 _nonce, uint256 _index) external view returns (Claim memory);
@@ -49,8 +48,7 @@ interface IClaimManagement {
     uint256 _index,
     bool _claimIsAccepted,
     bytes32[] calldata _exploitRisks,
-    uint256[] calldata _payoutNumerators,
-    uint256 _payoutDenominator
+    uint256[] calldata _payoutRates
   ) external;
 
   function getAllClaimsByState(address _coverPool, uint256 _nonce, ClaimState _state) external view returns (Claim[] memory);

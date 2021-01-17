@@ -8,7 +8,6 @@ describe('Cover', function() {
   const ETHER_UINT_20 = ethers.utils.parseEther('20');
   const ETHER_UINT_10 = ethers.utils.parseEther('10');
   const ETHER_UINT_6 = ethers.utils.parseEther('6');
-  const ETHER_UINT_4 = ethers.utils.parseEther('4');
   const ETHER_UINT_DUST = ethers.utils.parseEther('0.0000000001');
 
   let startTimestamp, TIMESTAMP, TIMESTAMP_NAME, COLLATERAL;
@@ -212,7 +211,7 @@ describe('Cover', function() {
   });
 
   it('Should redeem collateral with accepted claim with all tokens', async function() {
-    const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32], [100], 100, startTimestamp, 0);
+    const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32], [ethers.utils.parseEther('1')], startTimestamp, 0);
     await txA.wait();
 
     await verifyRedeemCollateral(userAAddress, ETHER_UINT_10);
@@ -286,7 +285,7 @@ describe('Cover', function() {
   });
 
   it('Should NOT redeemClaim after enact claim before redeemDelay ends', async function() {
-    const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32], [100], 100, startTimestamp, 0);
+    const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32], [ethers.utils.parseEther('1')], startTimestamp, 0);
     await txA.wait();
 
     await expect(cover.connect(userBAccount).redeemClaim()).to.be.reverted;
@@ -307,10 +306,10 @@ describe('Cover', function() {
     const ownerRedeemable = transferAmount.mul(40).div(100);
     const userARedeemable = ETHER_UINT_6.add(ETHER_UINT_10.sub(transferAmount).mul(40).div(100));
 
-    const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_2_BYTES32], [40, 20], 100, startTimestamp, 0);
+    const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_2_BYTES32], [ethers.utils.parseEther('0.4'), ethers.utils.parseEther('0.2')], startTimestamp, 0);
     await txA.wait();
 
-    const [,,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
+    const [,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
     const [delay] = await coverPool.getRedeemDelays();
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber());
     await time.advanceBlock();
@@ -349,10 +348,10 @@ describe('Cover', function() {
   it('Should allow redeemCollateral ONLY after enact and noclaimRedeemDelay if incident after expiry', async function() {
     const [, expiry ] = await cover.getCoverDetails();
 
-    const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32], [40], 100, expiry + 1, 0);
+    const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32], [ethers.utils.parseEther('0.4')], expiry + 1, 0);
     await txA.wait();
 
-    const [,,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
+    const [,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
     const [, delay] = await coverPool.getRedeemDelays();
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber() * 24 * 60 * 60);
     await time.advanceBlock();
@@ -375,7 +374,7 @@ describe('Cover', function() {
   });
 
   it('Should NOT redeemClaim after enact if does not have claim token', async function() {
-    const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32], [100], 100, startTimestamp, 0);
+    const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32], [ethers.utils.parseEther('1')], startTimestamp, 0);
     await txA.wait();
 
     await expect(cover.connect(userBAccount).redeemClaim()).to.be.reverted;
