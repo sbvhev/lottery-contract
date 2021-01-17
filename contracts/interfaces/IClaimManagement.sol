@@ -24,7 +24,10 @@ interface IClaimManagement {
   }
 
   function getCoverPoolClaims(address _coverPool, uint256 _nonce, uint256 _index) external view returns (Claim memory);
-  
+  function getAllClaimsByState(address _coverPool, uint256 _nonce, ClaimState _state) external view returns (Claim[] memory);
+  function getAllClaimsByNonce(address _coverPool, uint256 _nonce) external view returns (Claim[] memory);
+  function hasPendingClaim(address _coverPool, uint256 _nonce) external view returns (bool);
+
   function fileClaim(
     string calldata _coverPoolName,
     bytes32[] calldata _exploitRisks,
@@ -33,10 +36,10 @@ interface IClaimManagement {
     bool _isForceFile
   ) external;
   
-  // @dev Only callable by owner when auditor is voting
+  // @dev Only callable by gov when auditor is voting
   function validateClaim(address _coverPool, uint256 _nonce, uint256 _index, bool _claimIsValid) external;
 
-  // @dev Only callable by approved decider, governance or auditor (isAuditorVoting == true)
+  // @dev Only callable by CVC
   function decideClaim(
     address _coverPool,
     uint256 _nonce,
@@ -45,8 +48,4 @@ interface IClaimManagement {
     bytes32[] calldata _exploitRisks,
     uint256[] calldata _payoutRates
   ) external;
-
-  function getAllClaimsByState(address _coverPool, uint256 _nonce, ClaimState _state) external view returns (Claim[] memory);
-  function getAllClaimsByNonce(address _coverPool, uint256 _nonce) external view returns (Claim[] memory);
-  function hasPendingClaim(address _coverPool, uint256 _nonce) external view returns (bool);
  }

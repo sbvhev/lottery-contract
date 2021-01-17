@@ -67,7 +67,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   }
 
   /**
-   * @notice Validates whether claim will be passed to approvedDecider to decideClaim
+   * @notice Validates whether claim will be passed to CVC to decideClaim
    * @param _coverPool address: contract address of the coverPool that COVER supports
    * @param _nonce uint256: nonce of the coverPool
    * @param _index uint256: index of the claim
@@ -100,7 +100,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     });
   }
 
-  /// @notice Decide whether claim for a coverPool should be accepted(will payout) or denied,  Only callable by approvedDecider
+  /// @notice Decide whether claim for a coverPool should be accepted(will payout) or denied
   function decideClaim(
     address _coverPool,
     uint256 _nonce,
@@ -113,27 +113,21 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     require(isCVCMember(_coverPool, msg.sender), "ClaimManagement: !cvc");
     require(_nonce == _getCoverPoolNonce(_coverPool), "ClaimManagement: wrong nonce");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
-    require(
-        claim.state == ClaimState.Validated || 
-        claim.state == ClaimState.ForceFiled, 
-        "ClaimManagement: claim not validated or forceFiled"
-      );
+    require(claim.state == ClaimState.Validated || claim.state == ClaimState.ForceFiled, "ClaimManagement: claim not validated or forceFiled");
 
-    // Max decision claim window passed, claim is default to Denied
     uint256 totalRates = _getTotalNum(_payoutRates);
     if (_claimIsAccepted && !_isDecisionWindowPassed(claim)) {
       require(totalRates > 0 && totalRates <= 1 ether, "CoverPool: payout % is not in (0%, 100%]");
-
+      feeCurrency.safeTransfer(claim.filedBy, claim.feePaid);
+      _resetCoverPoolClaimFee(_coverPool);
       claim.state = ClaimState.Accepted;
       claim.payoutRiskList = _exploitRisks;
       claim.payoutRates = _payoutRates;
-      feeCurrency.safeTransfer(claim.filedBy, claim.feePaid);
-      _resetCoverPoolClaimFee(_coverPool);
       ICoverPool(_coverPool).enactClaim(claim.payoutRiskList, claim.payoutRates, claim.incidentTimestamp, _nonce);
-    } else {
+    } else { // Max decision claim window passed, claim is default to Denied
       require(totalRates == 0, "ClaimManagement: claim denied (default if passed window), but payoutNumerator != 0");
-      claim.state = ClaimState.Denied;
       feeCurrency.safeTransfer(treasury, claim.feePaid);
+      claim.state = ClaimState.Denied;
     }
     _resetNoclaimRedeemDelay(_coverPool, _nonce);
     claim.decidedBy = msg.sender;
@@ -183,10 +177,9 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   }
 
   function _resetNoclaimRedeemDelay(address _coverPool, uint256 _nonce) private {
-    if (!hasPendingClaim(_coverPool, _nonce)) {
-      (uint256 defaultRedeemDelay, ) = ICoverPool(_coverPool).getRedeemDelays();
-      ICoverPool(_coverPool).setNoclaimRedeemDelay(defaultRedeemDelay);
-    }
+    if (hasPendingClaim(_coverPool, _nonce)) return;
+    (uint256 defaultRedeemDelay, ) = ICoverPool(_coverPool).getRedeemDelays();
+    ICoverPool(_coverPool).setNoclaimRedeemDelay(defaultRedeemDelay);
   }
 
   function _getCoverPoolAddr(string calldata _coverPoolName) private view returns (address) {
