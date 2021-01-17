@@ -20,8 +20,6 @@ import "./interfaces/ICovTokenProxy.sol";
 /**
  * @title Cover contract
  * @author crypto-pumpkin
- *
- * The contract
  *  - Holds collateral funds
  *  - Mints and burns CovTokens (CoverERC20)
  *  - Handles redeem with or without an accepted claim
@@ -33,12 +31,9 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   uint48 private expiry;
   address private collateral;
   ICoverERC20 private noclaimCovToken;
-  // Yearn_0_DAI_210131
-  string private name;
-  // 1e18 cover feeRate, based on yearly feeRate on CoverPool, cannot be changed
-  uint256 public override feeRate;
-  // 1e18 created as initialization, cannot be changed, used to decided the collateral to covToken ratio
-  uint256 private mintRatio;
+  string private name; // Yearn_0_DAI_210131
+  uint256 public override feeRate; // 1e18, cannot be changed
+  uint256 private mintRatio; // 1e18, cannot be changed, 1 collateral mint mintRatio * 1 covTokens
   uint256 private totalCoverage;
   uint256 public override claimNonce;
 
@@ -61,7 +56,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     collateral = _collateral;
     mintRatio = _mintRatio;
     claimNonce = _claimNonce;
-    uint256 yearlyFeeRate = ICoverPool(owner()).yearlyFeeRate();
+    uint256 yearlyFeeRate = _coverPool().yearlyFeeRate();
     feeRate = yearlyFeeRate * (uint256(_expiry) - block.timestamp) / 365 days;
 
     noclaimCovToken = _createCovToken("NC_");
@@ -72,10 +67,10 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   /// @notice only owner (covered coverPool) can mint, collateral is transfered in CoverPool
   function mint(uint256 _amount, address _receiver) external override onlyOwner {
     require(deployComplete, "Cover: deploy incomplete");
-    require(ICoverPool(owner()).claimNonce() == claimNonce, "Cover: claim accepted");
+    require(_coverPool().claimNonce() == claimNonce, "Cover: claim accepted");
 
     uint256 adjustedAmount = _amount * mintRatio / 1e18;
-    (bytes32[] memory _riskList) = ICoverPool(owner()).getRiskList();
+    (bytes32[] memory _riskList) = _coverPool().getRiskList();
     for (uint i = 0; i < _riskList.length; i++) {
       claimCovTokenMap[_riskList[i]].mint(_receiver, adjustedAmount);
     }
@@ -92,7 +87,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
    * - otherwise, always allow redeem back collateral with all covToken at any give moment
    */
   function redeemCollateral(uint256 _amount) external override nonReentrant {
-    ICoverPool coverPool = ICoverPool(owner());
+    ICoverPool coverPool = _coverPool();
     (uint256 defaultRedeemDelay, uint256 noclaimRedeemDelay) = coverPool.getRedeemDelays();
 
     if (coverPool.claimNonce() > claimNonce) {
@@ -142,7 +137,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   /// @notice redeem when there is an accepted claim
   function redeemClaim() external override nonReentrant {
-    ICoverPool coverPool = ICoverPool(owner());
+    ICoverPool coverPool = _coverPool();
     require(coverPool.claimNonce() > claimNonce, "Cover: no claim accepted");
 
     ICoverPool.ClaimDetails memory claim = _claimDetails();
@@ -196,7 +191,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       ICoverERC20[] memory _claimCovTokens,
       ICoverERC20[] memory _futureCovTokens)
   {
-    (bytes32[] memory _riskList) = ICoverPool(owner()).getRiskList();
+    (bytes32[] memory _riskList) = _coverPool().getRiskList();
     ICoverERC20[] memory claimCovTokens = new ICoverERC20[](_riskList.length);
     for (uint256 i = 0; i < _riskList.length; i++) {
       claimCovTokens[i] = ICoverERC20(claimCovTokenMap[_riskList[i]]);
@@ -243,7 +238,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
    */
   function deploy() public override {
     require(!deployComplete, "Cover: deploy completed");
-    (bytes32[] memory _riskList) = ICoverPool(owner()).getRiskList();
+    (bytes32[] memory _riskList) = _coverPool().getRiskList();
     uint256 startGas = gasleft();
     for (uint256 i = 0; i < _riskList.length; i++) {
       if (startGas < _factory().deployGasMin()) return;
@@ -259,14 +254,18 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     emit CoverDeployCompleted();
   }
 
+  function _coverPool() private view returns (ICoverPool) {
+    return ICoverPool(owner());
+  }
+
   /// @notice the owner of this contract is CoverPool contract, the owner of CoverPool is CoverPoolFactory contract
-  function _factory() internal view returns (ICoverPoolFactory) {
+  function _factory() private view returns (ICoverPoolFactory) {
     return ICoverPoolFactory(IOwnable(owner()).owner());
   }
 
   // get the claim details for the corresponding nonce from coverPool contract
-  function _claimDetails() internal view returns (ICoverPool.ClaimDetails memory) {
-    return ICoverPool(owner()).getClaimDetails(claimNonce);
+  function _claimDetails() private view returns (ICoverPool.ClaimDetails memory) {
+    return _coverPool().getClaimDetails(claimNonce);
   }
 
   function _redeemWithAllCovTokens(ICoverPool coverPool, uint256 _amount) private {
@@ -326,7 +325,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       decimals = 18;
     }
     address coverERC20Impl = _factory().coverERC20Impl();
-    bytes32 salt = keccak256(abi.encodePacked(ICoverPool(owner()).name(), expiry, collateral, claimNonce, _prefix));
+    bytes32 salt = keccak256(abi.encodePacked(_coverPool().name(), expiry, collateral, claimNonce, _prefix));
     address proxyAddr = BasicProxyLib.deployProxy(coverERC20Impl, salt);
     ICovTokenProxy(proxyAddr).initialize(string(abi.encodePacked(_prefix, name)), decimals);
 
