@@ -50,7 +50,7 @@ describe('CoverPool', () => {
   });
 
   it('Should initialize correct state variables', async () => {
-    const [extendablePool, active, claimNonce, collaterals, expiries, riskList, deletedRiskList, allActiveCovers, allCovers] = await coverPool.getCoverPoolDetails();
+    const [extendablePool, active, claimNonce, collaterals, expiries, riskList, deletedRiskList, allCovers] = await coverPool.getCoverPoolDetails();
     const [defaultRedeemDelay, noclaimRedeemDelay] = await coverPool.getRedeemDelays();
 
     expect(await coverPool.name()).to.equal(consts.POOL_2);
@@ -65,7 +65,6 @@ describe('CoverPool', () => {
     expect(collaterals).to.deep.equal([COLLATERAL]);
     expect(expiries).to.deep.equal(consts.ALLOWED_EXPIRYS);
     expect(allCovers.length).to.equal(3);
-    expect(allActiveCovers.length).to.equal(3);
   });
 
   it('Should update state variables by the correct authority', async () => {
@@ -178,8 +177,8 @@ describe('CoverPool', () => {
     const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
     await txB.wait();
 
-    const [,,,,,,, activeCovers] = await coverPool.getCoverPoolDetails();
-    const lastActiveCover = activeCovers[0];
+    const [,,,,,,, allCovers] = await coverPool.getCoverPoolDetails();
+    const lastActiveCover = allCovers[0];
     expect(lastActiveCover).to.not.equal(consts.ADDRESS_ZERO);
 
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
@@ -198,8 +197,8 @@ describe('CoverPool', () => {
     const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
     await txB.wait();
 
-    const [,,,,,,, activeCovers] = await coverPool.getCoverPoolDetails();
-    const lastActiveCover = activeCovers[0];
+    const [,,,,,,, allCovers] = await coverPool.getCoverPoolDetails();
+    const lastActiveCover = allCovers[0];
     expect(lastActiveCover).to.not.equal(consts.ADDRESS_ZERO);
 
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
@@ -229,7 +228,7 @@ describe('CoverPool', () => {
   });
 
   it('Should NOT enactClaim if have non active risk', async () => {
-    await expectRevert(coverPool.enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32], [ethers.utils.parseEther('0.2'), ethers.utils.parseEther('0.4')], INCIDENT_TIMESTAMP, 0), "CoverPool: has non active risk");
+    await expectRevert(coverPool.enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32], [ethers.utils.parseEther('0.2'), ethers.utils.parseEther('0.4')], INCIDENT_TIMESTAMP, 0), "CoverPool: has inactive risk");
   });
   
   it('Should NOT enactClaim if called by non-claimManager', async () => {

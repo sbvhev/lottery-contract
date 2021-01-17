@@ -54,7 +54,6 @@ interface ICoverPool {
       uint48[] memory _expiries,
       bytes32[] memory _riskList,
       bytes32[] memory _deletedRiskList,
-      address[] memory _allActiveCovers,
       address[] memory _allCovers
     );
 
