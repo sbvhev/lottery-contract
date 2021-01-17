@@ -27,7 +27,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     require(_defaultCVC != address(0), "ClaimManagement: defaultCVC cannot be 0");
     governance = _governance;
     treasury = _treasury;
-    coverPoolFactory = _coverPoolFactory;
+    coverPoolFactory = ICoverPoolFactory(_coverPoolFactory);
     defaultCVC = _defaultCVC;
 
     initializeOwner();
@@ -178,12 +178,12 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
 
   function _resetNoclaimRedeemDelay(address _coverPool, uint256 _nonce) private {
     if (hasPendingClaim(_coverPool, _nonce)) return;
-    (uint256 defaultRedeemDelay, ) = ICoverPool(_coverPool).getRedeemDelays();
+    uint256 defaultRedeemDelay = coverPoolFactory.defaultRedeemDelay();
     ICoverPool(_coverPool).setNoclaimRedeemDelay(defaultRedeemDelay);
   }
 
   function _getCoverPoolAddr(string calldata _coverPoolName) private view returns (address) {
-    return ICoverPoolFactory(coverPoolFactory).coverPools(_coverPoolName);
+    return coverPoolFactory.coverPools(_coverPoolName);
   }
 
   function _getCoverPoolNonce(address _coverPool) private view returns (uint256) {

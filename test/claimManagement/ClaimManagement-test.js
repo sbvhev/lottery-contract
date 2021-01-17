@@ -81,8 +81,8 @@ describe("ClaimManagement", function () {
   // hasPendingClaim
   it("Should return false when no claims exist", async function () {
     expect(await management.hasPendingClaim(coverPool.address, 0)).to.equal(false);
-    const [defaultDelay, noclaimDelay] = await coverPool.getRedeemDelays();
-    expect([defaultDelay.toNumber(), noclaimDelay.toNumber()]).to.deep.equal([3 * DAY, 3 * DAY]);
+    const noclaimDelay = await coverPool.noclaimRedeemDelay();
+    expect(noclaimDelay.toNumber()).to.deep.equal(3 * DAY);
   });
 
   // fileClaim
@@ -93,8 +93,8 @@ describe("ClaimManagement", function () {
     await expect(management.fileClaim(BOGEY_PROTOCOL, EXPLOIT_ASSETS, timestamp), DESC, false).to.be.reverted;
 
     await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC, false);
-    const [defaultDelay, noclaimDelay] = await coverPool.getRedeemDelays();
-    expect([defaultDelay.toNumber(), noclaimDelay.toNumber()]).to.deep.equal([3 * DAY, 10 * DAY]);
+    const noclaimDelay = await coverPool.noclaimRedeemDelay();
+    expect(noclaimDelay.toNumber()).to.deep.equal(10 * DAY);
     const claim = await management.getCoverPoolClaims(coverPool.address, 0, 0);
     expect(claim.state).to.equal(state.filed);
     expect(claim.filedBy).to.equal(ownerAddress);
@@ -106,8 +106,8 @@ describe("ClaimManagement", function () {
 
   it("Should return true for pending claim on coverPool", async function () {
     expect(await management.hasPendingClaim(coverPool.address, 0)).to.equal(true);
-    const [defaultDelay, noclaimDelay] = await coverPool.getRedeemDelays();
-    expect([defaultDelay.toNumber(), noclaimDelay.toNumber()]).to.deep.equal([3 * DAY, 10 * DAY]);
+    const noclaimDelay = await coverPool.noclaimRedeemDelay();
+    expect(noclaimDelay.toNumber()).to.deep.equal(10 * DAY);
   });
 
   it("Should return false for pending claim on non-existent pool", async function () {
@@ -125,8 +125,8 @@ describe("ClaimManagement", function () {
   it("Should file a forced claim", async function () {
     const userBal = await dai.balanceOf(ownerAddress);
     await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC, true);
-    const [defaultDelay, noclaimDelay] = await coverPool.getRedeemDelays();
-    expect([defaultDelay.toNumber(), noclaimDelay.toNumber()]).to.deep.equal([3 * DAY, 10 * DAY]);
+    const noclaimDelay = await coverPool.noclaimRedeemDelay();
+    expect(noclaimDelay.toNumber()).to.deep.equal(10 * DAY);
     expect(await dai.balanceOf(ownerAddress)).to.equal(userBal.sub(ethers.utils.parseEther("500")));
     const claim = await management.getCoverPoolClaims(coverPool.address, 0, 2);
     expect(claim.state).to.equal(state.forceFiled);
@@ -226,8 +226,8 @@ describe("ClaimManagement", function () {
   
   it("Should return false for pending claim", async function () {
     expect(await management.hasPendingClaim(coverPool.address, 1)).to.equal(false);
-    const [defaultDelay, noclaimDelay] = await coverPool.getRedeemDelays();
-    expect([defaultDelay.toNumber(), noclaimDelay.toNumber()]).to.deep.equal([3 * DAY, 3 * DAY]);
+    const noclaimDelay = await coverPool.noclaimRedeemDelay();
+    expect(noclaimDelay.toNumber()).to.deep.equal(3 * DAY);
   });
 
   // edge cases
@@ -244,8 +244,8 @@ describe("ClaimManagement", function () {
 
   it("Should deny claim if window passed", async function () {
     await management.connect(governanceAccount).validateClaim(coverPool.address, 1, 1, true);
-    const [defaultDelay1, noclaimDelay1] = await coverPool.getRedeemDelays();
-    expect([defaultDelay1.toNumber(), noclaimDelay1.toNumber()]).to.deep.equal([3 * DAY, 10 * DAY]);
+    const noclaimDelay1 = await coverPool.noclaimRedeemDelay();
+    expect(noclaimDelay1.toNumber()).to.deep.equal(10 * DAY);
     await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 1, false, EXPLOIT_ASSETS, [0]);
     const claim = await management.getCoverPoolClaims(coverPool.address, 1, 1);
     expect(claim.state).to.equal(state.denied);
@@ -253,7 +253,7 @@ describe("ClaimManagement", function () {
     expect(claim.payoutRates[0]).to.equal(0);
     await management.connect(governanceAccount).validateClaim(coverPool.address, 1, 2, true);
     await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 2, true, EXPLOIT_ASSETS, [0]);
-    const [defaultDelay, noclaimDelay] = await coverPool.getRedeemDelays();
-    expect([defaultDelay.toNumber(), noclaimDelay.toNumber()]).to.deep.equal([3 * DAY, 3 * DAY]);
+    const noclaimDelay = await coverPool.noclaimRedeemDelay();
+    expect(noclaimDelay.toNumber()).to.deep.equal(3 * DAY);
   });
 });

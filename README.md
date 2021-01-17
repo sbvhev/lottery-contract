@@ -25,12 +25,12 @@ The following are the elements of the V2.
  ## Deploy to Kovan Testnet
 * Run `npx hardhat run scripts/deploy.js --network kovan`
 * Verify CoverPoolFactory: args - (coverPoolImpl, coverImpl, coverERC20Impl, gov, treasury)
-  * npx hardhat verify --network kovan 0x629A9F87b08131855e1fDBCC8e051b6313c0E0F5 "0xeA9cDbB866E3FF0484434d21ca378C9c923865EC" "0xE9DE405618a1f788C64f579fB36749d77725ACa5" "0x6d735fdf8670d138e04398F20f7aD12c7b769fd3" "0xe50fb5e4f608d96beb8b4364522e189fb98d821d" "0xe50fb5e4f608d96beb8b4364522e189fb98d821d"
+  * npx hardhat verify --network kovan 0xe15d59AD268759e6fB8D22Afc9a46E5E6f96f600 "0xCfA977dd0844E7DC8Dbdab00aeD076e6189e0765" "0xA5C0D4982588e54b9095590C8C2e03E0F811fb5a" "0x71fB7954bA078091A13FC85c7EF0d0D33210B9A6" "0xe50fb5e4f608d96beb8b4364522e189fb98d821d" "0xe50fb5e4f608d96beb8b4364522e189fb98d821d"
 * Verify Claim Management: args - (gov, treasury, coverPoolFactory, defaultCVC/auditor)
-  * npx hardhat verify --network kovan 0x47b2989d5123DA47B4113f0FB55758ECeee0341A "0xe50fb5e4f608d96beb8b4364522e189fb98d821d" "0xe50fb5e4f608d96beb8b4364522e189fb98d821d" "0x629A9F87b08131855e1fDBCC8e051b6313c0E0F5" "0x92E812467Df28763814f465048ae4c2AFfAd7631"
+  * npx hardhat verify --network kovan 0x8928eFa288Ef2d694dafA18975467FA5f9f97B8E "0xe50fb5e4f608d96beb8b4364522e189fb98d821d" "0xe50fb5e4f608d96beb8b4364522e189fb98d821d" "0xe15d59AD268759e6fB8D22Afc9a46E5E6f96f600" "0x92E812467Df28763814f465048ae4c2AFfAd7631"
 * Verify Implementations:
-  * npx hardhat verify --network kovan 0xeA9cDbB866E3FF0484434d21ca378C9c923865EC
-  * npx hardhat verify --network kovan 0xE9DE405618a1f788C64f579fB36749d77725ACa5
-  * npx hardhat verify --network kovan 0x6d735fdf8670d138e04398F20f7aD12c7b769fd3
+  * npx hardhat verify --network kovan 0xCfA977dd0844E7DC8Dbdab00aeD076e6189e0765
+  * npx hardhat verify --network kovan 0xA5C0D4982588e54b9095590C8C2e03E0F811fb5a
+  * npx hardhat verify --network kovan 0x71fB7954bA078091A13FC85c7EF0d0D33210B9A6
 
 * View on Kovan `npx hardhat run scripts/view.js --network kovan`

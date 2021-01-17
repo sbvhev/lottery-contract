@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "./utils/Ownable.sol";
 import "./interfaces/IClaimConfig.sol";
 import "./interfaces/ICoverPool.sol";
+import "./interfaces/ICoverPoolFactory.sol";
 
 /**
  * @title Config for ClaimManagement contract
@@ -14,7 +15,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
   IERC20 public override feeCurrency = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F); // Dai
   address public override governance;
   address public override treasury;
-  address public override coverPoolFactory;
+  ICoverPoolFactory public override coverPoolFactory;
   address public override defaultCVC; // if not specified, default to this
   
   // The max time allowed from filing a claim to a decision made
@@ -128,8 +129,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
 
   /// @notice Get the time window allowed to file after an incident happened, based on the defaultRedeemDelay of the coverPool - 1hour
   function getFileClaimWindow(address _coverPool) public view override returns (uint256) {
-    (uint256 defaultRedeemDelay, ) = ICoverPool(_coverPool).getRedeemDelays();
-    return defaultRedeemDelay - 1 hours;
+    return coverPoolFactory.defaultRedeemDelay() - 1 hours;
   }
 
   /// @notice Updates fee for coverPool `_coverPool` by multiplying current fee by `feeMultiplier`, capped at `forceClaimFee`

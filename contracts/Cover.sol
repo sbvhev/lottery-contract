@@ -56,7 +56,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     collateral = _collateral;
     mintRatio = _mintRatio;
     claimNonce = _claimNonce;
-    uint256 yearlyFeeRate = _coverPool().yearlyFeeRate();
+    uint256 yearlyFeeRate = _factory().yearlyFeeRate();
     feeRate = yearlyFeeRate * (uint256(_expiry) - block.timestamp) / 365 days;
 
     noclaimCovToken = _createCovToken("NC_");
@@ -84,7 +84,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   /// @notice redeem collateral always allow redeem back collateral with all covTokens
   function redeemCollateral(uint256 _amount) external override nonReentrant {
     ICoverPool coverPool = _coverPool();
-    (uint256 defaultRedeemDelay, uint256 noclaimRedeemDelay) = coverPool.getRedeemDelays();
+    uint256 noclaimRedeemDelay = coverPool.noclaimRedeemDelay();
+    uint256 defaultRedeemDelay = _factory().defaultRedeemDelay();
 
     if (coverPool.claimNonce() > claimNonce) { // accepted claim
       ICoverPool.ClaimDetails memory claim = _claimDetails();
@@ -137,7 +138,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     require(coverPool.claimNonce() > claimNonce, "Cover: no claim accepted");
     ICoverPool.ClaimDetails memory claim = _claimDetails();
     require(claim.incidentTimestamp <= expiry, "Cover: not eligible, redeem collateral instead");
-    (uint256 defaultRedeemDelay, ) = coverPool.getRedeemDelays();
+    uint256 defaultRedeemDelay = _factory().defaultRedeemDelay();
     require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + defaultRedeemDelay, "Cover: not ready");
 
     // get all claim tokens eligible amount

@@ -34,11 +34,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   bool public override addingRiskWIP;
   uint256 private addingRiskInd; // index of the active cover array to continue adding risk
   uint256 public override claimNonce; // nonce of for the coverPool's accepted claims
-  uint256 public override yearlyFeeRate;
-  // delay # of seconds for redeem with/o. accepted claim, redeemCollateral with all covTokens is not affected
-  uint256 private defaultRedeemDelay;
   // delay # of seconds for redeem with only noclaim tokens
-  uint256 private noclaimRedeemDelay;
+  uint256 public override noclaimRedeemDelay;
 
   // [claimNonce] => accepted ClaimDetails
   ClaimDetails[] private claimDetails;
@@ -57,11 +54,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   modifier onlyDev() {
     require(msg.sender == _dev(), "CoverPool: caller not dev");
-    _;
-  }
-
-  modifier onlyGov() {
-    require(msg.sender == _factory().governance(), "CoverPool: caller not governance");
     _;
   }
 
@@ -95,9 +87,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       riskMap[risk] = 1;
     }
 
-    defaultRedeemDelay = 3 days;
-    noclaimRedeemDelay = 3 days; // Claim manager can set it 10 days when claim filed
-    yearlyFeeRate = 0.006 ether; // 0.6% yearly rate
+    noclaimRedeemDelay = _factory().defaultRedeemDelay(); // Claim manager can set it 10 days when claim filed
     active = true;
     deployCover(_collateral, _expiry);
   }
@@ -204,25 +194,15 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     collateralStatusMap[_collateral] = CollateralInfo(_mintRatio, _status);
   }
 
-  function setYearlyFeeRate(uint256 _yearlyFeeRate) external override onlyGov {
-    require(_yearlyFeeRate <= 0.1 ether, "CoverPool: must < 10%");
-    yearlyFeeRate = _yearlyFeeRate;
-  }
-
   // update status of coverPool, if false, will pause new cover creation
   function setActive(bool _active) external override onlyDev {
     active = _active;
   }
 
-  function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external override onlyGov {
-    emit DefaultRedeemDelayUpdated(defaultRedeemDelay, _defaultRedeemDelay);
-    defaultRedeemDelay = _defaultRedeemDelay;
-  }
-
   function setNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external override {
     ICoverPoolFactory factory = _factory();
     require(msg.sender == factory.governance() || msg.sender == factory.claimManager(), "CoverPool: caller not gov or claimManager");
-    require(_noclaimRedeemDelay >= defaultRedeemDelay, "CoverPool: cannot be less than default delay");
+    require(_noclaimRedeemDelay >= factory.defaultRedeemDelay(), "CoverPool: cannot be less than default delay");
     if (_noclaimRedeemDelay != noclaimRedeemDelay) {
       emit NoclaimRedeemDelayUpdated(noclaimRedeemDelay, _noclaimRedeemDelay);
       noclaimRedeemDelay = _noclaimRedeemDelay;
@@ -276,10 +256,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       address[] memory _allCovers)
   {
     return (extendablePool, active, claimNonce, collaterals, expiries, riskList, deletedRiskList, allCovers);
-  }
-
-  function getRedeemDelays() external view override returns (uint256, uint256) {
-    return (defaultRedeemDelay, noclaimRedeemDelay);
   }
 
   function getRiskList() external view override returns (bytes32[] memory) {

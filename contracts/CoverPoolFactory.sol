@@ -27,6 +27,9 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   address public override treasury; // receive fees collected
   address public override governance;
   address public override claimManager;
+  // delay # of seconds for redeem with/o. accepted claim, redeemCollateral with all covTokens is not affected
+  uint256 public override defaultRedeemDelay = 3 days;
+  uint256 public override yearlyFeeRate = 0.006 ether; // 0.6% yearly rate
   /// @notice min gas left requirement before continue deployments (when creating new Cover or adding risks to CoverPool)
   uint256 public override deployGasMin = 1000000;
   // not all coverPools are active
@@ -83,6 +86,16 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     _addr = address(_deployCoverPool(_name, initData));
     coverPools[_name] = _addr;
     emit CoverPoolCreated(_addr);
+  }
+
+  function setYearlyFeeRate(uint256 _yearlyFeeRate) external override onlyOwner {
+    require(_yearlyFeeRate <= 0.1 ether, "CoverPool: must < 10%");
+    yearlyFeeRate = _yearlyFeeRate;
+  }
+
+  function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external override onlyOwner {
+    emit DefaultRedeemDelayUpdated(defaultRedeemDelay, _defaultRedeemDelay);
+    defaultRedeemDelay = _defaultRedeemDelay;
   }
 
   function setPaused(bool _paused) external override {

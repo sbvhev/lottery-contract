@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../ERC20/IERC20.sol";
+import "./ICoverPoolFactory.sol";
 
 /**
  * @dev ClaimConfg contract interface. See {ClaimConfig}.
@@ -11,7 +12,7 @@ import "../ERC20/IERC20.sol";
 interface IClaimConfig {
   function governance() external view returns (address);
   function treasury() external view returns (address);
-  function coverPoolFactory() external view returns (address);
+  function coverPoolFactory() external view returns (ICoverPoolFactory);
   function defaultCVC() external view returns (address);
   function maxClaimDecisionWindow() external view returns (uint256);
   function baseClaimFee() external view returns (uint256);

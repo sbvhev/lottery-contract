@@ -9,7 +9,6 @@ pragma solidity ^0.8.0;
 interface ICoverPool {
   event CoverCreated(address);
   event CoverAdded(address indexed _cover, address _acount, uint256 _amount);
-  event DefaultRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
   event NoclaimRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
   event ClaimEnacted(uint256 _enactedClaimNonce);
   event RiskUpdated(bytes32 _risk, bool _isAddRisk);
@@ -32,18 +31,16 @@ interface ICoverPool {
 
   // state vars
   function name() external view returns (string memory);
+  function noclaimRedeemDelay() external view returns (uint256);
   function addingRiskWIP() external view returns (bool);
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   function claimNonce() external view returns (uint256);
-  // yearlyFeeRate is 1e18
-  function yearlyFeeRate() external view returns (uint256);
   function collateralStatusMap(address _collateral) external view returns (uint256 _mintRatio, uint8 _status);
   function expiryInfoMap(uint48 _expiry) external view returns (string memory _name, uint8 _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);
 
   // extra view
   function getRiskList() external view returns (bytes32[] memory _riskList);
-  function getRedeemDelays() external view returns (uint256 _defaultRedeemDelay, uint256 _noclaimRedeemDelay);
   function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
   function getCoverPoolDetails()
     external view returns (
@@ -72,10 +69,6 @@ interface ICoverPool {
 
   // CM and Gov only
   function setNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external;
-
-  // access restriction - governance
-  function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external;
-  function setYearlyFeeRate(uint256 _yearlyFeeRate) external;
 
   // access restriction - dev
   function addRisk(string calldata _risk) external;

@@ -11,8 +11,12 @@ interface ICoverPoolFactory {
   event ImplUpdated(string _type, address _old, address _new);
   event AddressUpdated(string _type, address _old, address _new);
   event PausedStatusUpdated(bool _old, bool _new);
+  event DefaultRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
 
   // state vars
+  function defaultRedeemDelay() external view returns (uint256);
+  // yearlyFeeRate is 1e18
+  function yearlyFeeRate() external view returns (uint256);
   function paused() external view returns (bool);
   function responder() external view returns (address);
   function coverPoolImpl() external view returns (address);
@@ -37,6 +41,8 @@ interface ICoverPoolFactory {
   function setPaused(bool _paused) external;
 
   // access restriction - owner (dev)
+  function setYearlyFeeRate(uint256 _yearlyFeeRate) external;
+  function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external;
   function setResponder(address _responder) external;
   function setDeployGasMin(uint256 _deployGasMin) external;
   /// @dev update Impl will only affect contracts deployed after

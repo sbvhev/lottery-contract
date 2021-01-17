@@ -3,6 +3,8 @@ const { expectRevert } = require("@openzeppelin/test-helpers");
 const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
 describe('CoverPoolFactory', () => {
+  const feeRate = ethers.utils.parseEther('0.006');
+
   let ownerAccount, ownerAddress, userAAccount, userAAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
   let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
   let coverPoolFactory, dai, COLLATERAL;
@@ -30,6 +32,8 @@ describe('CoverPoolFactory', () => {
     expect(await coverPoolFactory.treasury()).to.equal(treasuryAddress);
     expect(await coverPoolFactory.deployGasMin()).to.equal(1000000);
     expect(await coverPoolFactory.paused()).to.equal(false);
+    expect(await coverPoolFactory.yearlyFeeRate()).to.equal(feeRate);
+    expect(await coverPoolFactory.defaultRedeemDelay()).to.equal(3 * 24 * 3600);
   });
 
   it('Should emit CoverPoolCreation event', async () => {
@@ -67,6 +71,14 @@ describe('CoverPoolFactory', () => {
     await expect(coverPoolFactory.connect(ownerAccount).setResponder(userAAddress)).to.emit(coverPoolFactory, 'AddressUpdated');
     await expect(coverPoolFactory.connect(userAAccount).setPaused(true)).to.emit(coverPoolFactory, 'PausedStatusUpdated');
     expect(await coverPoolFactory.paused()).to.equal(true);
+
+    await expectRevert(coverPoolFactory.connect(ownerAccount).setYearlyFeeRate(ethers.utils.parseEther('0.11')), "CoverPool: must < 10%");
+    await coverPoolFactory.connect(ownerAccount).setYearlyFeeRate(0);
+    expect(await coverPoolFactory.yearlyFeeRate()).to.equal(0);
+
+    await expect(coverPoolFactory.connect(ownerAccount).setDefaultRedeemDelay(4 * 24 * 3600))
+      .to.emit(coverPoolFactory, 'DefaultRedeemDelayUpdated');
+    expect(await coverPoolFactory.defaultRedeemDelay()).to.equal(4 * 24 * 3600);
   });
 
   it('Should add 2 new coverPools by owner', async () => {

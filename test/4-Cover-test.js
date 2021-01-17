@@ -252,7 +252,7 @@ describe('Cover', function() {
 
   it('Should redeemCollateral after expire and after wait period ends', async function() {
     const [, expiry ] = await cover.getCoverDetails();
-    const [, delay] = await coverPool.getRedeemDelays();
+    const delay = await coverPool.noclaimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(expiry).toNumber() + delay.toNumber());
     await time.advanceBlock();
 
@@ -310,7 +310,7 @@ describe('Cover', function() {
     await txA.wait();
 
     const [,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
-    const [delay] = await coverPool.getRedeemDelays();
+    const delay = await coverPool.noclaimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber());
     await time.advanceBlock();
 
@@ -352,7 +352,7 @@ describe('Cover', function() {
     await txA.wait();
 
     const [,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
-    const [, delay] = await coverPool.getRedeemDelays();
+    const delay = await coverPool.noclaimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber() * 24 * 60 * 60);
     await time.advanceBlock();
 

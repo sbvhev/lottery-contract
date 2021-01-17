@@ -8,7 +8,6 @@ describe('CoverPool', () => {
   const INCIDENT_TIMESTAMP = 1580515200000;
   const ETHER_UINT_10 = ethers.utils.parseEther('10');
   const ETHER_UINT_1 = ethers.utils.parseEther('1');
-  const feeRate = ethers.utils.parseEther('0.006');
 
   let ownerAddress, ownerAccount, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
   let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
@@ -51,14 +50,12 @@ describe('CoverPool', () => {
 
   it('Should initialize correct state variables', async () => {
     const [extendablePool, active, claimNonce, collaterals, expiries, riskList, deletedRiskList, allCovers] = await coverPool.getCoverPoolDetails();
-    const [defaultRedeemDelay, noclaimRedeemDelay] = await coverPool.getRedeemDelays();
+    const noclaimRedeemDelay = await coverPool.noclaimRedeemDelay();
 
     expect(await coverPool.name()).to.equal(consts.POOL_2);
-    expect(await coverPool.yearlyFeeRate()).to.equal(feeRate);
     expect(extendablePool).to.equal(true);
     expect(active).to.equal(true);
     expect(claimNonce).to.equal(0);
-    expect(defaultRedeemDelay).to.equal(3 * 24 * 60 * 60);
     expect(noclaimRedeemDelay).to.equal(3 * 24 * 60 * 60);
     expect(riskList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_2_BYTES32]);
     expect(deletedRiskList).to.deep.equal([]);
@@ -82,21 +79,13 @@ describe('CoverPool', () => {
     const newDelay = 10 * 24 * 60 * 60;
     await expect(coverPool.connect(governanceAccount).setNoclaimRedeemDelay(newDelay))
       .to.emit(coverPool, 'NoclaimRedeemDelayUpdated');
-    await expect(coverPool.connect(governanceAccount).setDefaultRedeemDelay(newDelay))
-          .to.emit(coverPool, 'DefaultRedeemDelayUpdated');
-    expect((await coverPool.getRedeemDelays())[0]).to.equal(newDelay);
-
-    await expectRevert(coverPool.connect(governanceAccount).setYearlyFeeRate(ethers.utils.parseEther('0.11')), "CoverPool: must < 10%");
-
-    await coverPool.connect(governanceAccount).setYearlyFeeRate(0);
-    expect(await coverPool.yearlyFeeRate()).to.equal(0);
+    expect((await coverPool.noclaimRedeemDelay())).to.equal(newDelay);
   });
 
   it('Should NOT update state variables by the wrong authority', async () => {
     await expect(coverPool.connect(userAAccount).setCollateral(NEW_COLLATERAL, 1)).to.be.reverted;
     await expect(coverPool.connect(userAAccount).setExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1)).to.be.reverted;
     await expect(coverPool.connect(userAAccount).setActive(false)).to.be.reverted;
-    await expect(coverPool.connect(ownerAccount).setDefaultRedeemDelay(10 * 24 * 60 * 60, 0)).to.be.reverted;
     await expect(coverPool.connect(ownerAccount).setNoclaimRedeemDelay(10 * 24 * 60 * 60, 0)).to.be.reverted;
   });
 
