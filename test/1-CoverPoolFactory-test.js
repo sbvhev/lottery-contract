@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { expectRevert } = require("@openzeppelin/test-helpers");
 const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
-xdescribe('CoverPoolFactory', () => {
+describe('CoverPoolFactory', () => {
   let ownerAccount, ownerAddress, userAAccount, userAAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
   let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
   let coverPoolFactory, dai, COLLATERAL;

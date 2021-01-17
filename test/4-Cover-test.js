@@ -2,7 +2,7 @@ const { expect } = require('chai');
 const { expectRevert, time, BN } = require('@openzeppelin/test-helpers');
 const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
-xdescribe('Cover', function() {
+describe('Cover', function() {
   const NAME = 'Pool2_0_DAI_2020_12_31';
   const ETHER_UINT_10000 = ethers.utils.parseEther('10000');
   const ETHER_UINT_20 = ethers.utils.parseEther('20');
