@@ -246,16 +246,18 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   function getCoverPoolDetails() external view override
     returns (
+      string memory _name,
       bool _extendablePool,
       bool _active,
       uint256 _claimNonce,
+      uint256 _noclaimRedeemDelay,
       address[] memory _collaterals,
       uint48[] memory _expiries,
       bytes32[] memory _riskList,
       bytes32[] memory _deletedRiskList,
       address[] memory _allCovers)
   {
-    return (extendablePool, active, claimNonce, collaterals, expiries, riskList, deletedRiskList, allCovers);
+    return (name, extendablePool, active, claimNonce, noclaimRedeemDelay, collaterals, expiries, riskList, deletedRiskList, allCovers);
   }
 
   function getRiskList() external view override returns (bytes32[] memory) {

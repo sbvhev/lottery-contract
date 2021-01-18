@@ -43,7 +43,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   ) external override {
     address coverPool = _getCoverPoolAddr(_coverPoolName);
     require(coverPool != address(0), "ClaimManagement: pool not found");
-    require(block.timestamp - _incidentTimestamp <= getFileClaimWindow(coverPool), "ClaimManagement: time passed window");
+    require(block.timestamp - _incidentTimestamp <= coverPoolFactory.defaultRedeemDelay() - 1 hours, "ClaimManagement: time passed window");
 
     ICoverPool(coverPool).setNoclaimRedeemDelay(10 days);
     uint256 nonce = _getCoverPoolNonce(coverPool);

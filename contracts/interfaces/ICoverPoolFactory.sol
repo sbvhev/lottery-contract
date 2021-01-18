@@ -49,6 +49,9 @@ interface ICoverPoolFactory {
   function setCoverPoolImpl(address _newImpl) external;
   function setCoverImpl(address _newImpl) external;
   function setCoverERC20Impl(address _newImpl) external;
+  function setTreasury(address _address) external;
+  function setClaimManager(address _address) external;
+  function setGovernance(address _address) external;
   /**
    * @notice Create a new Cover Pool
    * @param _name name for pool, e.g. Yearn
@@ -70,7 +73,4 @@ interface ICoverPoolFactory {
     uint48 _expiry,
     string calldata _expiryString
   ) external returns (address);
-  function setTreasury(address _address) external;
-  function setClaimManager(address _address) external;
-  function setGovernance(address _address) external;
 }  

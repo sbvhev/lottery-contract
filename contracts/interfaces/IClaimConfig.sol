@@ -20,7 +20,6 @@ interface IClaimConfig {
   function feeMultiplier() external view returns (uint256);
   function feeCurrency() external view returns (IERC20);
   function cvcMap(address _coverPool, uint256 _idx) external view returns (address);
-  function getFileClaimWindow(address _coverPool) external view returns (uint256);
   function isCVCMember(address _coverPool, address _address) external view returns (bool);
   function getCoverPoolClaimFee(address _coverPool) external view returns (uint256);
   function getCVCList(address _coverPool) external view returns (address[] memory);

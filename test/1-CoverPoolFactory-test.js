@@ -93,7 +93,7 @@ describe('CoverPoolFactory', () => {
     const coverPool = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_1));
     expect(await coverPool.name()).to.equal(consts.POOL_1);
     const coverPool2 = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_3));
-    const [,,,,,riskList] = await coverPool2.getCoverPoolDetails();
+    const [,,,,,,,riskList] = await coverPool2.getCoverPoolDetails();
     expect(await coverPool2.name()).to.equal(consts.POOL_3);
     expect(ethers.utils.parseBytes32String(riskList[0])).to.equal(consts.ASSET_1);
     expect(riskList[1]).to.equal(consts.ASSET_2_BYTES32);

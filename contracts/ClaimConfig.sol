@@ -127,11 +127,6 @@ contract ClaimConfig is IClaimConfig, Ownable {
     return coverPoolClaimFee[_coverPool] < baseClaimFee ? baseClaimFee : coverPoolClaimFee[_coverPool];
   }
 
-  /// @notice Get the time window allowed to file after an incident happened, based on the defaultRedeemDelay of the coverPool - 1hour
-  function getFileClaimWindow(address _coverPool) public view override returns (uint256) {
-    return coverPoolFactory.defaultRedeemDelay() - 1 hours;
-  }
-
   /// @notice Updates fee for coverPool `_coverPool` by multiplying current fee by `feeMultiplier`, capped at `forceClaimFee`
   function _updateCoverPoolClaimFee(address _coverPool) internal {
     uint256 newFee = getCoverPoolClaimFee(_coverPool) * feeMultiplier;
