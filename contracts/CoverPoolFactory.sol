@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "./proxy/InitializableAdminUpgradeabilityProxy.sol";
-import "./proxy/BasicProxyLib.sol";
+import "./proxy/Clones.sol";
 import "./utils/Address.sol";
 import "./utils/Create2.sol";
 import "./utils/Ownable.sol";
@@ -174,7 +174,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   ) external view override returns (address) {
     bytes32 salt = keccak256(abi.encodePacked(_coverPoolName, _timestamp, _collateral, _claimNonce, _prefix));
     address deployer = getCoverAddress(_coverPoolName, _timestamp, _collateral, _claimNonce);
-    return BasicProxyLib.computeProxyAddress(coverERC20Impl, salt, deployer);
+    return Clones.predictDeterministicAddress(coverERC20Impl, salt, deployer);
   }
 
   /// @notice return coverPool contract address, the contract may not be deployed yet

@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "./ERC20/SafeERC20.sol";
 import "./ERC20/IERC20.sol";
-import "./proxy/BasicProxyLib.sol";
+import "./proxy/Clones.sol";
 import "./utils/Create2.sol";
 import "./utils/Initializable.sol";
 import "./utils/Ownable.sol";
@@ -303,7 +303,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
     address coverERC20Impl = _factory().coverERC20Impl();
     bytes32 salt = keccak256(abi.encodePacked(_coverPool().name(), expiry, collateral, claimNonce, _prefix));
-    address proxyAddr = BasicProxyLib.deployProxy(coverERC20Impl, salt);
+    address proxyAddr = Clones.cloneDeterministic(coverERC20Impl, salt);
     ICovTokenProxy(proxyAddr).initialize(string(abi.encodePacked(_prefix, name)), decimals);
 
     emit CovTokenCreated(proxyAddr);
