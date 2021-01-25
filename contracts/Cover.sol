@@ -70,14 +70,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     require(deployComplete, "Cover: deploy incomplete");
     require(coverPool.claimNonce() == claimNonce, "Cover: claim accepted");
 
-    uint256 mintAmount;
-    uint256 totalSupply = noclaimCovToken.totalSupply();
-    if (totalSupply == 0) {
-      mintAmount = _receivedColAmt * mintRatio / 1e18;
-    } else {
-      uint256 totalCoverageInCol = totalCoverage * 1e18 / mintRatio;
-      mintAmount = _receivedColAmt * totalSupply / totalCoverageInCol;
-    }
+    uint256 mintAmount = _receivedColAmt * mintRatio / 1e18;
     totalCoverage = totalCoverage + mintAmount;
     _collectFees();
     (bytes32[] memory _riskList) = coverPool.getRiskList();
