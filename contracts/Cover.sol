@@ -34,7 +34,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   string private name; // Yearn_0_DAI_210131
   uint256 public override feeRate; // 1e18, cannot be changed
   uint256 private mintRatio; // 1e18, cannot be changed, 1 collateral mint mintRatio * 1 covTokens
-  uint256 private totalCoverage;
+  uint256 private totalCoverage; // in covTokens
   uint256 public override claimNonce;
 
   ICoverERC20[] private futureCovTokens;
@@ -70,15 +70,22 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     require(deployComplete, "Cover: deploy incomplete");
     require(coverPool.claimNonce() == claimNonce, "Cover: claim accepted");
 
-    uint256 adjustedAmount = _receivedColAmt * mintRatio / 1e18;
-    totalCoverage = totalCoverage + adjustedAmount;
+    uint256 mintAmount;
+    uint256 totalSupply = noclaimCovToken.totalSupply();
+    if (totalSupply == 0) {
+      mintAmount = _receivedColAmt * mintRatio / 1e18;
+    } else {
+      uint256 colTotal = totalCoverage * 1e18 / mintRatio;
+      mintAmount = _receivedColAmt * totalSupply / colTotal;
+    }
+    totalCoverage = totalCoverage + mintAmount;
     _collectFees();
     (bytes32[] memory _riskList) = coverPool.getRiskList();
     for (uint i = 0; i < _riskList.length; i++) {
-      claimCovTokenMap[_riskList[i]].mint(_receiver, adjustedAmount);
+      claimCovTokenMap[_riskList[i]].mint(_receiver, mintAmount);
     }
-    noclaimCovToken.mint(_receiver, adjustedAmount);
-    _handleLatestFutureToken(_receiver, adjustedAmount, true); // mint
+    noclaimCovToken.mint(_receiver, mintAmount);
+    _handleLatestFutureToken(_receiver, mintAmount, true); // mint
   }
 
   /// @notice redeem collateral always allow redeem back collateral with all covTokens
@@ -200,8 +207,11 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     if (totalCoverage == 0) {
       if (collateralBal == 0) return;
       _sendFees(collateralBal);
-    } else {
-      uint256 colToBePaidOut = _getAmountAfterFees(totalCoverage);
+    } else { // mintRatio & feeRate are both 1e18
+      uint256 totalCoverageInCol = totalCoverage * 1e18 / mintRatio;
+      uint256 fees = totalCoverageInCol * feeRate / 1e18;
+      uint256 colToBePaidOut = totalCoverageInCol - fees;
+
       uint256 feeToCollect = collateralBal - colToBePaidOut > 0 ? (collateralBal - colToBePaidOut) : 0;
       _sendFees(feeToCollect);
     }
@@ -281,13 +291,13 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   // transfer collateral (amount - fee) from this contract to recevier, transfer fee to COVER treasury
-  function _payCollateral(address _receiver, uint256 _amount) private {
-    totalCoverage = totalCoverage - _amount;
-    uint256 amountAfterFees = _getAmountAfterFees(_amount);
+  function _payCollateral(address _receiver, uint256 _covarageAmt) private {
     IERC20 colToken = IERC20(collateral);
     uint256 colBal = colToken.balanceOf(address(this));
-    if (colBal > amountAfterFees) {
-      colToken.safeTransfer(_receiver, amountAfterFees);
+    uint256 payoutColAmount = _covarageAmt * colBal / totalCoverage;
+    totalCoverage = totalCoverage - _covarageAmt;
+    if (colBal > payoutColAmount) {
+      colToken.safeTransfer(_receiver, payoutColAmount);
     } else {
       colToken.safeTransfer(_receiver, colBal);
     }
@@ -316,13 +326,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
     emit CovTokenCreated(proxyAddr);
     return ICoverERC20(proxyAddr);
-  }
-
-  function _getAmountAfterFees(uint256 _amount) private view returns (uint256 amountAfterFees) {
-    // mintRatio & feeRate are both 1e18
-    uint256 adjustedAmount = _amount * 1e18 / mintRatio;
-    uint256 fees = adjustedAmount * feeRate / 1e18;
-    amountAfterFees = adjustedAmount - fees;
   }
 
   function _coverPool() private view returns (ICoverPool) {

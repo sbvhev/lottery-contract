@@ -321,10 +321,10 @@ describe('Cover', function() {
     expect(await claimCovToken.balanceOf(userAAddress)).to.equal(0);
     expect(await claimCovToken2.balanceOf(userAAddress)).to.equal(0);
 
-    const userAFees = await calFees(userARedeemable);
+    const userAFees = (await calFees(userARedeemable)).add(1); // add 1 for dust
     expect(aDaiBalanceAfter.sub(aDaiBalance)).to.equal(userARedeemable.sub(userAFees));
 
-    const fees = (await calFees(ownerRedeemable)).sub(1); // sub 1 for dust
+    const fees = (await calFees(ownerRedeemable)); // sub 1 for dust
     expect(await dai.balanceOf(cover.address)).to.equal(ownerRedeemable.sub(fees));
     const ownerClaimable = await cover.viewClaimable(ownerAddress);
     expect(ownerClaimable).to.equal(ownerRedeemable);
