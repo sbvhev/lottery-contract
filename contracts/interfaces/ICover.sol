@@ -36,7 +36,7 @@ interface ICover {
       ICoverERC20[] memory _futureCovTokens);
 
   // user action
-  function collectFees() external;
+  // function collectFees() external;
   function deploy() external;
   /// @notice convert futureToken to claimToken
   function convert(ICoverERC20 _futureToken) external;

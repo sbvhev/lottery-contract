@@ -65,14 +65,14 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice only CoverPool can mint, collateral is transfered in CoverPool
-  function mint(uint256 _amount, address _receiver) external override onlyOwner {
+  function mint(uint256 _receivedColAmt, address _receiver) external override onlyOwner {
     ICoverPool coverPool = _coverPool();
     require(deployComplete, "Cover: deploy incomplete");
     require(coverPool.claimNonce() == claimNonce, "Cover: claim accepted");
 
-    uint256 adjustedAmount = _amount * mintRatio / 1e18;
+    uint256 adjustedAmount = _receivedColAmt * mintRatio / 1e18;
     totalCoverage = totalCoverage + adjustedAmount;
-    collectFees();
+    _collectFees();
     (bytes32[] memory _riskList) = coverPool.getRiskList();
     for (uint i = 0; i < _riskList.length; i++) {
       claimCovTokenMap[_riskList[i]].mint(_receiver, adjustedAmount);
@@ -195,15 +195,15 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     return (name, expiry, collateral, mintRatio, feeRate, claimNonce, noclaimCovToken, claimCovTokens, futureCovTokens);
   }
 
-  function collectFees() public override {
+  function _collectFees() private {
     uint256 collateralBal = IERC20(collateral).balanceOf(address(this));
     if (totalCoverage == 0) {
       if (collateralBal == 0) return;
       _sendFees(collateralBal);
     } else {
-      uint256 feeToCollect = collateralBal - _getAmountAfterFees(totalCoverage);
-      if (feeToCollect < 100) return;
-      _sendFees(feeToCollect - 1); // minus 1 to avoid dust caused inBalance
+      uint256 colToBePaidOut = _getAmountAfterFees(totalCoverage);
+      uint256 feeToCollect = collateralBal - colToBePaidOut > 0 ? (collateralBal - colToBePaidOut) : 0;
+      _sendFees(feeToCollect);
     }
   }
 
@@ -263,6 +263,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   function _sendFees(uint256 _totalFees) private {
+    if (_totalFees == 0) return;
     IERC20 collateralToken = IERC20(collateral);
     uint256 feesToTreasury = _totalFees * 9 / 10;
     collateralToken.safeTransfer(_factory().treasury(), feesToTreasury);
@@ -282,7 +283,14 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   // transfer collateral (amount - fee) from this contract to recevier, transfer fee to COVER treasury
   function _payCollateral(address _receiver, uint256 _amount) private {
     totalCoverage = totalCoverage - _amount;
-    IERC20(collateral).safeTransfer(_receiver, _getAmountAfterFees(_amount));
+    uint256 amountAfterFees = _getAmountAfterFees(_amount);
+    IERC20 colToken = IERC20(collateral);
+    uint256 colBal = colToken.balanceOf(address(this));
+    if (colBal > amountAfterFees) {
+      colToken.safeTransfer(_receiver, amountAfterFees);
+    } else {
+      colToken.safeTransfer(_receiver, colBal);
+    }
   }
 
   // burn covToken and pay sender
