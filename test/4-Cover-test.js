@@ -324,7 +324,7 @@ describe('Cover', function() {
     const userAFees = (await calFees(userARedeemable)).add(1); // add 1 for dust
     expect(aDaiBalanceAfter.sub(aDaiBalance)).to.equal(userARedeemable.sub(userAFees));
 
-    const fees = (await calFees(ownerRedeemable)); // sub 1 for dust
+    const fees = await calFees(ownerRedeemable);
     expect(await dai.balanceOf(cover.address)).to.equal(ownerRedeemable.sub(fees));
     const ownerClaimable = await cover.viewClaimable(ownerAddress);
     expect(ownerClaimable).to.equal(ownerRedeemable);

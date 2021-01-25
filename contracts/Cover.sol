@@ -204,8 +204,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   function _collectFees() private {
     uint256 collateralBal = IERC20(collateral).balanceOf(address(this));
+    if (collateralBal == 0) return;
     if (totalCoverage == 0) {
-      if (collateralBal == 0) return;
       _sendFees(collateralBal);
     } else { // mintRatio & feeRate are both 1e18
       uint256 totalCoverageInCol = totalCoverage * 1e18 / mintRatio;
