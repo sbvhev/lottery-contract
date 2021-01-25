@@ -75,8 +75,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     if (totalSupply == 0) {
       mintAmount = _receivedColAmt * mintRatio / 1e18;
     } else {
-      uint256 colTotal = totalCoverage * 1e18 / mintRatio;
-      mintAmount = _receivedColAmt * totalSupply / colTotal;
+      uint256 totalCoverageInCol = totalCoverage * 1e18 / mintRatio;
+      mintAmount = _receivedColAmt * totalSupply / totalCoverageInCol;
     }
     totalCoverage = totalCoverage + mintAmount;
     _collectFees();
@@ -209,9 +209,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       _sendFees(collateralBal);
     } else { // mintRatio & feeRate are both 1e18
       uint256 totalCoverageInCol = totalCoverage * 1e18 / mintRatio;
-      uint256 fees = totalCoverageInCol * feeRate / 1e18;
-      uint256 colToBePaidOut = totalCoverageInCol - fees;
-
+      uint256 colToBePaidOut = totalCoverageInCol - totalCoverageInCol * feeRate / 1e18;
       uint256 feeToCollect = collateralBal - colToBePaidOut > 0 ? (collateralBal - colToBePaidOut) : 0;
       _sendFees(feeToCollect);
     }
