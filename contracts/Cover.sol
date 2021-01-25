@@ -195,19 +195,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     return (name, expiry, collateral, mintRatio, feeRate, claimNonce, noclaimCovToken, claimCovTokens, futureCovTokens);
   }
 
-  function _collectFees() private {
-    uint256 collateralBal = IERC20(collateral).balanceOf(address(this));
-    if (collateralBal == 0) return;
-    if (totalCoverage == 0) {
-      _sendFees(collateralBal);
-    } else { // mintRatio & feeRate are both 1e18
-      uint256 totalCoverageInCol = totalCoverage * 1e18 / mintRatio;
-      uint256 colToBePaidOut = totalCoverageInCol - totalCoverageInCol * feeRate / 1e18;
-      uint256 feeToCollect = collateralBal > colToBePaidOut ? (collateralBal - colToBePaidOut) : 0;
-      _sendFees(feeToCollect);
-    }
-  }
-
   /// @notice convert the future token to claim token and mint next future token
   function convert(ICoverERC20 _futureToken) public override {
     ICoverERC20 claimCovToken = futureCovTokenMap[_futureToken];
@@ -271,6 +258,19 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     // owner of this is CoverPool, whose owner is Factory, owner of factory is dev
     address dev = IOwnable(IOwnable(owner()).owner()).owner();
     collateralToken.safeTransfer(dev, _totalFees - feesToTreasury);
+  }
+
+  function _collectFees() private {
+    uint256 collateralBal = IERC20(collateral).balanceOf(address(this));
+    if (collateralBal == 0) return;
+    if (totalCoverage == 0) {
+      _sendFees(collateralBal);
+    } else { // mintRatio & feeRate are both 1e18
+      uint256 totalCoverageInCol = totalCoverage * 1e18 / mintRatio;
+      uint256 colToBePaidOut = totalCoverageInCol - totalCoverageInCol * feeRate / 1e18;
+      uint256 feeToCollect = collateralBal > colToBePaidOut ? (collateralBal - colToBePaidOut) : 0;
+      _sendFees(feeToCollect);
+    }
   }
 
   function _handleLatestFutureToken(address _receiver, uint256 _amount, bool _isMint) private {
