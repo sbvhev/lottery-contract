@@ -281,7 +281,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     _isMint ? futureCovToken.mint(_receiver, _amount) : futureCovToken.burnByCover(_receiver, _amount);
   }
 
-  // transfer collateral (amount - fee) from this contract to recevier, transfer fee to COVER treasury
+  // transfer collateral (amount - fee) from this contract to recevier
   function _payCollateral(address _receiver, uint256 _covarageAmt) private {
     IERC20 colToken = IERC20(collateral);
     uint256 colBal = colToken.balanceOf(address(this));
