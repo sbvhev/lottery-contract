@@ -72,13 +72,14 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
     uint256 mintAmount = _receivedColAmt * mintRatio / 1e18;
     totalCoverage = totalCoverage + mintAmount;
-    _collectFees();
+
     (bytes32[] memory _riskList) = coverPool.getRiskList();
     for (uint i = 0; i < _riskList.length; i++) {
       claimCovTokenMap[_riskList[i]].mint(_receiver, mintAmount);
     }
     noclaimCovToken.mint(_receiver, mintAmount);
     _handleLatestFutureToken(_receiver, mintAmount, true); // mint
+    _sendFees(_receivedColAmt * feeRate / 1e18);
   }
 
   /// @notice redeem collateral always allow redeem back collateral with all covTokens
@@ -258,19 +259,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     // owner of this is CoverPool, whose owner is Factory, owner of factory is dev
     address dev = IOwnable(IOwnable(owner()).owner()).owner();
     collateralToken.safeTransfer(dev, _totalFees - feesToTreasury);
-  }
-
-  function _collectFees() private {
-    uint256 collateralBal = IERC20(collateral).balanceOf(address(this));
-    if (collateralBal == 0) return;
-    if (totalCoverage == 0) {
-      _sendFees(collateralBal);
-    } else { // mintRatio & feeRate are both 1e18
-      uint256 totalCoverageInCol = totalCoverage * 1e18 / mintRatio;
-      uint256 colToBePaidOut = totalCoverageInCol - totalCoverageInCol * feeRate / 1e18;
-      uint256 feeToCollect = collateralBal > colToBePaidOut ? (collateralBal - colToBePaidOut) : 0;
-      _sendFees(feeToCollect);
-    }
   }
 
   function _handleLatestFutureToken(address _receiver, uint256 _amount, bool _isMint) private {
