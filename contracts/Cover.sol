@@ -69,6 +69,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     ICoverPool coverPool = _coverPool();
     require(deployComplete, "Cover: deploy incomplete");
     require(coverPool.claimNonce() == claimNonce, "Cover: claim accepted");
+    IERC20(collateral).safeTransfer(_factory().treasury(), _receivedColAmt * feeRate / 1e18);
 
     uint256 mintAmount = _receivedColAmt * mintRatio / 1e18;
     totalCoverage = totalCoverage + mintAmount;
@@ -79,7 +80,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
     noclaimCovToken.mint(_receiver, mintAmount);
     _handleLatestFutureToken(_receiver, mintAmount, true); // mint
-    _sendFees(_receivedColAmt * feeRate / 1e18);
   }
 
   /// @notice redeem collateral always allow redeem back collateral with all covTokens
@@ -249,16 +249,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       claimCovTokenMap[riskList[i]].burnByCover(msg.sender, _amount);
     }
     _payCollateral(msg.sender, _amount);
-  }
-
-  function _sendFees(uint256 _totalFees) private {
-    if (_totalFees == 0) return;
-    IERC20 collateralToken = IERC20(collateral);
-    uint256 feesToTreasury = _totalFees * 9 / 10;
-    collateralToken.safeTransfer(_factory().treasury(), feesToTreasury);
-    // owner of this is CoverPool, whose owner is Factory, owner of factory is dev
-    address dev = IOwnable(IOwnable(owner()).owner()).owner();
-    collateralToken.safeTransfer(dev, _totalFees - feesToTreasury);
   }
 
   function _handleLatestFutureToken(address _receiver, uint256 _amount, bool _isMint) private {

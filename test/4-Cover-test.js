@@ -82,7 +82,7 @@ describe('Cover', function() {
     expect(await CoverERC20.attach(noclaimCovToken).balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
     const fees = await calFees(ETHER_UINT_10);
     expect(await dai.balanceOf(cover.address)).to.equal(ETHER_UINT_10.sub(fees));
-    expect(await dai.balanceOf(treasuryAddress)).to.equal(fees.mul(9).div(10));
+    expect(await dai.balanceOf(treasuryAddress)).to.equal(fees);
   });
 
   it('Should deploy Cover in two txs with CoverPool', async function() {
