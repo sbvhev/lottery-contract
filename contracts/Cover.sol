@@ -43,7 +43,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   mapping(ICoverERC20 => ICoverERC20) public override futureCovTokenMap;
 
   modifier onlyNotPaused() {
-    require(!_factory().paused(), "CP: paused");
+    require(!_factory().paused(), "Cover: paused");
     _;
   }
 
