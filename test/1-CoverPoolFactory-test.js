@@ -3,8 +3,6 @@ const { expectRevert } = require("@openzeppelin/test-helpers");
 const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
 describe('CoverPoolFactory', () => {
-  const feeRate = ethers.utils.parseEther('0.006');
-
   let ownerAccount, ownerAddress, userAAccount, userAAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
   let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
   let coverPoolFactory, dai, COLLATERAL;
@@ -32,7 +30,7 @@ describe('CoverPoolFactory', () => {
     expect(await coverPoolFactory.treasury()).to.equal(treasuryAddress);
     expect(await coverPoolFactory.deployGasMin()).to.equal(1000000);
     expect(await coverPoolFactory.paused()).to.equal(false);
-    expect(await coverPoolFactory.yearlyFeeRate()).to.equal(feeRate);
+    expect(await coverPoolFactory.yearlyFeeRate()).to.equal(consts.FEE_RATE);
     expect(await coverPoolFactory.defaultRedeemDelay()).to.equal(3 * 24 * 3600);
   });
 

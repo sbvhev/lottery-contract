@@ -67,8 +67,8 @@ describe('Cover', function() {
     expect(expiry).to.equal(TIMESTAMP);
     expect(collateral).to.equal(COLLATERAL);
     expect(mintRatio).to.equal(consts.DEPOSIT_RATIO);
-    expect(feeRate).to.gt(ethers.utils.parseEther('0.006'));
-    expect(feeRate).to.lt(ethers.utils.parseEther('0.0061'));
+    expect(feeRate).to.gt(consts.FEE_RATE);
+    expect(feeRate).to.lt(consts.FEE_RATE.mul(10).div(9));
     expect(claimNonce).to.equal(0);
     expect(await CoverERC20.attach(futureCovTokens[0]).symbol()).to.equal('C_FUT0_' + NAME);
     expect(await CoverERC20.attach(claimCovTokens[0]).symbol()).to.equal('C_Binance_' + NAME);
