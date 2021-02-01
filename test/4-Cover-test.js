@@ -92,7 +92,7 @@ describe('Cover', function() {
     await dai.connect(userAAccount).approve(coverPool2.address, ETHER_UINT_10000);
 
     // revert cause deploy incomplete
-    await expectRevert(coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10, {gasLimit: 2112841}), 'CoverPool: cover deploy incomplete');
+    await expectRevert(coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10, {gasLimit: 2112841}), 'CP: cover deploy incomplete');
     const coverIP = Cover.attach(await coverPool2.coverMap(COLLATERAL, TIMESTAMP));
     await expect(coverPool2.deployCover(COLLATERAL, TIMESTAMP)).to.emit(coverIP, 'CoverDeployCompleted');
     await coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10)
@@ -155,7 +155,7 @@ describe('Cover', function() {
 
   it('Should delete risk, mint, and redeem with active tokens only', async function() {
     await coverPool.deleteRisk(consts.ASSET_2);
-    await expectRevert(coverPool.addRisk(consts.ASSET_2), "CoverPool: deleted risk not allowed");
+    await expectRevert(coverPool.addRisk(consts.ASSET_2), "CP: deleted risk not allowed");
 
     await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
     const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.ASSET_1_BYTES32));

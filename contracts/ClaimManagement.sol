@@ -20,11 +20,11 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   constructor(address _governance, address _treasury, address _coverPoolFactory, address _defaultCVC) {
     require(
       _governance != msg.sender && _governance != address(0), 
-      "ClaimManagement: governance cannot be owner or 0"
+      "CM: gov cannot be owner or 0"
     );
-    require(_treasury != address(0), "ClaimManagement: treasury cannot be 0");
-    require(_coverPoolFactory != address(0), "ClaimManagement: coverPool factory cannot be 0");
-    require(_defaultCVC != address(0), "ClaimManagement: defaultCVC cannot be 0");
+    require(_treasury != address(0), "CM: treasury cannot be 0");
+    require(_coverPoolFactory != address(0), "CM: factory cannot be 0");
+    require(_defaultCVC != address(0), "CM: defaultCVC cannot be 0");
     governance = _governance;
     treasury = _treasury;
     coverPoolFactory = ICoverPoolFactory(_coverPoolFactory);
@@ -42,8 +42,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     bool isForceFile
   ) external override {
     address coverPool = _getCoverPoolAddr(_coverPoolName);
-    require(coverPool != address(0), "ClaimManagement: pool not found");
-    require(block.timestamp - _incidentTimestamp <= coverPoolFactory.defaultRedeemDelay() - 1 hours, "ClaimManagement: time passed window");
+    require(coverPool != address(0), "CM: pool not found");
+    require(block.timestamp - _incidentTimestamp <= coverPoolFactory.defaultRedeemDelay() - 1 hours, "CM: time passed window");
 
     ICoverPool(coverPool).setNoclaimRedeemDelay(10 days);
     uint256 nonce = _getCoverPoolNonce(coverPool);
@@ -81,8 +81,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     bool _claimIsValid
   ) external override onlyGov {
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
-    require(_nonce == _getCoverPoolNonce(_coverPool), "ClaimManagement: wrong nonce");
-    require(claim.state == ClaimState.Filed, "ClaimManagement: claim not filed");
+    require(_nonce == _getCoverPoolNonce(_coverPool), "CM: wrong nonce");
+    require(claim.state == ClaimState.Filed, "CM: claim not filed");
     if (_claimIsValid) {
       claim.state = ClaimState.Validated;
       _resetCoverPoolClaimFee(_coverPool);
@@ -109,15 +109,15 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     bytes32[] calldata _exploitRisks,
     uint256[] calldata _payoutRates
   ) external override {
-    require(_exploitRisks.length == _payoutRates.length, "CoverPool: payout risks len don't match");
-    require(isCVCMember(_coverPool, msg.sender), "ClaimManagement: !cvc");
-    require(_nonce == _getCoverPoolNonce(_coverPool), "ClaimManagement: wrong nonce");
+    require(_exploitRisks.length == _payoutRates.length, "CM: arrays len don't match");
+    require(isCVCMember(_coverPool, msg.sender), "CM: !cvc");
+    require(_nonce == _getCoverPoolNonce(_coverPool), "CM: wrong nonce");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
-    require(claim.state == ClaimState.Validated || claim.state == ClaimState.ForceFiled, "ClaimManagement: claim not validated or forceFiled");
+    require(claim.state == ClaimState.Validated || claim.state == ClaimState.ForceFiled, "CM: ! validated or forceFiled");
 
     uint256 totalRates = _getTotalNum(_payoutRates);
     if (_claimIsAccepted && !_isDecisionWindowPassed(claim)) {
-      require(totalRates > 0 && totalRates <= 1 ether, "CoverPool: payout % is not in (0%, 100%]");
+      require(totalRates > 0 && totalRates <= 1 ether, "CM: payout % not in (0%, 100%]");
       feeCurrency.safeTransfer(claim.filedBy, claim.feePaid);
       _resetCoverPoolClaimFee(_coverPool);
       claim.state = ClaimState.Accepted;
@@ -125,7 +125,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
       claim.payoutRates = _payoutRates;
       ICoverPool(_coverPool).enactClaim(claim.payoutRiskList, claim.payoutRates, claim.incidentTimestamp, _nonce);
     } else { // Max decision claim window passed, claim is default to Denied
-      require(totalRates == 0, "ClaimManagement: claim denied (default if passed window), but payoutNumerator != 0");
+      require(totalRates == 0, "CM: claim denied (default if passed window), but payoutNumerator != 0");
       feeCurrency.safeTransfer(treasury, claim.feePaid);
       claim.state = ClaimState.Denied;
     }

@@ -138,7 +138,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     ICoverPool coverPool = _coverPool();
     require(coverPool.claimNonce() > claimNonce, "Cover: no claim accepted");
     ICoverPool.ClaimDetails memory claim = _claimDetails();
-    require(claim.incidentTimestamp <= expiry, "Cover: not eligible, redeem collateral instead");
+    require(claim.incidentTimestamp <= expiry, "Cover: not eligible");
     uint256 defaultRedeemDelay = _factory().defaultRedeemDelay();
     require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + defaultRedeemDelay, "Cover: not ready");
 

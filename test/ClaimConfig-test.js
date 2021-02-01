@@ -1,5 +1,5 @@
 const { expect } = require("chai");
-const { consts, getAccounts } = require('../testHelper');
+const { consts, getAccounts } = require('./testHelper');
 
 describe("ClaimConfig", function () {
   let claimConfig;

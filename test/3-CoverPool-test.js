@@ -136,8 +136,8 @@ describe('CoverPool', () => {
     expect(riskList).to.deep.equal([consts.ASSET_2_BYTES32]);
     expect(deletedRiskList).to.deep.equal([consts.ASSET_1_BYTES32]);
 
-    await expectRevert(coverPool.deleteRisk(consts.ASSET_1), "CoverPool: not active risk");
-    await expectRevert(coverPool.deleteRisk(consts.ASSET_2), "CoverPool: only 1 risk left");
+    await expectRevert(coverPool.deleteRisk(consts.ASSET_1), "CP: not active risk");
+    await expectRevert(coverPool.deleteRisk(consts.ASSET_2), "CP: only 1 risk left");
   });
 
   it('Should add cover for userA and emit event', async () => {
@@ -216,7 +216,7 @@ describe('CoverPool', () => {
   });
 
   it('Should NOT enactClaim if have non active risk', async () => {
-    await expectRevert(coverPool.enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32], [ethers.utils.parseEther('0.2'), ethers.utils.parseEther('0.4')], INCIDENT_TIMESTAMP, 0), "CoverPool: has inactive risk");
+    await expectRevert(coverPool.enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32], [ethers.utils.parseEther('0.2'), ethers.utils.parseEther('0.4')], INCIDENT_TIMESTAMP, 0), "CP: has inactive risk");
   });
   
   it('Should NOT enactClaim if called by non-claimManager', async () => {

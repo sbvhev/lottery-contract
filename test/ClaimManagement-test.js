@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { time } = require("@openzeppelin/test-helpers");
 
-const { deployCoin, consts, getAccounts, getImpls} = require('../testHelper');
+const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
 describe("ClaimManagement", function () {
   const BOGEY_PROTOCOL = ethers.utils.formatBytes32String("BOGEY");

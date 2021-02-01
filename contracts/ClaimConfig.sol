@@ -30,29 +30,29 @@ contract ClaimConfig is IClaimConfig, Ownable {
   mapping(address => address[]) public override cvcMap;
   
   modifier onlyGov() {
-    require(msg.sender == governance, "ClaimConfig: caller not governance");
+    require(msg.sender == governance, "CC: caller not governance");
     _;
   }
 
   function setGovernance(address _governance) external override onlyGov {
-    require(_governance != address(0), "ClaimConfig: governance cannot be 0");
-    require(_governance != owner(), "ClaimConfig: governance cannot be owner");
+    require(_governance != address(0), "CC: governance cannot be 0");
+    require(_governance != owner(), "CC: governance cannot be owner");
     governance = _governance;
   }
 
   function setTreasury(address _treasury) external override onlyOwner {
-    require(_treasury != address(0), "ClaimConfig: treasury cannot be 0");
+    require(_treasury != address(0), "CC: treasury cannot be 0");
     treasury = _treasury;
   }
 
   /// @notice Set max time window allowed to decide a claim after filed, requires at least 3 days for voting
   function setMaxClaimDecisionWindow(uint256 _newTimeWindow) external override onlyOwner {
-    require(_newTimeWindow < 3 days, "ClaimConfig: window too short");
+    require(_newTimeWindow < 3 days, "CC: window too short");
     maxClaimDecisionWindow = _newTimeWindow;
   }
 
   function setDefaultCVC(address _cvc) external override onlyOwner {
-    require(_cvc != address(0), "ClaimConfig: default CVC cannot be 0");
+    require(_cvc != address(0), "CC: default CVC cannot be 0");
     defaultCVC = _cvc;
   }
 
@@ -60,14 +60,14 @@ contract ClaimConfig is IClaimConfig, Ownable {
   function addCVCForPool(address _coverPool, address _cvc) public override onlyOwner {
     address[] memory cvcCopy = cvcMap[_coverPool];
     for (uint i = 0; i < cvcCopy.length; i++) {
-      require(cvcCopy[i] != _cvc, "ClaimConfig: cvc exists");
+      require(cvcCopy[i] != _cvc, "CC: cvc exists");
     }
     cvcMap[_coverPool].push(_cvc);
   }
 
   /// @notice Add CVC groups for multiple coverPools
   function addCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external override onlyOwner {
-    require(_coverPools.length == _cvcs.length, "ClaimConfig: lengths don't match");
+    require(_coverPools.length == _cvcs.length, "CC: lengths don't match");
     for (uint i = 0; i < _coverPools.length; i++) {
       addCVCForPool(_coverPools[i], _cvcs[i]);
     }
@@ -88,23 +88,23 @@ contract ClaimConfig is IClaimConfig, Ownable {
 
   /// @notice Remove CVC groups for multiple coverPools
   function removeCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external override onlyOwner {
-    require(_coverPools.length == _cvcs.length, "ClaimConfig: lengths don't match");
+    require(_coverPools.length == _cvcs.length, "CC: lengths don't match");
     for (uint i = 0; i < _coverPools.length; i++) {
       removeCVCForPool(_coverPools[i], _cvcs[i]);
     }
   }
 
   function setFeeAndCurrency(uint256 _baseClaimFee, uint256 _forceClaimFee, address _currency) external override onlyGov {
-    require(_baseClaimFee > 0, "ClaimConfig: baseClaimFee <= 0");
-    require(_forceClaimFee > _baseClaimFee, "ClaimConfig: forceClaimFee <= baseClaimFee");
-    require(_currency != address(0), "ClaimConfig: feeCurrency cannot be 0");
+    require(_baseClaimFee > 0, "CC: baseClaimFee <= 0");
+    require(_forceClaimFee > _baseClaimFee, "CC: force Fee <= base Fee");
+    require(_currency != address(0), "CC: feeCurrency cannot be 0");
     baseClaimFee = _baseClaimFee;
     forceClaimFee = _forceClaimFee;
     feeCurrency = IERC20(_currency);
   }
 
   function setFeeMultiplier(uint256 _multiplier) external override onlyGov {
-    require(_multiplier > 0, "ClaimConfig: multiplier < 1");
+    require(_multiplier > 0, "CC: multiplier < 1");
     feeMultiplier = _multiplier;
   }
 

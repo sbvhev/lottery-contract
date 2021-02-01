@@ -43,11 +43,11 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     address _governance,
     address _treasury
   ) {
-    require(Address.isContract(_coverPoolImpl), "CoverPoolFactory: _coverPoolImpl is not a contract");
-    require(Address.isContract(_coverImpl), "CoverPoolFactory: _coverImpl is not a contract");
-    require(Address.isContract(_coverERC20Impl), "CoverPoolFactory: _coverERC20Impl is not a contract");
-    require(_governance != address(0), "CoverPoolFactory: governance cannot be 0");
-    require(_treasury != address(0), "CoverPoolFactory: treasury cannot be 0");
+    require(Address.isContract(_coverPoolImpl), "Factory: _coverPoolImpl is not a contract");
+    require(Address.isContract(_coverImpl), "Factory: _coverImpl is not a contract");
+    require(Address.isContract(_coverERC20Impl), "Factory: _coverERC20Impl is not a contract");
+    require(_governance != address(0), "Factory: governance cannot be 0");
+    require(_treasury != address(0), "Factory: treasury cannot be 0");
     coverPoolImpl = _coverPoolImpl;
     coverImpl = _coverImpl;
     coverERC20Impl = _coverERC20Impl;
@@ -77,9 +77,9 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     uint48 _expiry,
     string calldata _expiryString
   ) external override onlyOwner returns (address _addr) {
-    require(coverPools[_name] == address(0), "CoverPoolFactory: coverPool exists");
-    require(_riskList.length > 0, "CoverPoolFactory: no risk underlying passed for pool");
-    require(_expiry > block.timestamp, "CoverPoolFactory: expiry in the past");
+    require(coverPools[_name] == address(0), "Factory: coverPool exists");
+    require(_riskList.length > 0, "Factory: riskList is empty");
+    require(_expiry > block.timestamp, "Factory: expiry in the past");
 
     coverPoolNames.push(_name);
     bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _extendablePool, _riskList, _collateral, _mintRatio, _expiry, _expiryString);
@@ -89,7 +89,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   }
 
   function setYearlyFeeRate(uint256 _yearlyFeeRate) external override onlyOwner {
-    require(_yearlyFeeRate <= 0.1 ether, "CoverPool: must < 10%");
+    require(_yearlyFeeRate <= 0.1 ether, "Factory: must < 10%");
     yearlyFeeRate = _yearlyFeeRate;
   }
 
@@ -99,58 +99,58 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   }
 
   function setPaused(bool _paused) external override {
-    require(msg.sender == owner() || msg.sender == responder, "CoverPoolFactory: caller not owner or responder");
+    require(msg.sender == owner() || msg.sender == responder, "Factory: not owner or responder");
     emit PausedStatusUpdated(paused, _paused);
     paused = _paused;
   }
 
   function setDeployGasMin(uint256 _deployGasMin) external override onlyOwner {
-    require(_deployGasMin > 0, "CoverPoolFactory: min gas cannot be 0");
+    require(_deployGasMin > 0, "Factory: min gas cannot be 0");
     deployGasMin = _deployGasMin;
   }
 
   /// @dev update this will only affect coverPools deployed after
   function setCoverPoolImpl(address _newImpl) external override onlyOwner {
-    require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
+    require(Address.isContract(_newImpl), "Factory: impl is not a contract");
     emit ImplUpdated('CoverPool', coverPoolImpl, _newImpl);
     coverPoolImpl = _newImpl;
   }
 
   /// @dev update this will only affect covers of coverPools deployed after
   function setCoverImpl(address _newImpl) external override onlyOwner {
-    require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
+    require(Address.isContract(_newImpl), "Factory: impl is not a contract");
     emit ImplUpdated('Cover', coverImpl, _newImpl);
     coverImpl = _newImpl;
   }
 
   /// @dev update this will only affect covTokens of covers of coverPools deployed after
   function setCoverERC20Impl(address _newImpl) external override onlyOwner {
-    require(Address.isContract(_newImpl), "CoverPoolFactory: new implementation is not a contract");
+    require(Address.isContract(_newImpl), "Factory: impl is not a contract");
     emit ImplUpdated('CoverERC20', coverERC20Impl, _newImpl);
     coverERC20Impl = _newImpl;
   }
 
   function setClaimManager(address _address) external override onlyOwner {
-    require(_address != address(0), "CoverPoolFactory: address cannot be 0");
+    require(_address != address(0), "Factory: address cannot be 0");
     emit AddressUpdated('claimManager', claimManager, _address);
     claimManager = _address;
   }
 
   function setGovernance(address _address) external override onlyOwner {
-    require(_address != address(0), "CoverPoolFactory: address cannot be 0");
-    require(_address != owner(), "CoverPoolFactory: governance cannot be owner");
+    require(_address != address(0), "Factory: address cannot be 0");
+    require(_address != owner(), "Factory: gov cannot be owner");
     emit AddressUpdated('governance', governance, _address);
     governance = _address;
   }
 
   function setTreasury(address _address) external override onlyOwner {
-    require(_address != address(0), "CoverPoolFactory: address cannot be 0");
+    require(_address != address(0), "Factory: address cannot be 0");
     emit AddressUpdated('treasury', treasury, _address);
     treasury = _address;
   }
 
   function setResponder(address _address) external override onlyOwner {
-    require(_address != address(0), "CoverPoolFactory: address cannot be 0");
+    require(_address != address(0), "Factory: address cannot be 0");
     emit AddressUpdated('responder', responder, _address);
     responder = _address;
   }

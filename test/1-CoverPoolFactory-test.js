@@ -42,11 +42,11 @@ describe('CoverPoolFactory', () => {
 
   // test functions with governance access restriction
   it('Should NOT update governance to address(0) by governance', async () => {
-    await expectRevert(coverPoolFactory.setGovernance(consts.ADDRESS_ZERO), 'CoverPoolFactory: address cannot be 0');
+    await expectRevert(coverPoolFactory.setGovernance(consts.ADDRESS_ZERO), 'Factory: address cannot be 0');
   });
 
   it('Should NOT update governance to owner by governance', async () => {
-    await expectRevert(coverPoolFactory.setGovernance(ownerAddress), 'CoverPoolFactory: governance cannot be owner');
+    await expectRevert(coverPoolFactory.setGovernance(ownerAddress), 'Factory: gov cannot be owner');
   });
 
   // test functions with owner access restriction
@@ -70,7 +70,7 @@ describe('CoverPoolFactory', () => {
     await expect(coverPoolFactory.connect(userAAccount).setPaused(true)).to.emit(coverPoolFactory, 'PausedStatusUpdated');
     expect(await coverPoolFactory.paused()).to.equal(true);
 
-    await expectRevert(coverPoolFactory.connect(ownerAccount).setYearlyFeeRate(ethers.utils.parseEther('0.11')), "CoverPool: must < 10%");
+    await expectRevert(coverPoolFactory.connect(ownerAccount).setYearlyFeeRate(ethers.utils.parseEther('0.11')), "Factory: must < 10%");
     await coverPoolFactory.connect(ownerAccount).setYearlyFeeRate(0);
     expect(await coverPoolFactory.yearlyFeeRate()).to.equal(0);
 
