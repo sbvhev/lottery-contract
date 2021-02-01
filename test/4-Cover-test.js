@@ -125,8 +125,7 @@ describe('Cover', function() {
     // verify convert for userA
     expect(await futureCovToken.balanceOf(userAAddress)).to.equal(0);
     expect(await lastFutureToken.balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
-    // await cover.connect(userAAccount).convert(lastFutureToken.address);
-    await cover.connect(userAAccount).convertAll([lastFutureToken.address, middleFutureToken.address]);
+    await cover.connect(userAAccount).convert([lastFutureToken.address, middleFutureToken.address]);
     expect(await lastFutureToken.balanceOf(userAAddress)).to.equal(0);
     expect(await middleFutureToken.balanceOf(userAAddress)).to.equal(0);
     expect(await futureCovToken.balanceOf(userAAddress)).to.equal(ETHER_UINT_10);

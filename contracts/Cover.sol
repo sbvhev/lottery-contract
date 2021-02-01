@@ -42,6 +42,11 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   // future token => CLAIM Token
   mapping(ICoverERC20 => ICoverERC20) public override futureCovTokenMap;
 
+  modifier onlyNotPaused() {
+    require(!_factory().paused(), "CP: paused");
+    _;
+  }
+
   /// @dev Initialize, called once
   function initialize (
     string calldata _name,
@@ -83,7 +88,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice redeem collateral always allow redeem back collateral with all covTokens
-  function redeemCollateral(uint256 _amount) external override nonReentrant {
+  function redeemCollateral(uint256 _amount) external override nonReentrant onlyNotPaused {
     ICoverPool coverPool = _coverPool();
     uint256 noclaimRedeemDelay = coverPool.noclaimRedeemDelay();
     uint256 defaultRedeemDelay = _factory().defaultRedeemDelay();
@@ -103,9 +108,9 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     _redeemWithAllCovTokens(coverPool, _amount);
   }
 
-  function convertAll(ICoverERC20[] calldata _futureTokens) external override {
+  function convert(ICoverERC20[] calldata _futureTokens) external override onlyNotPaused {
     for (uint256 i = 0; i < _futureTokens.length; i++) {
-      convert(_futureTokens[i]);
+      _convert(_futureTokens[i]);
     }
   }
 
@@ -134,7 +139,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice redeem when there is an accepted claim
-  function redeemClaim() external override nonReentrant {
+  function redeemClaim() external override nonReentrant onlyNotPaused {
     ICoverPool coverPool = _coverPool();
     require(coverPool.claimNonce() > claimNonce, "Cover: no claim accepted");
     ICoverPool.ClaimDetails memory claim = _claimDetails();
@@ -159,6 +164,25 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
     require(eligibleAmount > 0, "Cover: low covToken balance");
     _payCollateral(msg.sender, eligibleAmount);
+  }
+
+  /// @notice multi-tx/block deployment solution. Only called (1+ times depend on size of pool) at creation. Deploy covTokens as many as possible in one tx till not enough gas left.
+  function deploy() public override {
+    require(!deployComplete, "Cover: deploy completed");
+    (bytes32[] memory _riskList) = _coverPool().getRiskList();
+    uint256 startGas = gasleft();
+    for (uint256 i = 0; i < _riskList.length; i++) {
+      if (startGas < _factory().deployGasMin()) return;
+      ICoverERC20 claimToken = claimCovTokenMap[_riskList[i]];
+      if (address(claimToken) == address(0)) {
+        string memory riskName = StringHelper.bytes32ToString(_riskList[i]);
+        claimToken = _createCovToken(string(abi.encodePacked("C_", riskName, "_")));
+        claimCovTokenMap[_riskList[i]] = claimToken;
+        startGas = gasleft();
+      }
+    }
+    deployComplete = true;
+    emit CoverDeployCompleted();
   }
 
   function viewClaimable(address _account) external view override returns (uint256 eligibleAmount) {
@@ -194,45 +218,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       claimCovTokens[i] = ICoverERC20(claimCovTokenMap[_riskList[i]]);
     }
     return (name, expiry, collateral, mintRatio, feeRate, claimNonce, noclaimCovToken, claimCovTokens, futureCovTokens);
-  }
-
-  /// @notice convert the future token to claim token and mint next future token
-  function convert(ICoverERC20 _futureToken) public override {
-    ICoverERC20 claimCovToken = futureCovTokenMap[_futureToken];
-    require(address(claimCovToken) != address(0), "Cover: nothing to convert");
-    uint256 amount = _futureToken.balanceOf(msg.sender);
-    require(amount > 0, "Cover: insufficient balance");
-    _futureToken.burnByCover(msg.sender, amount);
-    claimCovToken.mint(msg.sender, amount);
-
-    // mint next future covTokens
-    ICoverERC20[] memory futureCovTokensCopy = futureCovTokens;
-    for (uint256 i = 0; i < futureCovTokensCopy.length; i++) {
-      if (futureCovTokensCopy[i] == _futureToken) {
-        ICoverERC20 futureCovToken = futureCovTokensCopy[i + 1];
-        futureCovToken.mint(msg.sender, amount);
-        return;
-      }
-    }
-  }
-
-  /// @notice multi-tx/block deployment solution. Only called (1+ times depend on size of pool) at creation. Deploy covTokens as many as possible in one tx till not enough gas left.
-  function deploy() public override {
-    require(!deployComplete, "Cover: deploy completed");
-    (bytes32[] memory _riskList) = _coverPool().getRiskList();
-    uint256 startGas = gasleft();
-    for (uint256 i = 0; i < _riskList.length; i++) {
-      if (startGas < _factory().deployGasMin()) return;
-      ICoverERC20 claimToken = claimCovTokenMap[_riskList[i]];
-      if (address(claimToken) == address(0)) {
-        string memory riskName = StringHelper.bytes32ToString(_riskList[i]);
-        claimToken = _createCovToken(string(abi.encodePacked("C_", riskName, "_")));
-        claimCovTokenMap[_riskList[i]] = claimToken;
-        startGas = gasleft();
-      }
-    }
-    deployComplete = true;
-    emit CoverDeployCompleted();
   }
 
   // get the claim details for the corresponding nonce from coverPool contract
@@ -280,6 +265,26 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     _covToken.burnByCover(msg.sender, amount);
     uint256 payoutAmount = amount * _payoutRate / 1e18;
     _payCollateral(msg.sender, payoutAmount);
+  }
+
+  // convert the future token to claim token and mint next future token
+  function _convert(ICoverERC20 _futureToken) private {
+    ICoverERC20 claimCovToken = futureCovTokenMap[_futureToken];
+    require(address(claimCovToken) != address(0), "Cover: nothing to convert");
+    uint256 amount = _futureToken.balanceOf(msg.sender);
+    require(amount > 0, "Cover: insufficient balance");
+    _futureToken.burnByCover(msg.sender, amount);
+    claimCovToken.mint(msg.sender, amount);
+
+    // mint next future covTokens
+    ICoverERC20[] memory futureCovTokensCopy = futureCovTokens;
+    for (uint256 i = 0; i < futureCovTokensCopy.length; i++) {
+      if (futureCovTokensCopy[i] == _futureToken) {
+        ICoverERC20 futureCovToken = futureCovTokensCopy[i + 1];
+        futureCovToken.mint(msg.sender, amount);
+        return;
+      }
+    }
   }
 
   /// @dev Emits CovTokenCreated

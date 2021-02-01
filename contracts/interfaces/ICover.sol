@@ -37,10 +37,8 @@ interface ICover {
 
   // user action
   function deploy() external;
-  /// @notice convert futureToken to claimToken
-  function convert(ICoverERC20 _futureToken) external;
   /// @notice convert futureTokens to claimTokens
-  function convertAll(ICoverERC20[] calldata _futureTokens) external;
+  function convert(ICoverERC20[] calldata _futureTokens) external;
   /// @notice redeem func when there is a claim on the cover, aka. the cover is affected
   function redeemClaim() external;
   /// @notice redeem func when the cover is not affected by any accepted claim, _amount is respected only when when no claim accepted before expiry (for cover with expiry)
