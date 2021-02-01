@@ -29,7 +29,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   address public override claimManager;
   // delay # of seconds for redeem with/o. accepted claim, redeemCollateral with all covTokens is not affected
   uint256 public override defaultRedeemDelay = 3 days;
-  uint256 public override yearlyFeeRate = 0.006 ether; // 0.6% yearly rate
+  uint256 public override yearlyFeeRate = 0.012 ether; // 1.2% yearly rate
   /// @notice min gas left requirement before continue deployments (when creating new Cover or adding risks to CoverPool)
   uint256 public override deployGasMin = 1000000;
   // not all coverPools are active
