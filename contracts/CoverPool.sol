@@ -18,7 +18,7 @@ import "./interfaces/ICoverPoolCallee.sol";
 import "./interfaces/ICoverPoolFactory.sol";
 
 /**
- * @title CoverPool contract, manages covers for pool, add coverage for user
+ * @title CoverPool contract, manages risks, and covers for pool, handles adding coverage for user
  * @author crypto-pumpkin
  * CoverPool types:
  * - extendable pool: allowed to add and delete risk
@@ -31,17 +31,15 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   string public override name;
   bool private extendablePool;
-  bool private active; // only active coverPool addCover (aka. minting more covTokens)
+  Status private poolStatus; // only Active coverPool status can addCover (aka. minting more covTokens)
   bool public override addingRiskWIP;
   uint256 private addingRiskInd; // index of the active cover array to continue adding risk
   uint256 public override claimNonce; // nonce of for the coverPool's accepted claims
-  // delay # of seconds for redeem with only noclaim tokens
-  uint256 public override noclaimRedeemDelay;
+  uint256 public override noclaimRedeemDelay; // delay for redeem with only noclaim tokens for expired cover with no accpeted claim
 
-  // [claimNonce] => accepted ClaimDetails
-  ClaimDetails[] private claimDetails;
-  address[] private activeCovers;
-  address[] private allCovers;
+  ClaimDetails[] private claimDetails; // [claimNonce] => accepted ClaimDetails
+  address[] private activeCovers; // reset once claim accepted, may contain expired covers, used mostly for adding new risk to pool for faster deployment
+  address[] private allCovers; // all covers ever created
   uint48[] private expiries; // all expiries ever added
   address[] private collaterals; // all collaterals ever added
   bytes32[] private riskList; // list of active risks in cover pool
@@ -88,61 +86,60 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     }
 
     noclaimRedeemDelay = _factory().defaultRedeemDelay(); // Claim manager can set it 10 days when claim filed
-    active = true;
+    poolStatus = Status.Active;
     deployCover(_collateral, _expiry);
   }
 
-  /// @notice add coverage (with expiry) for sender, cover must be deployed first
+  /// @notice add coverage (with expiry) for sender, support flash mint
   function addCover(
     address _collateral,
     uint48 _expiry,
-    uint256 _amountIn,
-    uint256 _amountOut,
+    uint256 _colAmountIn,
+    uint256 _covTokensAmountOut,
     address _caller,
     bytes calldata data
   ) external override nonReentrant onlyNotAddingRiskWIP
   {
     require(!_factory().paused(), "CP: paused");
-    require(active, "CP: pool not active");
-    require(_amountIn > 0, "CP: amount <= 0");
+    require(poolStatus == Status.Active, "CP: pool not active");
+    require(_colAmountIn > 0, "CP: amount <= 0");
     require(collateralStatusMap[_collateral].status == Status.Active, "CP: invalid collateral");
     require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == Status.Active, "CP: invalid expiry");
-
     address coverAddr = coverMap[_collateral][_expiry];
     require(coverAddr != address(0), "CP: cover not deployed yet");
     ICover cover = ICover(coverAddr);
     require(cover.deployComplete(), "CP: cover deploy incomplete");
 
     // support flash mint
-    cover.mint(_amountOut, msg.sender);
+    cover.mint(_covTokensAmountOut, msg.sender);
     if (data.length > 0) {
-      ICoverPoolCallee(_caller).coverPoolCall(msg.sender, _amountIn, _amountOut, data);
+      ICoverPoolCallee(_caller).coverPoolCall(msg.sender, _colAmountIn, _covTokensAmountOut, data);
     }
 
     IERC20 collateral = IERC20(_collateral);
     uint256 coverBalanceBefore = collateral.balanceOf(coverAddr);
-    collateral.safeTransferFrom(msg.sender, coverAddr, _amountIn);
+    collateral.safeTransferFrom(msg.sender, coverAddr, _colAmountIn);
     uint256 received = collateral.balanceOf(coverAddr) - coverBalanceBefore;
-    require(received >= _amountOut, "CP: collateral transfer failed");
+    require(received >= _covTokensAmountOut, "CP: collateral transfer failed");
 
-    emit CoverAdded(coverAddr, msg.sender, _amountOut);
+    emit CoverAdded(coverAddr, msg.sender, _covTokensAmountOut);
   }
 
   /// @notice add risk to pool, previously deleted risk not allowed. Can be called as much as needed till addingRiskWIP is false
   function addRisk(string calldata _risk) external override onlyDev {
-    bytes32 risk = StringHelper.stringToBytes32(_risk);
     require(extendablePool, "CP: not extendable pool");
+    bytes32 risk = StringHelper.stringToBytes32(_risk);
     require(riskMap[risk] != Status.Disabled, "CP: deleted risk not allowed");
 
     if (riskMap[risk] == Status.Null) {
-      // first time adding risk, make sure no other risk adding in prrogress
+      // first time adding the risk, make sure no other risk adding in progress
       require(!addingRiskWIP, "CP: adding risk WIP");
       addingRiskWIP = true;
       riskMap[risk] = Status.Active;
       riskList.push(risk);
     }
 
-    // update all active covers with new risk by deploying claim and new future tokens
+    // update all active covers with new risk by deploying claim and new future covTokens for each cover contract
     address[] memory activeCoversCopy = activeCovers;
     if (activeCoversCopy.length == 0) return;
     uint256 startGas = gasleft();
@@ -206,9 +203,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   // update status of coverPool, if false, will pause new cover creation
-  function setActive(bool _active) external override onlyDev {
-    emit ActiveUpdated(active, _active);
-    active = _active;
+  function setPoolStatus(Status _poolStatus) external override onlyDev {
+    emit PoolStatusUpdated(poolStatus, _poolStatus);
+    poolStatus = _poolStatus;
   }
 
   function setNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external override {
@@ -260,7 +257,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     returns (
       string memory _name,
       bool _extendablePool,
-      bool _active,
+      Status _poolStatus,
       uint256 _claimNonce,
       uint256 _noclaimRedeemDelay,
       address[] memory _collaterals,
@@ -269,7 +266,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       bytes32[] memory _deletedRiskList,
       address[] memory _allCovers)
   {
-    return (name, extendablePool, active, claimNonce, noclaimRedeemDelay, collaterals, expiries, riskList, deletedRiskList, allCovers);
+    return (name, extendablePool, poolStatus, claimNonce, noclaimRedeemDelay, collaterals, expiries, riskList, deletedRiskList, allCovers);
   }
 
   function getRiskList() external view override returns (bytes32[] memory) {

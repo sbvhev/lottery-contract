@@ -12,7 +12,7 @@ interface ICoverPool {
   event NoclaimRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
   event ClaimEnacted(uint256 _enactedClaimNonce);
   event RiskUpdated(bytes32 _risk, bool _isAddRisk);
-  event ActiveUpdated(bool _old, bool _new);
+  event PoolStatusUpdated(Status _old, Status _new);
   event ExpiryUpdated(uint48 _expiry, string _expiryStr,  Status _status);
   event CollateralUpdated(address _collateral, uint256 _mintRatio,  Status _status);
 
@@ -51,7 +51,7 @@ interface ICoverPool {
     external view returns (
       string memory _name,
       bool _extendablePool,
-      bool _active,
+      Status _poolStatus,
       uint256 _claimNonce,
       uint256 _noclaimRedeemDelay,
       address[] memory _collaterals,
@@ -89,5 +89,5 @@ interface ICoverPool {
   function deleteRisk(string calldata _risk) external;
   function setExpiry(uint48 _expiry, string calldata _expiryName, Status _status) external;
   function setCollateral(address _collateral, uint256 _mintRatio, Status _status) external;
-  function setActive(bool _active) external;
+  function setPoolStatus(Status _poolStatus) external;
 }

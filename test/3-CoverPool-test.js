@@ -49,11 +49,11 @@ describe('CoverPool', () => {
   });
 
   it('Should initialize correct state variables', async () => {
-    const [name, extendablePool, active, claimNonce, noclaimRedeemDelay, collaterals, expiries, riskList, deletedRiskList, allCovers] = await coverPool.getCoverPoolDetails();
+    const [name, extendablePool, poolStatus, claimNonce, noclaimRedeemDelay, collaterals, expiries, riskList, deletedRiskList, allCovers] = await coverPool.getCoverPoolDetails();
 
     expect(name).to.equal(consts.POOL_2);
     expect(extendablePool).to.equal(true);
-    expect(active).to.equal(true);
+    expect(poolStatus).to.equal(1);
     expect(claimNonce).to.equal(0);
     expect(noclaimRedeemDelay).to.equal(3 * 24 * 60 * 60);
     expect(riskList).to.deep.equal([consts.ASSET_1_BYTES32, consts.ASSET_2_BYTES32]);
@@ -72,9 +72,9 @@ describe('CoverPool', () => {
     await coverPool.connect(ownerAccount).setExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1);
     expect((await coverPool.expiryInfoMap(NEW_TIMESTAMP)).status).to.equal(1);
 
-    await coverPool.connect(ownerAccount).setActive(false);
-    const [,, active] = await coverPool.getCoverPoolDetails();
-    expect(active).to.equal(false);
+    await coverPool.connect(ownerAccount).setPoolStatus(2);
+    const [,, poolStatus] = await coverPool.getCoverPoolDetails();
+    expect(poolStatus).to.equal(2);
 
     const newDelay = 10 * 24 * 60 * 60;
     await expect(coverPool.connect(ownerAccount).setNoclaimRedeemDelay(newDelay))
@@ -85,7 +85,7 @@ describe('CoverPool', () => {
   it('Should NOT update state variables by the wrong authority', async () => {
     await expect(coverPool.connect(userAAccount).setCollateral(NEW_COLLATERAL, 1)).to.be.reverted;
     await expect(coverPool.connect(userAAccount).setExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1)).to.be.reverted;
-    await expect(coverPool.connect(userAAccount).setActive(false)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).setPoolStatus(2)).to.be.reverted;
     await expect(coverPool.connect(userAAccount).setNoclaimRedeemDelay(10 * 24 * 60 * 60, 0)).to.be.reverted;
   });
 
@@ -217,18 +217,18 @@ describe('CoverPool', () => {
     const oldClaimNonce = await coverPool.claimNonce();
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [ETHER_UINT_1], INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimEnacted');
-    const [,, active] = await coverPool.getCoverPoolDetails();
+    const [,, poolStatus] = await coverPool.getCoverPoolDetails();
     expect(await coverPool.name()).to.equal(consts.POOL_2);
-    expect(active).to.equal(true);
+    expect(poolStatus).to.equal(1);
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce + 1);
   });
 
   it('Should NOT enactClaim if coverPool nonce not match', async () => {
     const oldClaimNonce = await coverPool.claimNonce();
     await coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [ETHER_UINT_1], INCIDENT_TIMESTAMP, 0);
-    const [,, active] = await coverPool.getCoverPoolDetails();
+    const [,, poolStatus] = await coverPool.getCoverPoolDetails();
     expect(await coverPool.name()).to.equal(consts.POOL_2);
-    expect(active).to.equal(true);
+    expect(poolStatus).to.equal(1);
     expect(await coverPool.claimNonce()).to.equal(oldClaimNonce + 1);
 
     await expect(coverPool.connect(userAAccount).enactClaim([consts.ASSET_1_BYTES32], [ETHER_UINT_1], INCIDENT_TIMESTAMP, 0)).to.be.reverted;

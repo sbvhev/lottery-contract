@@ -13,13 +13,13 @@ import "./interfaces/ICoverPoolFactory.sol";
 /**
  * @title CoverPoolFactory contract, manages all the coverPools for Cover Protocol
  * @author crypto-pumpkin
- * Using string (instead of bytes32) for all inputs for operation convinience at the expenses of a slightly highly cost
+ * Using string (instead of bytes32) for all inputs for operation convinience at the expenses of a slightly higher cost
  */
 contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
   bytes4 private constant COVER_POOL_INIT_SIGNITURE = bytes4(keccak256("initialize(string,bool,string[],address,uint256,uint48,string)"));
 
-  bool public override paused;
+  bool public override paused; // set by responder or owner, pause token transfer events for the protocol
   address public override responder;
   address public override coverPoolImpl;
   address public override coverImpl;
@@ -31,7 +31,6 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   uint256 public override yearlyFeeRate = 0.012 ether; // 1.2% yearly rate
   /// @notice min gas left requirement before continue deployments (when creating new Cover or adding risks to CoverPool)
   uint256 public override deployGasMin = 1000000;
-  // not all coverPools are active
   string[] private coverPoolNames;
   mapping(string => address) public override coverPools;
 
@@ -54,10 +53,10 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   }
 
   /**
-   * @notice Create a new Cover Pool
-   * @param _name name for pool, e.g. Yearn
+   * @notice Create a new Cover Pool, it will deploy the Cover and covTokens for the collateral and expiry
+   * @param _name name for pool, has to be unique, e.g. Yearn
    * @param _extendablePool extendable pools allow adding new risk
-   * @param _riskList list of underlying that are covered in the pool
+   * @param _riskList list of underlyings that are covered in the pool
    * @param _collateral the collateral of the pool
    * @param _mintRatio must be 18 decimals, in (0, + infinity), 1.5 means 1 collateral mints 1.5 covTokens
    * @param _expiry expiration date supported for the pool
@@ -84,12 +83,14 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     emit CoverPoolCreated(_addr);
   }
 
+  /// @notice this only affects future Covers, a Cover's fee rate is fixed once deployed
   function setYearlyFeeRate(uint256 _yearlyFeeRate) external override onlyOwner {
     require(_yearlyFeeRate <= 0.1 ether, "Factory: must < 10%");
     emit IntUpdated('YearlyFeeRate', yearlyFeeRate, _yearlyFeeRate);
     yearlyFeeRate = _yearlyFeeRate;
   }
 
+  /// @notice takes effects immediately, it will apply to all coverages
   function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external override onlyOwner {
     emit IntUpdated('DefaultRedeemDelay', defaultRedeemDelay, _defaultRedeemDelay);
     defaultRedeemDelay = _defaultRedeemDelay;
