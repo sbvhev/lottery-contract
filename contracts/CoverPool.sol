@@ -90,14 +90,22 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     deployCover(_collateral, _expiry);
   }
 
-  /// @notice add coverage (with expiry) for sender, support flash mint
+  /**
+   * @notice add coverage (with expiry) for sender, collateral is transferred here to optimize collateral approve tx for users
+   * @param _collateral, collateral for cover, must be supported and active
+   * @param _expiry, expiry for cover, must be supported and active
+   * @param _colAmountIn, the amount of collateral to transfer from sender
+   * @param _amountOut, the amount of collateral to use to mint covTokens
+   * @param _callee, the address of the contract to call for flash mint, can be 0 for normal mint
+   * @param _data, the data to use to call _callee, set to '0x' if normal mint
+   */
   function addCover(
     address _collateral,
     uint48 _expiry,
     uint256 _colAmountIn,
-    uint256 _covTokensAmountOut,
-    address _caller,
-    bytes calldata data
+    uint256 _amountOut, // amount of collateral to used to mint covTokens
+    address _callee,
+    bytes calldata _data
   ) external override nonReentrant onlyNotAddingRiskWIP
   {
     require(!_factory().paused(), "CP: paused");
@@ -111,18 +119,18 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     require(cover.deployComplete(), "CP: cover deploy incomplete");
 
     // support flash mint
-    cover.mint(_covTokensAmountOut, msg.sender);
-    if (data.length > 0) {
-      ICoverPoolCallee(_caller).coverPoolCall(msg.sender, _colAmountIn, _covTokensAmountOut, data);
+    cover.mint(_amountOut, msg.sender);
+    if (_data.length > 0) {
+      ICoverPoolCallee(_callee).coverPoolCall(msg.sender, _colAmountIn, _amountOut, _data);
     }
 
     IERC20 collateral = IERC20(_collateral);
     uint256 coverBalanceBefore = collateral.balanceOf(coverAddr);
     collateral.safeTransferFrom(msg.sender, coverAddr, _colAmountIn);
     uint256 received = collateral.balanceOf(coverAddr) - coverBalanceBefore;
-    require(received >= _covTokensAmountOut, "CP: collateral transfer failed");
+    require(received >= _amountOut, "CP: collateral transfer failed");
 
-    emit CoverAdded(coverAddr, msg.sender, _covTokensAmountOut);
+    emit CoverAdded(coverAddr, msg.sender, _amountOut);
   }
 
   /// @notice add risk to pool, previously deleted risk not allowed. Can be called as much as needed till addingRiskWIP is false

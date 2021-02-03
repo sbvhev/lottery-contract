@@ -73,7 +73,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   function mint(uint256 _receivedColAmt, address _receiver) external override onlyOwner nonReentrant {
     require(deployComplete, "Cover: deploy incomplete");
     ICoverPool coverPool = _coverPool();
-    require(coverPool.claimNonce() == claimNonce, "Cover: claim accepted");
+    require(coverPool.claimNonce() == claimNonce, "Cover: nonces dont match");
 
     uint256 mintAmount = _receivedColAmt * mintRatio / 1e18;
     totalCoverage = totalCoverage + mintAmount;
