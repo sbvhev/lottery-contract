@@ -121,7 +121,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   /**
    * @notice called by owner (CoverPool) only, when a new risk is added to pool the first time
    * - create a new claim token for risk
-   * - point the current latest (last one in futureCovTokens) to newly created claim token
+   * - point the current latest (last one in futureCovTokens) future token to newly created claim token
    * - create a new future token and push to futureCovTokens
    */
   function addRisk(bytes32 _risk) external override onlyOwner {
@@ -151,7 +151,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     uint256 defaultRedeemDelay = _factory().defaultRedeemDelay();
     require(block.timestamp >= uint256(claim.claimEnactedTimestamp) + defaultRedeemDelay, "Cover: not ready");
 
-    // get all claim tokens eligible amount
+    // get all claim tokens eligible amount to payout
     uint256 eligibleAmount;
     for (uint256 i = 0; i < claim.payoutRiskList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutRiskList[i]];
@@ -160,7 +160,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       covToken.burnByCover(msg.sender, amount);
     }
 
-    // if total claim payout rate < 1, get noclaim token eligible amount
+    // if total claim payout rate < 1, get noclaim token eligible amount to payout
     if (claim.totalPayoutRate < 1e18) {
       uint256 amount = noclaimCovToken.balanceOf(msg.sender);
       uint256 payoutAmount = amount * (1e18 - claim.totalPayoutRate) / 1e18;
@@ -249,6 +249,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     return _coverPool().getClaimDetails(claimNonce);
   }
 
+  // must convert all future tokens to claim tokens to be able to redeem with all covTokens
   function _redeemWithAllCovTokens(ICoverPool coverPool, uint256 _amount) private {
     noclaimCovToken.burnByCover(msg.sender, _amount);
     _handleLatestFutureToken(msg.sender, _amount, false); // burn
@@ -282,7 +283,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
   }
 
-  // burn covToken and pay sender
+  // burn noclaim covToken and pay sender
   function _burnNoclaimAndPay(ICoverERC20 _covToken, uint256 _payoutRate, uint256 _amount) private {
     _covToken.burnByCover(msg.sender, _amount);
     uint256 payoutAmount = _amount * _payoutRate / 1e18;
