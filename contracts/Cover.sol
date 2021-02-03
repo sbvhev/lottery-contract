@@ -86,42 +86,26 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     _handleLatestFutureToken(_receiver, mintAmount, true); // mint
   }
 
-  function collectFees() public override {
-    IERC20 colToken = IERC20(collateral);
-    uint256 collateralBal = colToken.balanceOf(address(this));
-    if (collateralBal == 0) return;
-    if (totalCoverage == 0) {
-      colToken.safeTransfer(_factory().treasury(), collateralBal);
-    } else {
-      uint256 totalCoverageInCol = totalCoverage * 1e18 / mintRatio;
-      uint256 feesInTheory = totalCoverageInCol * feeRate / 1e18;
-      uint256 feesToCollect = feesInTheory + collateralBal - totalCoverageInCol;
-      if (feesToCollect > 0) {
-        colToken.safeTransfer(_factory().treasury(), feesToCollect);
-      }
-    }
-  }
-
-  /// @notice redeem collateral always allow redeem back collateral with all covTokens
-  function redeemCollateral(uint256 _amount) external override nonReentrant onlyNotPaused {
+  /// @notice normal redeem (no claim accepted), but always allow redeem back collateral with all covTokens
+  function redeem(uint256 _amount) external override nonReentrant onlyNotPaused {
     ICoverPool coverPool = _coverPool();
-    uint256 noclaimRedeemDelay = coverPool.noclaimRedeemDelay();
-    uint256 defaultRedeemDelay = _factory().defaultRedeemDelay();
 
-    if (coverPool.claimNonce() > claimNonce) { // accepted claim
+    if (coverPool.claimNonce() > claimNonce) { // accepted claim, should only redeem for not affected cover
       ICoverPool.ClaimDetails memory claim = _claimDetails();
+      uint256 defaultRedeemDelay = _factory().defaultRedeemDelay();
       if (claim.incidentTimestamp > expiry && block.timestamp >= uint256(expiry) + defaultRedeemDelay) {
-        // not affected cover, redeem with noclaim tokens only
-        _burnNoclaimAndPay(noclaimCovToken, 1e18);
-        return;
+        // not affected cover, default delay passed, redeem with noclaim tokens only
+        _burnNoclaimAndPay(noclaimCovToken, 1e18, _amount);
+      } else { // redeem with all covTokens is always allowed
+        _redeemWithAllCovTokens(coverPool, _amount);
       }
-    } else if (block.timestamp >= uint256(expiry) + noclaimRedeemDelay) {
-      // expired and noclaim delay passed, no accepted claim, redeem with noclaim tokens only
-      _burnNoclaimAndPay(noclaimCovToken, 1e18);
-      return;
+    } else if (block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay()) {
+      // no accepted claim, expired and noclaim delay passed, redeem with noclaim tokens only. Use noclaimRedeemDelay (>= default delay) in case there are pending claims
+      _burnNoclaimAndPay(noclaimCovToken, 1e18, _amount);
+    } else { // redeem with all covTokens is always allowed
+      _redeemWithAllCovTokens(coverPool, _amount);
     }
-    _redeemWithAllCovTokens(coverPool, _amount);
-    emit Redeemed('Collateral', msg.sender, _amount);
+    emit Redeemed('Normal', msg.sender, _amount);
   }
 
   /**
@@ -243,6 +227,23 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     return (name, expiry, collateral, mintRatio, feeRate, claimNonce, noclaimCovToken, claimCovTokens, futureCovTokens);
   }
 
+  /// @notice collectFees send fees to treasury, anyone can call
+  function collectFees() public override {
+    IERC20 colToken = IERC20(collateral);
+    uint256 collateralBal = colToken.balanceOf(address(this));
+    if (collateralBal == 0) return;
+    if (totalCoverage == 0) {
+      colToken.safeTransfer(_factory().treasury(), collateralBal);
+    } else {
+      uint256 totalCoverageInCol = totalCoverage * 1e18 / mintRatio;
+      uint256 feesInTheory = totalCoverageInCol * feeRate / 1e18;
+      uint256 feesToCollect = feesInTheory + collateralBal - totalCoverageInCol;
+      if (feesToCollect > 0) {
+        colToken.safeTransfer(_factory().treasury(), feesToCollect);
+      }
+    }
+  }
+
   // get the claim details for the corresponding nonce from coverPool contract
   function _claimDetails() private view returns (ICoverPool.ClaimDetails memory) {
     return _coverPool().getClaimDetails(claimNonce);
@@ -282,12 +283,9 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   // burn covToken and pay sender
-  function _burnNoclaimAndPay(ICoverERC20 _covToken, uint256 _payoutRate) private {
-    uint256 amount = _covToken.balanceOf(msg.sender);
-    require(amount > 0, "Cover: low covToken balance");
-
-    _covToken.burnByCover(msg.sender, amount);
-    uint256 payoutAmount = amount * _payoutRate / 1e18;
+  function _burnNoclaimAndPay(ICoverERC20 _covToken, uint256 _payoutRate, uint256 _amount) private {
+    _covToken.burnByCover(msg.sender, _amount);
+    uint256 payoutAmount = _amount * _payoutRate / 1e18;
     _payCollateral(msg.sender, payoutAmount);
   }
 

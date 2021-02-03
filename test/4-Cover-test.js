@@ -156,7 +156,7 @@ describe('Cover', function() {
     expect(await futureCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20);
 
     const userABal = await dai.balanceOf(userAAddress);
-    await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
+    await cover.connect(userAAccount).redeem(ETHER_UINT_10);
     for (let i = 0; i < claimCovTokens.length; i++) {
       const claimCovToken = CoverERC20.attach(claimCovTokens[i]);
       expect(await claimCovToken.balanceOf(userAAddress)).to.equal(0);
@@ -185,7 +185,7 @@ describe('Cover', function() {
     expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20);
 
     const userABal = await dai.balanceOf(userAAddress);
-    await cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10);
+    await cover.connect(userAAccount).redeem(ETHER_UINT_10);
     expect(await claimCovToken.balanceOf(userAAddress)).to.equal(0);
     expect(await deletedClaimCovToken.balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
     expect(await noclaimCovToken.balanceOf(userAAddress)).to.equal(0);
@@ -219,7 +219,7 @@ describe('Cover', function() {
     expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20.mul(ratio));
 
     const userBBal = await dai.balanceOf(userBAddress);
-    await cover2.connect(userBAccount).redeemCollateral(ETHER_UINT_20);
+    await cover2.connect(userBAccount).redeem(ETHER_UINT_20);
     expect(await claimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_10.mul(ratio));
     expect(await claimCovToken2.balanceOf(userBAddress)).to.equal(ETHER_UINT_10.mul(ratio));
     expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_10.mul(ratio));
@@ -228,19 +228,19 @@ describe('Cover', function() {
   });
 
   it('Should redeem collateral without accepted claim', async function() {
-    await verifyRedeemCollateral(userAAddress, ETHER_UINT_10);
+    await verifyredeem(userAAddress, ETHER_UINT_10);
   });
 
   it('Should redeem collateral with accepted claim with all tokens', async function() {
     const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32], [ethers.utils.parseEther('1')], startTimestamp, 0);
     await txA.wait();
 
-    await verifyRedeemCollateral(userAAddress, ETHER_UINT_10);
+    await verifyredeem(userAAddress, ETHER_UINT_10);
   });
 
-  async function verifyRedeemCollateral(address, amount) {
+  async function verifyredeem(address, amount) {
     const treasuryBalBefore = await dai.balanceOf(treasuryAddress);
-    await cover.connect(userAAccount).redeemCollateral(amount);
+    await cover.connect(userAAccount).redeem(amount);
     const [,,,,,, noclaimCovTokenAddress, claimCovTokens] = await cover.getCoverDetails();
     const claimCovTokenAddress = claimCovTokens[0];
     expect(await CoverERC20.attach(claimCovTokenAddress).totalSupply()).to.equal(0);
@@ -258,25 +258,25 @@ describe('Cover', function() {
     await time.increaseTo(ethers.BigNumber.from(expiry).toNumber());
     await time.advanceBlock();
 
-    await verifyRedeemCollateral(userAAddress, ETHER_UINT_10);
+    await verifyredeem(userAAddress, ETHER_UINT_10);
   });
 
-  it('Should NOT redeemCollateral if dont have all tokens', async function() {
+  it('Should NOT redeem if dont have all tokens', async function() {
     const [,,,,,, noclaimCovTokenAddress, claimCovTokens] = await cover.getCoverDetails();
     const noclaimCovToken = CoverERC20.attach(noclaimCovTokenAddress);
     const balance = await noclaimCovToken.balanceOf(userAAddress);
     await noclaimCovToken.connect(userAAccount).transfer(userBAddress, balance);
 
-    await expect(cover.connect(userAAccount).redeemCollateral(ETHER_UINT_10)).to.be.reverted;
+    await expect(cover.connect(userAAccount).redeem(ETHER_UINT_10)).to.be.reverted;
   });
 
-  it('Should redeemCollateral after expire and after wait period ends', async function() {
+  it('Should redeem after expire and after wait period ends', async function() {
     const [, expiry ] = await cover.getCoverDetails();
     const delay = await coverPool.noclaimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(expiry).toNumber() + delay.toNumber());
     await time.advanceBlock();
 
-    await cover.connect(userAAccount).redeemCollateral(1);
+    await cover.connect(userAAccount).redeem(ETHER_UINT_10);
 
     const [,,,,,, noclaimCovTokenAddress] = await cover.getCoverDetails();
     const noclaimCovToken = CoverERC20.attach(noclaimCovTokenAddress);
@@ -285,12 +285,12 @@ describe('Cover', function() {
     expect(await dai.balanceOf(cover.address)).to.equal(0);
   });
 
-  it('Should NOT redeemCollateral after expire if does not hold noclaim covToken', async function() {
+  it('Should NOT redeem after expire if does not hold noclaim covToken', async function() {
     const [, expiry ] = await cover.getCoverDetails();
     await time.increaseTo(ethers.BigNumber.from(expiry).toNumber());
     await time.advanceBlock();
 
-    await expect(cover.connect(userBAccount).redeemCollateral(1)).to.be.reverted;
+    await expect(cover.connect(userBAccount).redeem(1)).to.be.reverted;
     const fees = await calFees(ETHER_UINT_10);
     expect(await dai.balanceOf(cover.address)).to.equal(ETHER_UINT_10.sub(fees));
   });
@@ -364,7 +364,7 @@ describe('Cover', function() {
     expect(ownerDaiBalanceAfter.sub(ownerDaiBalance)).to.equal(ownerRedeemable.sub(ownerFees));
   });
 
-  it('Should allow redeemCollateral ONLY after enact and noclaimRedeemDelay if incident after expiry', async function() {
+  it('Should allow redeem ONLY after enact and noclaimRedeemDelay if incident after expiry', async function() {
     const [, expiry ] = await cover.getCoverDetails();
 
     const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32], [ethers.utils.parseEther('0.4')], expiry + 1, 0);
@@ -379,7 +379,7 @@ describe('Cover', function() {
     await expect(cover.connect(userBAccount).redeemClaim()).to.be.reverted;
 
     const aDaiBalance = await dai.balanceOf(userAAddress);
-    await cover.connect(userAAccount).redeemCollateral(1);
+    await cover.connect(userAAccount).redeem(ETHER_UINT_10);
     const [,,,,,, noclaimCovTokenAddress] = await cover.getCoverDetails();
     const noclaimCovToken = CoverERC20.attach(noclaimCovTokenAddress);
     expect(await noclaimCovToken.totalSupply()).to.equal(0);
