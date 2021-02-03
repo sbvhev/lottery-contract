@@ -280,7 +280,11 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return claimDetails[_nonce];
   }
 
-  /// @notice Will only deploy or complete existing deployment if necessary, safe to call
+  /**
+   * @notice deploy Cover contracts with all necessary covTokens deployed
+   * Will only deploy or complete existing deployment if necessary.
+   * Safe to call by anyone, make it convinient operationally to deploy a new cover for pool
+   */
   function deployCover(address _collateral, uint48 _expiry) public override returns (address addr) {
     addr = coverMap[_collateral][_expiry];
 
