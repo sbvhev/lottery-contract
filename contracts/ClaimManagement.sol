@@ -195,7 +195,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
 
   // The times passed since the claim was filed has to be less than the max claim decision window
   function _isDecisionWindowPassed(Claim memory claim) private view returns (bool) {
-    return block.timestamp - claim.filedTimestamp > maxClaimDecisionWindow - 1 hours;
+    return block.timestamp - claim.filedTimestamp > maxClaimDecisionWindow;
   }
 
   function _getTotalNum(uint256[] calldata _payoutRates) private pure returns (uint256 _totalRates) {

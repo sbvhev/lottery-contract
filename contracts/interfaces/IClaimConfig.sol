@@ -13,7 +13,6 @@ interface IClaimConfig {
   function treasury() external view returns (address);
   function coverPoolFactory() external view returns (ICoverPoolFactory);
   function defaultCVC() external view returns (address);
-  function minClaimDecisionWindow() external view returns (uint256);
   function maxClaimDecisionWindow() external view returns (uint256);
   function baseClaimFee() external view returns (uint256);
   function forceClaimFee() external view returns (uint256);

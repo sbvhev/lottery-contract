@@ -16,10 +16,9 @@ contract ClaimConfig is IClaimConfig, Ownable {
   address public override treasury;
   ICoverPoolFactory public override coverPoolFactory;
   address public override defaultCVC; // if not specified, default to this
-  
-  // The max time allowed from filing a claim to a decision made
-  uint256 public override minClaimDecisionWindow = 2 days;
-  uint256 public override maxClaimDecisionWindow = 7 days;
+
+  // The max time allowed from filing a claim to a decision made, 1 hr buffer for calling
+  uint256 public override maxClaimDecisionWindow = 7 days - 1 hours;
   uint256 public override baseClaimFee = 50e18;
   uint256 public override forceClaimFee = 500e18;
   uint256 public override feeMultiplier = 2;
@@ -36,7 +35,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
 
   /// @notice Set max time window allowed to decide a claim after filed, requires at least 3 days for voting
   function setMaxClaimDecisionWindow(uint256 _newTimeWindow) external override onlyOwner {
-    require(_newTimeWindow >= minClaimDecisionWindow, "CC: window too short");
+    require(_newTimeWindow > 0, "CC: window too short");
     maxClaimDecisionWindow = _newTimeWindow;
   }
 
