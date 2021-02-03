@@ -177,9 +177,9 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
 
     // if total claim payout rate < 1, get noclaim token eligible amount
-    if (claim.payoutTotalRate < 1e18) {
+    if (claim.totalPayoutRate < 1e18) {
       uint256 amount = noclaimCovToken.balanceOf(msg.sender);
-      uint256 payoutAmount = amount * (1e18 - claim.payoutTotalRate) / 1e18;
+      uint256 payoutAmount = amount * (1e18 - claim.totalPayoutRate) / 1e18;
       eligibleAmount = eligibleAmount + payoutAmount;
       noclaimCovToken.burnByCover(msg.sender, amount);
     }
@@ -215,9 +215,9 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       uint256 amount = covToken.balanceOf(_account);
       eligibleAmount = eligibleAmount + amount * claim.payoutRates[i] / 1e18;
     }
-    if (claim.payoutTotalRate < 1e18) {
+    if (claim.totalPayoutRate < 1e18) {
       uint256 amount = noclaimCovToken.balanceOf(_account);
-      uint256 payoutAmount = amount * (1e18 - claim.payoutTotalRate) / 1e18;
+      uint256 payoutAmount = amount * (1e18 - claim.totalPayoutRate) / 1e18;
       eligibleAmount = eligibleAmount + payoutAmount;
     }
   }

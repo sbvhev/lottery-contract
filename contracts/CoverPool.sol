@@ -234,19 +234,19 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     require(_coverPoolNonce == claimNonce, "CP: nonces do not match");
     require(_payoutRiskList.length == _payoutRates.length, "CP: arrays length don't match");
 
-    uint256 totalNum;
+    uint256 totalPayoutRate;
     for (uint256 i = 0; i < _payoutRiskList.length; i++) {
       require(riskMap[_payoutRiskList[i]] == Status.Active, "CP: has disabled risk");
-      totalNum = totalNum + _payoutRates[i];
+      totalPayoutRate = totalPayoutRate + _payoutRates[i];
     }
-    require(totalNum <= 1 ether && totalNum > 0, "CP: payout % not in (0%, 100%]");
+    require(totalPayoutRate <= 1 ether && totalPayoutRate > 0, "CP: payout % not in (0%, 100%]");
 
     claimNonce = claimNonce + 1;
     delete activeCovers;
     claimDetails.push(ClaimDetails(
       _payoutRiskList,
       _payoutRates,
-      totalNum,
+      totalPayoutRate,
       _incidentTimestamp,
       uint48(block.timestamp)
     ));
@@ -278,7 +278,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /**
-   * @notice deploy Cover contracts with all necessary covTokens deployed
+   * @notice deploy Cover contracts with all necessary covTokens
    * Will only deploy or complete existing deployment if necessary.
    * Safe to call by anyone, make it convinient operationally to deploy a new cover for pool
    */
@@ -286,7 +286,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     addr = coverMap[_collateral][_expiry];
 
     // Deploy new cover contract if not exist or if claim accepted
-    if (addr == address(0) || ICover(addr).claimNonce() != claimNonce) {
+    if (addr == address(0) || ICover(addr).claimNonce() < claimNonce) {
       require(collateralStatusMap[_collateral].status == Status.Active, "CP: invalid collateral");
       require(block.timestamp < _expiry && expiryInfoMap[_expiry].status == Status.Active, "CP: invalid expiry");
 
