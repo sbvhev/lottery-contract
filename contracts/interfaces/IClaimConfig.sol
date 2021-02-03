@@ -26,9 +26,7 @@ interface IClaimConfig {
   // @notice only dev
   function setMaxClaimDecisionWindow(uint256 _newTimeWindow) external;
   function setTreasury(address _treasury) external;
-  function addCVCForPool(address _coverPool, address _cvc) external;
   function addCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external;
-  function removeCVCForPool(address _coverPool, address _cvc) external;
   function removeCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external;
   function setDefaultCVC(address _cvc) external;
   function setFeeAndCurrency(uint256 _baseClaimFee, uint256 _forceClaimFee, address _currency) external;

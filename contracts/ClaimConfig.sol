@@ -17,8 +17,9 @@ contract ClaimConfig is IClaimConfig, Ownable {
   ICoverPoolFactory public override coverPoolFactory;
   address public override defaultCVC; // if not specified, default to this
 
+  uint256 internal constant TIME_BUFFER = 1 hours;
   // The max time allowed from filing a claim to a decision made, 1 hr buffer for calling
-  uint256 public override maxClaimDecisionWindow = 7 days - 1 hours;
+  uint256 public override maxClaimDecisionWindow = 7 days - TIME_BUFFER;
   uint256 public override baseClaimFee = 50e18;
   uint256 public override forceClaimFee = 500e18;
   uint256 public override feeMultiplier = 2;
@@ -44,41 +45,19 @@ contract ClaimConfig is IClaimConfig, Ownable {
     defaultCVC = _cvc;
   }
 
-  /// @notice Add CVC group for a coverPool if `_cvc` isn't already added
-  function addCVCForPool(address _coverPool, address _cvc) public override onlyOwner {
-    address[] memory cvcCopy = cvcMap[_coverPool];
-    for (uint i = 0; i < cvcCopy.length; i++) {
-      require(cvcCopy[i] != _cvc, "CC: cvc exists");
-    }
-    cvcMap[_coverPool].push(_cvc);
-  }
-
   /// @notice Add CVC groups for multiple coverPools
   function addCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external override onlyOwner {
     require(_coverPools.length == _cvcs.length, "CC: lengths don't match");
-    for (uint i = 0; i < _coverPools.length; i++) {
-      addCVCForPool(_coverPools[i], _cvcs[i]);
+    for (uint256 i = 0; i < _coverPools.length; i++) {
+      _addCVCForPool(_coverPools[i], _cvcs[i]);
     }
-  }
-
-  function removeCVCForPool(address _coverPool, address _cvc) public override onlyOwner {
-    address[] memory cvcCopy = cvcMap[_coverPool];
-    address[] memory newCVC = new address[](cvcCopy.length - 1);
-    uint256 newListInd = 0;
-    for (uint i = 0; i < cvcCopy.length; i++) {
-      if (_cvc != cvcCopy[i]) {
-        newCVC[newListInd] = cvcCopy[i];
-        newListInd++;
-      }
-    }
-    cvcMap[_coverPool] = newCVC;
   }
 
   /// @notice Remove CVC groups for multiple coverPools
   function removeCVCForPools(address[] calldata _coverPools, address[] calldata _cvcs) external override onlyOwner {
     require(_coverPools.length == _cvcs.length, "CC: lengths don't match");
-    for (uint i = 0; i < _coverPools.length; i++) {
-      removeCVCForPool(_coverPools[i], _cvcs[i]);
+    for (uint256 i = 0; i < _coverPools.length; i++) {
+      _removeCVCForPool(_coverPools[i], _cvcs[i]);
     }
   }
 
@@ -104,7 +83,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
   function isCVCMember(address _coverPool, address _address) public view override returns (bool) {
     address[] memory cvcCopy = cvcMap[_coverPool];
     if (cvcCopy.length == 0 && _address == defaultCVC) return true;
-    for (uint i = 0; i < cvcCopy.length; i++) {
+    for (uint256 i = 0; i < cvcCopy.length; i++) {
       if (_address == cvcCopy[i]) {
         return true;
       }
@@ -116,7 +95,29 @@ contract ClaimConfig is IClaimConfig, Ownable {
     return coverPoolClaimFee[_coverPool] < baseClaimFee ? baseClaimFee : coverPoolClaimFee[_coverPool];
   }
 
-  /// @notice Updates fee for coverPool `_coverPool` by multiplying current fee by `feeMultiplier`, capped at `forceClaimFee`
+  // Add CVC group for a coverPool if `_cvc` isn't already added
+  function _addCVCForPool(address _coverPool, address _cvc) private onlyOwner {
+    address[] memory cvcCopy = cvcMap[_coverPool];
+    for (uint256 i = 0; i < cvcCopy.length; i++) {
+      require(cvcCopy[i] != _cvc, "CC: cvc exists");
+    }
+    cvcMap[_coverPool].push(_cvc);
+  }
+
+  function _removeCVCForPool(address _coverPool, address _cvc) private {
+    address[] memory cvcCopy = cvcMap[_coverPool];
+    address[] memory newCVC = new address[](cvcCopy.length - 1);
+    uint256 newListInd = 0;
+    for (uint256 i = 0; i < cvcCopy.length; i++) {
+      if (_cvc != cvcCopy[i]) {
+        newCVC[newListInd] = cvcCopy[i];
+        newListInd++;
+      }
+    }
+    cvcMap[_coverPool] = newCVC;
+  }
+
+  // Updates fee for coverPool `_coverPool` by multiplying current fee by `feeMultiplier`, capped at `forceClaimFee`
   function _updateCoverPoolClaimFee(address _coverPool) internal {
     uint256 newFee = getCoverPoolClaimFee(_coverPool) * feeMultiplier;
     if (newFee <= forceClaimFee) {
@@ -124,7 +125,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
     }
   }
 
-  /// @notice Resets fee for coverPool `_coverPool` to `baseClaimFee`
+  // Resets fee for coverPool `_coverPool` to `baseClaimFee`
   function _resetCoverPoolClaimFee(address _coverPool) internal {
     coverPoolClaimFee[_coverPool] = baseClaimFee;
   }

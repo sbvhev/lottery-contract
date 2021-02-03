@@ -72,7 +72,7 @@ describe("ClaimManagement", function () {
   });
 
   it("Should add cvc to deployed cover pool" , async function () {
-    await management.connect(ownerAccount).addCVCForPool(coverPool.address, auditorAddress);
+    await management.connect(ownerAccount).addCVCForPools([coverPool.address], [auditorAddress]);
     expect(await management.isCVCMember(coverPool.address, auditorAddress)).to.equal(true);
     expect(await management.isCVCMember(coverPool.address, ownerAddress)).to.equal(false);
   })

@@ -34,15 +34,15 @@ describe("ClaimConfig", function () {
     expect(await claimConfig.treasury()).to.equal(treasuryAddress);
 
     expect(await claimConfig.isCVCMember(testCoverPool, defaultCVC)).to.equal(true);
-    await claimConfig.addCVCForPool(testCoverPool, auditorAddress);
+    await claimConfig.addCVCForPools([testCoverPool], [auditorAddress]);
     expect(await claimConfig.isCVCMember(testCoverPool, auditorAddress)).to.equal(true);
     expect(await claimConfig.isCVCMember(testCoverPool, defaultCVC)).to.equal(false);
 
-    expect(await claimConfig.removeCVCForPool(testCoverPool, auditorAddress))
+    expect(await claimConfig.removeCVCForPools([testCoverPool], [auditorAddress]))
     expect(await claimConfig.isCVCMember(testCoverPool, auditorAddress)).to.equal(false);
 
-    await expect(claimConfig.removeCVCForPool(testCoverPool, auditorAddress)).to.be.reverted;
-    await expect(claimConfig.removeCVCForPool(testCoverPool, defaultCVC)).to.be.reverted;
+    await expect(claimConfig.removeCVCForPools([testCoverPool], [auditorAddress])).to.be.reverted;
+    await expect(claimConfig.removeCVCForPools([testCoverPool], [defaultCVC])).to.be.reverted;
   });
   
   it("Should set fees and currency", async function () {

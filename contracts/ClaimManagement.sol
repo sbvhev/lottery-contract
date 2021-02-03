@@ -14,6 +14,8 @@ import "./interfaces/IClaimManagement.sol";
 contract ClaimManagement is IClaimManagement, ClaimConfig {
   using SafeERC20 for IERC20;
 
+  // the redeem delay for a cover when there is a pending claim
+  uint256 public constant PENDING_CLAIM_REDEEM_DELAY = 10 days;
   // coverPool => nonce => Claim[]
   mapping(address => mapping(uint256 => Claim[])) private coverPoolClaims;
 
@@ -45,9 +47,9 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   ) external override {
     address coverPool = _getCoverPoolAddr(_coverPoolName);
     require(coverPool != address(0), "CM: pool not found");
-    require(block.timestamp - _incidentTimestamp <= coverPoolFactory.defaultRedeemDelay() - 1 hours, "CM: time passed window");
+    require(block.timestamp - _incidentTimestamp <= coverPoolFactory.defaultRedeemDelay() - TIME_BUFFER, "CM: time passed window");
 
-    ICoverPool(coverPool).setNoclaimRedeemDelay(10 days);
+    ICoverPool(coverPool).setNoclaimRedeemDelay(PENDING_CLAIM_REDEEM_DELAY);
     uint256 nonce = _getCoverPoolNonce(coverPool);
     uint256 claimFee = isForceFile ? forceClaimFee : getCoverPoolClaimFee(coverPool);
     feeCurrency.safeTransferFrom(msg.sender, address(this), claimFee);
