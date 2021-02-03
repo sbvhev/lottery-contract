@@ -51,6 +51,7 @@ async function main() {
 
   // deploy claimManagement
   const claimManagement = await ClaimManagement.deploy(
+    envVars.dai,
     envVars.gov,
     envVars.treasury,
     coverPoolFactory.address,

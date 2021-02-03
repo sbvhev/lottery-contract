@@ -9,12 +9,12 @@ describe('CoverPool', () => {
   const ETHER_UINT_10 = ethers.utils.parseEther('10');
   const ETHER_UINT_1 = ethers.utils.parseEther('1');
 
-  let ownerAddress, ownerAccount, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
+  let ownerAddress, ownerAccount, userAAccount, userAAddress, userBAccount, userBAddress, treasuryAccount, treasuryAddress;
   let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
   let COLLATERAL, NEW_COLLATERAL, coverPoolFactory, coverPool, dai, weth;
 
   before(async () => {
-    ({ownerAccount, ownerAddress, userAAccount, userAAddress, userBAccount, userBAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress} = await getAccounts());
+    ({ownerAccount, ownerAddress, userAAccount, userAAddress, userBAccount, userBAddress, treasuryAccount, treasuryAddress} = await getAccounts());
     ({CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
 
     // deploy stablecoins to local blockchain emulator
@@ -28,7 +28,7 @@ describe('CoverPool', () => {
   
   beforeEach(async () => {
     // deploy coverPool factory
-    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
+    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, treasuryAddress);
     await coverPoolFactory.deployed();
     await coverPoolFactory.setClaimManager(ownerAddress);
 
@@ -64,7 +64,8 @@ describe('CoverPool', () => {
   });
 
   it('Should update state variables by the correct authority', async () => {
-    await coverPool.connect(ownerAccount).setCollateral(NEW_COLLATERAL, consts.DEPOSIT_RATIO, 2);
+    await expect(coverPool.connect(ownerAccount).setCollateral(NEW_COLLATERAL, consts.DEPOSIT_RATIO, 2))
+      .to.emit(coverPool, 'CollateralUpdated');
     const [, status] = await coverPool.collateralStatusMap(NEW_COLLATERAL);
     expect(status).to.equal(2);
     
@@ -76,7 +77,7 @@ describe('CoverPool', () => {
     expect(active).to.equal(false);
 
     const newDelay = 10 * 24 * 60 * 60;
-    await expect(coverPool.connect(governanceAccount).setNoclaimRedeemDelay(newDelay))
+    await expect(coverPool.connect(ownerAccount).setNoclaimRedeemDelay(newDelay))
       .to.emit(coverPool, 'NoclaimRedeemDelayUpdated');
     expect((await coverPool.noclaimRedeemDelay())).to.equal(newDelay);
   });
@@ -85,7 +86,7 @@ describe('CoverPool', () => {
     await expect(coverPool.connect(userAAccount).setCollateral(NEW_COLLATERAL, 1)).to.be.reverted;
     await expect(coverPool.connect(userAAccount).setExpiry(NEW_TIMESTAMP, NEW_TIMESTAMP_NAME, 1)).to.be.reverted;
     await expect(coverPool.connect(userAAccount).setActive(false)).to.be.reverted;
-    await expect(coverPool.connect(ownerAccount).setNoclaimRedeemDelay(10 * 24 * 60 * 60, 0)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).setNoclaimRedeemDelay(10 * 24 * 60 * 60, 0)).to.be.reverted;
   });
 
   it('Should add and delete risk for open pool', async () => {
@@ -141,11 +142,17 @@ describe('CoverPool', () => {
   });
 
   it('Should add cover for userA and emit event', async () => {
-    await expect(coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10)).to.emit(coverPool, 'CoverAdded');
+    await expect(coverPool.connect(userAAccount).addCover(
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
+      ETHER_UINT_10, consts.ADDRESS_ZERO, '0x'
+    )).to.emit(coverPool, 'CoverAdded');
   });
 
   it('Should match cover with computed cover address', async () => {
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
+    const txA = await coverPool.connect(userAAccount).addCover(
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
+      ETHER_UINT_10, consts.ADDRESS_ZERO, '0x'
+    );
     await txA.wait();
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
 
@@ -155,14 +162,20 @@ describe('CoverPool', () => {
   });
 
   it('Should add cover for userB on existing contract', async () => {
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
+    const txA = await coverPool.connect(userAAccount).addCover(
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
+      ETHER_UINT_10, consts.ADDRESS_ZERO, '0x'
+    );
     await txA.wait();
 
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [ETHER_UINT_1], INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimEnacted');
     await expect(coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1])).to.emit(coverPool, 'CoverCreated');
     
-    const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
+    const txB = await coverPool.connect(userBAccount).addCover(
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
+      ETHER_UINT_10, consts.ADDRESS_ZERO, '0x'
+    );
     await txB.wait();
 
     const [,,,,,,,,, allCovers] = await coverPool.getCoverPoolDetails();
@@ -175,14 +188,20 @@ describe('CoverPool', () => {
   });
 
   it('Should create new cover for userB on existing contract when accepted claim', async () => {
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
+    const txA = await coverPool.connect(userAAccount).addCover(
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
+      ETHER_UINT_10, consts.ADDRESS_ZERO, '0x'
+    );
     await txA.wait();
 
     await expect(coverPool.connect(ownerAccount).enactClaim([consts.ASSET_1_BYTES32], [ETHER_UINT_1], INCIDENT_TIMESTAMP, 0))
       .to.emit(coverPool, 'ClaimEnacted');
     await coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
 
-    const txB = await coverPool.connect(userBAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10);
+    const txB = await coverPool.connect(userBAccount).addCover(
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
+      ETHER_UINT_10, consts.ADDRESS_ZERO, '0x'
+    );
     await txB.wait();
 
     const [,,,,,,,,, allCovers] = await coverPool.getCoverPoolDetails();
@@ -216,7 +235,7 @@ describe('CoverPool', () => {
   });
 
   it('Should NOT enactClaim if have non active risk', async () => {
-    await expectRevert(coverPool.enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32], [ethers.utils.parseEther('0.2'), ethers.utils.parseEther('0.4')], INCIDENT_TIMESTAMP, 0), "CP: has inactive risk");
+    await expectRevert(coverPool.enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_3_BYTES32], [ethers.utils.parseEther('0.2'), ethers.utils.parseEther('0.4')], INCIDENT_TIMESTAMP, 0), "CP: has disabled risk");
   });
   
   it('Should NOT enactClaim if called by non-claimManager', async () => {
@@ -230,6 +249,9 @@ describe('CoverPool', () => {
     await time.increaseTo(consts.ALLOWED_EXPIRYS[1]);
     await time.advanceBlock();
 
-    await expect(coverPool.connect(userAAccount).addCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10)).to.be.reverted;
+    await expect(coverPool.connect(userAAccount).addCover(
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
+      ETHER_UINT_10, consts.ADDRESS_ZERO, '0x'
+    )).to.be.reverted;
   });
 });

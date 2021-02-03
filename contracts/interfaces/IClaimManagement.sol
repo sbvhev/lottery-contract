@@ -36,7 +36,7 @@ interface IClaimManagement {
     bool _isForceFile
   ) external;
   
-  // @dev Only callable by gov when auditor is voting
+  // @dev Only callable by dev when auditor is voting
   function validateClaim(address _coverPool, uint256 _nonce, uint256 _index, bool _claimIsValid) external;
 
   // @dev Only callable by CVC

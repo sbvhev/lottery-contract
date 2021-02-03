@@ -25,7 +25,6 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   address public override coverImpl;
   address public override coverERC20Impl;
   address public override treasury; // receive fees collected
-  address public override governance;
   address public override claimManager;
   // delay # of seconds for redeem with/o. accepted claim, redeemCollateral with all covTokens is not affected
   uint256 public override defaultRedeemDelay = 3 days;
@@ -40,18 +39,15 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     address _coverPoolImpl,
     address _coverImpl,
     address _coverERC20Impl,
-    address _governance,
     address _treasury
   ) {
     require(Address.isContract(_coverPoolImpl), "Factory: _coverPoolImpl is not a contract");
     require(Address.isContract(_coverImpl), "Factory: _coverImpl is not a contract");
     require(Address.isContract(_coverERC20Impl), "Factory: _coverERC20Impl is not a contract");
-    require(_governance != address(0), "Factory: governance cannot be 0");
     require(_treasury != address(0), "Factory: treasury cannot be 0");
     coverPoolImpl = _coverPoolImpl;
     coverImpl = _coverImpl;
     coverERC20Impl = _coverERC20Impl;
-    governance = _governance;
     treasury = _treasury;
 
     initializeOwner();
@@ -90,11 +86,12 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
   function setYearlyFeeRate(uint256 _yearlyFeeRate) external override onlyOwner {
     require(_yearlyFeeRate <= 0.1 ether, "Factory: must < 10%");
+    emit IntUpdated('YearlyFeeRate', yearlyFeeRate, _yearlyFeeRate);
     yearlyFeeRate = _yearlyFeeRate;
   }
 
   function setDefaultRedeemDelay(uint256 _defaultRedeemDelay) external override onlyOwner {
-    emit DefaultRedeemDelayUpdated(defaultRedeemDelay, _defaultRedeemDelay);
+    emit IntUpdated('DefaultRedeemDelay', defaultRedeemDelay, _defaultRedeemDelay);
     defaultRedeemDelay = _defaultRedeemDelay;
   }
 
@@ -106,27 +103,28 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
 
   function setDeployGasMin(uint256 _deployGasMin) external override onlyOwner {
     require(_deployGasMin > 0, "Factory: min gas cannot be 0");
+    emit IntUpdated('DeployGasMin', deployGasMin, _deployGasMin);
     deployGasMin = _deployGasMin;
   }
 
   /// @dev update this will only affect coverPools deployed after
   function setCoverPoolImpl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "Factory: impl is not a contract");
-    emit ImplUpdated('CoverPool', coverPoolImpl, _newImpl);
+    emit AddressUpdated('CoverPoolImpl', coverPoolImpl, _newImpl);
     coverPoolImpl = _newImpl;
   }
 
   /// @dev update this will only affect covers of coverPools deployed after
   function setCoverImpl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "Factory: impl is not a contract");
-    emit ImplUpdated('Cover', coverImpl, _newImpl);
+    emit AddressUpdated('CoverImpl', coverImpl, _newImpl);
     coverImpl = _newImpl;
   }
 
   /// @dev update this will only affect covTokens of covers of coverPools deployed after
   function setCoverERC20Impl(address _newImpl) external override onlyOwner {
     require(Address.isContract(_newImpl), "Factory: impl is not a contract");
-    emit ImplUpdated('CoverERC20', coverERC20Impl, _newImpl);
+    emit AddressUpdated('CoverERC20Impl', coverERC20Impl, _newImpl);
     coverERC20Impl = _newImpl;
   }
 
@@ -134,13 +132,6 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     require(_address != address(0), "Factory: address cannot be 0");
     emit AddressUpdated('claimManager', claimManager, _address);
     claimManager = _address;
-  }
-
-  function setGovernance(address _address) external override onlyOwner {
-    require(_address != address(0), "Factory: address cannot be 0");
-    require(_address != owner(), "Factory: gov cannot be owner");
-    emit AddressUpdated('governance', governance, _address);
-    governance = _address;
   }
 
   function setTreasury(address _address) external override onlyOwner {

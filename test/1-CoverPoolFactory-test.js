@@ -3,12 +3,12 @@ const { expectRevert } = require("@openzeppelin/test-helpers");
 const { deployCoin, consts, getAccounts, getImpls} = require('./testHelper');
 
 describe('CoverPoolFactory', () => {
-  let ownerAccount, ownerAddress, userAAccount, userAAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress;
+  let ownerAccount, ownerAddress, userAAccount, userAAddress, treasuryAccount, treasuryAddress;
   let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
   let coverPoolFactory, dai, COLLATERAL;
 
   before(async () => {
-    ({ownerAccount, ownerAddress, userAAccount, userAAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress} = await getAccounts());
+    ({ownerAccount, ownerAddress, userAAccount, userAAddress, treasuryAccount, treasuryAddress} = await getAccounts());
     ({CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
 
     // deploy stablecoins to local blockchain emulator
@@ -18,7 +18,7 @@ describe('CoverPoolFactory', () => {
   });
 
   beforeEach(async () => {
-    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
+    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, treasuryAddress);
     await coverPoolFactory.deployed();
   });
 
@@ -26,7 +26,6 @@ describe('CoverPoolFactory', () => {
     expect(await coverPoolFactory.coverPoolImpl()).to.equal(coverPoolImpl.address);
     expect(await coverPoolFactory.coverImpl()).to.equal(coverImpl.address);
     expect(await coverPoolFactory.coverERC20Impl()).to.equal(coverERC20Impl.address);
-    expect(await coverPoolFactory.governance()).to.equal(governanceAddress);
     expect(await coverPoolFactory.treasury()).to.equal(treasuryAddress);
     expect(await coverPoolFactory.deployGasMin()).to.equal(1000000);
     expect(await coverPoolFactory.paused()).to.equal(false);
@@ -40,15 +39,6 @@ describe('CoverPoolFactory', () => {
       ).to.emit(coverPoolFactory, 'CoverPoolCreated');
   });
 
-  // test functions with governance access restriction
-  it('Should NOT update governance to address(0) by governance', async () => {
-    await expectRevert(coverPoolFactory.setGovernance(consts.ADDRESS_ZERO), 'Factory: address cannot be 0');
-  });
-
-  it('Should NOT update governance to owner by governance', async () => {
-    await expectRevert(coverPoolFactory.setGovernance(ownerAddress), 'Factory: gov cannot be owner');
-  });
-
   // test functions with owner access restriction
   it('Should update vars by authorized only', async () => {
     // should only be updated by owner
@@ -60,11 +50,9 @@ describe('CoverPoolFactory', () => {
     await coverPoolFactory.connect(ownerAccount).setDeployGasMin(6000000);
     expect(await coverPoolFactory.deployGasMin()).to.equal(6000000);
     await expect(coverPoolFactory.connect(ownerAccount).setTreasury(ownerAddress)).to.emit(coverPoolFactory, 'AddressUpdated');
-    await expect(coverPoolFactory.connect(ownerAccount).setCoverERC20Impl(dai.address)).to.emit(coverPoolFactory, 'ImplUpdated');
-    await expect(coverPoolFactory.connect(ownerAccount).setCoverImpl(dai.address)).to.emit(coverPoolFactory, 'ImplUpdated');
-    await expect(coverPoolFactory.connect(ownerAccount).setCoverPoolImpl(dai.address)).to.emit(coverPoolFactory, 'ImplUpdated');
-
-    await expect(coverPoolFactory.setGovernance(userAAddress)).to.emit(coverPoolFactory, 'AddressUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).setCoverERC20Impl(dai.address)).to.emit(coverPoolFactory, 'AddressUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).setCoverImpl(dai.address)).to.emit(coverPoolFactory, 'AddressUpdated');
+    await expect(coverPoolFactory.connect(ownerAccount).setCoverPoolImpl(dai.address)).to.emit(coverPoolFactory, 'AddressUpdated');
 
     await expect(coverPoolFactory.connect(ownerAccount).setResponder(userAAddress)).to.emit(coverPoolFactory, 'AddressUpdated');
     await expect(coverPoolFactory.connect(userAAccount).setPaused(true)).to.emit(coverPoolFactory, 'PausedStatusUpdated');
@@ -75,7 +63,7 @@ describe('CoverPoolFactory', () => {
     expect(await coverPoolFactory.yearlyFeeRate()).to.equal(0);
 
     await expect(coverPoolFactory.connect(ownerAccount).setDefaultRedeemDelay(4 * 24 * 3600))
-      .to.emit(coverPoolFactory, 'DefaultRedeemDelayUpdated');
+      .to.emit(coverPoolFactory, 'IntUpdated');
     expect(await coverPoolFactory.defaultRedeemDelay()).to.equal(4 * 24 * 3600);
   });
 

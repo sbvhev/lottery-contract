@@ -11,6 +11,8 @@ import "./ICoverERC20.sol";
 interface ICover {
   event CovTokenCreated(address);
   event CoverDeployCompleted();
+  event Redeemed(string _type, address indexed _account, uint256 _amount);
+  event FutureTokenConverted(address _futureToken, address claimCovToken, uint256 _amount);
 
   // state vars
   function deployComplete() external view returns (bool);
@@ -43,6 +45,7 @@ interface ICover {
   function redeemClaim() external;
   /// @notice redeem func when the cover is not affected by any accepted claim, _amount is respected only when when no claim accepted before expiry (for cover with expiry)
   function redeemCollateral(uint256 _amount) external;
+  function collectFees() external;
 
   // access restriction - owner (CoverPool)
   function mint(uint256 _amount, address _receiver) external;

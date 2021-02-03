@@ -12,14 +12,19 @@ interface ICoverPool {
   event NoclaimRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
   event ClaimEnacted(uint256 _enactedClaimNonce);
   event RiskUpdated(bytes32 _risk, bool _isAddRisk);
+  event ActiveUpdated(bool _old, bool _new);
+  event ExpiryUpdated(uint48 _expiry, string _expiryStr,  Status _status);
+  event CollateralUpdated(address _collateral, uint256 _mintRatio,  Status _status);
+
+  enum Status { Null, Active, Disabled }
 
   struct ExpiryInfo {
     string name;
-    uint8 status; // 0 never set; 1 active, 2 inactive
+    Status status;
   }
   struct CollateralInfo {
     uint256 mintRatio;
-    uint8 status; // 0 never set; 1 active, 2 inactive
+    Status status;
   }
   struct ClaimDetails {
     bytes32[] payoutRiskList;
@@ -35,8 +40,8 @@ interface ICoverPool {
   function addingRiskWIP() external view returns (bool);
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   function claimNonce() external view returns (uint256);
-  function collateralStatusMap(address _collateral) external view returns (uint256 _mintRatio, uint8 _status);
-  function expiryInfoMap(uint48 _expiry) external view returns (string memory _name, uint8 _status);
+  function collateralStatusMap(address _collateral) external view returns (uint256 _mintRatio, Status _status);
+  function expiryInfoMap(uint48 _expiry) external view returns (string memory _name, Status _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);
 
   // extra view
@@ -58,7 +63,14 @@ interface ICoverPool {
 
   // user action
   /// @notice cover must be deployed first
-  function addCover(address _collateral, uint48 _expiry, uint256 _amount) external;
+  function addCover(
+    address _collateral,
+    uint48 _expiry,
+    uint256 _amountIn,
+    uint256 _amountOut,
+    address _caller,
+    bytes calldata data
+  ) external;
   function deployCover(address _collateral, uint48 _expiry) external returns (address _coverAddress);
 
   // access restriction - claimManager
@@ -69,13 +81,13 @@ interface ICoverPool {
     uint256 _coverPoolNonce
   ) external;
 
-  // CM and Gov only
+  // CM and dev only
   function setNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external;
 
   // access restriction - dev
   function addRisk(string calldata _risk) external;
   function deleteRisk(string calldata _risk) external;
-  function setExpiry(uint48 _expiry, string calldata _expiryName, uint8 _status) external;
-  function setCollateral(address _collateral, uint256 _mintRatio, uint8 _status) external;
+  function setExpiry(uint48 _expiry, string calldata _expiryName, Status _status) external;
+  function setCollateral(address _collateral, uint256 _mintRatio, Status _status) external;
   function setActive(bool _active) external;
 }

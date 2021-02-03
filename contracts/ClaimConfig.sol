@@ -12,13 +12,13 @@ import "./interfaces/ICoverPoolFactory.sol";
  */
 contract ClaimConfig is IClaimConfig, Ownable {
 
-  IERC20 public override feeCurrency = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F); // Dai
-  address public override governance;
+  IERC20 public override feeCurrency;
   address public override treasury;
   ICoverPoolFactory public override coverPoolFactory;
   address public override defaultCVC; // if not specified, default to this
   
   // The max time allowed from filing a claim to a decision made
+  uint256 public override minClaimDecisionWindow = 2 days;
   uint256 public override maxClaimDecisionWindow = 7 days;
   uint256 public override baseClaimFee = 50e18;
   uint256 public override forceClaimFee = 500e18;
@@ -28,17 +28,6 @@ contract ClaimConfig is IClaimConfig, Ownable {
   mapping(address => uint256) private coverPoolClaimFee;
   // coverPool => cvc addresses
   mapping(address => address[]) public override cvcMap;
-  
-  modifier onlyGov() {
-    require(msg.sender == governance, "CC: caller not governance");
-    _;
-  }
-
-  function setGovernance(address _governance) external override onlyGov {
-    require(_governance != address(0), "CC: governance cannot be 0");
-    require(_governance != owner(), "CC: governance cannot be owner");
-    governance = _governance;
-  }
 
   function setTreasury(address _treasury) external override onlyOwner {
     require(_treasury != address(0), "CC: treasury cannot be 0");
@@ -47,7 +36,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
 
   /// @notice Set max time window allowed to decide a claim after filed, requires at least 3 days for voting
   function setMaxClaimDecisionWindow(uint256 _newTimeWindow) external override onlyOwner {
-    require(_newTimeWindow < 3 days, "CC: window too short");
+    require(_newTimeWindow >= minClaimDecisionWindow, "CC: window too short");
     maxClaimDecisionWindow = _newTimeWindow;
   }
 
@@ -94,22 +83,23 @@ contract ClaimConfig is IClaimConfig, Ownable {
     }
   }
 
-  function setFeeAndCurrency(uint256 _baseClaimFee, uint256 _forceClaimFee, address _currency) external override onlyGov {
+  function setFeeAndCurrency(uint256 _baseClaimFee, uint256 _forceClaimFee, address _currency) external override onlyOwner {
+    require(_currency != address(0), "CC: feeCurrency cannot be 0");
     require(_baseClaimFee > 0, "CC: baseClaimFee <= 0");
     require(_forceClaimFee > _baseClaimFee, "CC: force Fee <= base Fee");
-    require(_currency != address(0), "CC: feeCurrency cannot be 0");
     baseClaimFee = _baseClaimFee;
     forceClaimFee = _forceClaimFee;
     feeCurrency = IERC20(_currency);
   }
 
-  function setFeeMultiplier(uint256 _multiplier) external override onlyGov {
+  function setFeeMultiplier(uint256 _multiplier) external override onlyOwner {
     require(_multiplier > 0, "CC: multiplier < 1");
     feeMultiplier = _multiplier;
   }
 
-  function getCVCList(address _coverPool) external view override returns (address[] memory) {
-    return cvcMap[_coverPool];
+  /// @notice return the whole list so dont need to query by index
+  function getCVCList(address _coverPool) external view override returns (address[] memory) {	
+    return cvcMap[_coverPool];	
   }
 
   function isCVCMember(address _coverPool, address _address) public view override returns (bool) {

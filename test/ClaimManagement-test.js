@@ -19,17 +19,17 @@ describe("ClaimManagement", function () {
     denied: 5,
   };
   let COLLATERAL;
-  let ownerAccount, ownerAddress, auditorAccount, auditorAddress, treasuryAccount, treasuryAddress, governanceAccount, governanceAddress;
+  let ownerAccount, ownerAddress, auditorAccount, auditorAddress, treasuryAccount, treasuryAddress;
   let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
   let management, coverPool, dai, coverPoolFactory;
 
   before(async () => {
     timestamp = (await time.latest()).toNumber();
-    ({ownerAccount, ownerAddress, governanceAccount, governanceAddress, treasuryAccount, treasuryAddress, auditorAccount, auditorAddress} = await getAccounts());
+    ({ownerAccount, ownerAddress, treasuryAccount, treasuryAddress, auditorAccount, auditorAddress} = await getAccounts());
     ({CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl} = await getImpls());
 
     // deploy coverPool factory
-    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
+    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, treasuryAddress);
     await coverPoolFactory.deployed();
 
     // deploy stablecoins to local blockchain emulator
@@ -45,7 +45,7 @@ describe("ClaimManagement", function () {
 
     const ClaimManagement = await ethers.getContractFactory("ClaimManagement");
     management = await ClaimManagement.deploy(
-      governanceAddress,
+      dai.address,
       treasuryAddress,
       coverPoolFactory.address,
       ownerAddress
@@ -58,7 +58,6 @@ describe("ClaimManagement", function () {
   });
 
   it("Should deploy ClaimManagement correctly", async function () {
-    expect(await management.governance()).to.equal(governanceAddress);
     expect(await management.treasury()).to.equal(treasuryAddress);
     expect(await management.coverPoolFactory()).to.equal(coverPoolFactory.address);
   });
@@ -67,7 +66,7 @@ describe("ClaimManagement", function () {
     let baseClaimFee = ethers.utils.parseEther("40");
     let forceClaimFee = ethers.utils.parseEther("500");
     let feeCurrency = dai.address;
-    await management.connect(governanceAccount).setFeeAndCurrency(baseClaimFee, forceClaimFee, feeCurrency);
+    await management.connect(ownerAccount).setFeeAndCurrency(baseClaimFee, forceClaimFee, feeCurrency);
     expect(await management.feeCurrency()).to.equal(dai.address);
     expect(await management.isCVCMember(coverPool.address, ownerAddress)).to.equal(true);
   });
@@ -141,29 +140,29 @@ describe("ClaimManagement", function () {
   // validateClaim
   it("Should NOT validate if condition is wrong", async function () {
     // validate zero address
-    await expect(management.connect(governanceAccount).validateClaim(consts.ADDRESS_ZERO, 0, 0, true)).to.be.reverted;
+    await expect(management.connect(ownerAccount).validateClaim(consts.ADDRESS_ZERO, 0, 0, true)).to.be.reverted;
     // nonce != claimNonce()
-    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 1, 0, true)).to.be.reverted;
+    await expect(management.connect(ownerAccount).validateClaim(coverPool.address, 1, 0, true)).to.be.reverted;
     // index >= coverPoolClaims length
-    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 5, true)).to.be.reverted;
+    await expect(management.connect(ownerAccount).validateClaim(coverPool.address, 0, 5, true)).to.be.reverted;
     // validating a forcedClaim
-    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 2, true)).to.be.reverted;
+    await expect(management.connect(ownerAccount).validateClaim(coverPool.address, 0, 2, true)).to.be.reverted;
   });
 
   // invalidated
   it("Should invalidate claim once", async function () {
-    await management.connect(governanceAccount).connect(governanceAccount).validateClaim(coverPool.address, 0, 0, false);
+    await management.connect(ownerAccount).validateClaim(coverPool.address, 0, 0, false);
     const claim = await management.getCoverPoolClaims(coverPool.address, 0, 0);
     expect(claim.state).to.equal(state.invalidated);
     expect(claim.decidedTimestamp).to.greaterThan(0);
     expect(await dai.balanceOf(treasuryAddress)).to.equal(ethers.utils.parseEther("40"));
 
-    await expect(management.connect(governanceAccount).validateClaim(coverPool.address, 0, 0, true)).to.be.reverted;
+    await expect(management.connect(ownerAccount).validateClaim(coverPool.address, 0, 0, true)).to.be.reverted;
   });
 
   // validated
   it("Should validate claim", async function () {
-    await management.connect(governanceAccount).validateClaim(coverPool.address, 0, 1, true);
+    await management.connect(ownerAccount).validateClaim(coverPool.address, 0, 1, true);
     const claim = await management.getCoverPoolClaims(coverPool.address, 0, 1);
     expect(claim.state).to.equal(state.validated);
     expect(await management.getCoverPoolClaimFee(coverPool.address)).to.equal(await management.baseClaimFee());
@@ -171,10 +170,10 @@ describe("ClaimManagement", function () {
 
   it("Should file and validate more claims for further testing", async function () {
     await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC, false);
-    await management.connect(governanceAccount).validateClaim(coverPool.address, 0, 3, true);
+    await management.connect(ownerAccount).validateClaim(coverPool.address, 0, 3, true);
 
     await management.fileClaim(consts.POOL_2, EXPLOIT_ASSETS, timestamp, DESC, false);
-    await management.connect(governanceAccount).validateClaim(coverPool.address, 0, 4, true);
+    await management.connect(ownerAccount).validateClaim(coverPool.address, 0, 4, true);
   });
   // decideClaim
   it("Should NOT decideClaim if condition is wrong", async function () {
@@ -217,7 +216,7 @@ describe("ClaimManagement", function () {
 
   // claim denied
   it("Should deny claim", async function () {
-    await management.connect(governanceAccount).validateClaim(coverPool.address, 1, 0, true);
+    await management.connect(ownerAccount).validateClaim(coverPool.address, 1, 0, true);
     await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 0, false, EXPLOIT_ASSETS, [0]);
     const claim = await management.getCoverPoolClaims(coverPool.address, 1, 0);
     expect(claim.state).to.equal(state.denied);
@@ -243,7 +242,7 @@ describe("ClaimManagement", function () {
   });
 
   it("Should deny claim if window passed", async function () {
-    await management.connect(governanceAccount).validateClaim(coverPool.address, 1, 1, true);
+    await management.connect(ownerAccount).validateClaim(coverPool.address, 1, 1, true);
     const noclaimDelay1 = await coverPool.noclaimRedeemDelay();
     expect(noclaimDelay1.toNumber()).to.deep.equal(10 * DAY);
     await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 1, false, EXPLOIT_ASSETS, [0]);
@@ -251,7 +250,7 @@ describe("ClaimManagement", function () {
     expect(claim.state).to.equal(state.denied);
     expect(claim.decidedTimestamp).to.greaterThan(0);
     expect(claim.payoutRates[0]).to.equal(0);
-    await management.connect(governanceAccount).validateClaim(coverPool.address, 1, 2, true);
+    await management.connect(ownerAccount).validateClaim(coverPool.address, 1, 2, true);
     await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 2, true, EXPLOIT_ASSETS, [0]);
     const noclaimDelay = await coverPool.noclaimRedeemDelay();
     expect(noclaimDelay.toNumber()).to.deep.equal(3 * DAY);

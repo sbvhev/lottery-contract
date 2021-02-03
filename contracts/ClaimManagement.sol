@@ -17,15 +17,17 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
   // coverPool => nonce => Claim[]
   mapping(address => mapping(uint256 => Claim[])) private coverPoolClaims;
 
-  constructor(address _governance, address _treasury, address _coverPoolFactory, address _defaultCVC) {
-    require(
-      _governance != msg.sender && _governance != address(0), 
-      "CM: gov cannot be owner or 0"
-    );
+  constructor(
+    address _feeCurrency,
+    address _treasury,
+    address _coverPoolFactory,
+    address _defaultCVC
+  ) {
+    require(_feeCurrency != address(0), "CM: fee cannot be 0");
     require(_treasury != address(0), "CM: treasury cannot be 0");
     require(_coverPoolFactory != address(0), "CM: factory cannot be 0");
     require(_defaultCVC != address(0), "CM: defaultCVC cannot be 0");
-    governance = _governance;
+    feeCurrency = IERC20(_feeCurrency);
     treasury = _treasury;
     coverPoolFactory = ICoverPoolFactory(_coverPoolFactory);
     defaultCVC = _defaultCVC;
@@ -79,8 +81,9 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     uint256 _nonce,
     uint256 _index,
     bool _claimIsValid
-  ) external override onlyGov {
+  ) external override onlyOwner {
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
+    require(_index < coverPoolClaims[_coverPool][_nonce].length, "CM: bad index");
     require(_nonce == _getCoverPoolNonce(_coverPool), "CM: wrong nonce");
     require(claim.state == ClaimState.Filed, "CM: claim not filed");
     if (_claimIsValid) {

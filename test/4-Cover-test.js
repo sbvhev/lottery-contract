@@ -29,7 +29,7 @@ describe('Cover', function() {
 
   beforeEach(async () => {
     // deploy coverPool factory
-    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, governanceAddress, treasuryAddress);
+    coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, treasuryAddress);
     await coverPoolFactory.deployed();
     await coverPoolFactory.setClaimManager(claimManager.getAddress());
     
@@ -50,10 +50,13 @@ describe('Cover', function() {
     await dai.connect(userBAccount).approve(coverPool.address, ETHER_UINT_10000);
 
     // add cover through coverPool
-    const txA = await coverPool.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10);
-    await txA.wait();
+    await coverPool.connect(userAAccount).addCover(
+      COLLATERAL, TIMESTAMP, ETHER_UINT_10,
+      ETHER_UINT_10, consts.ADDRESS_ZERO, '0x'
+    );
     const coverAddress = await coverPool.coverMap(COLLATERAL, TIMESTAMP);
     cover = Cover.attach(coverAddress);
+    await cover.connect(userAAccount).collectFees();
   });
 
   async function calFees(amount, coverPassed = cover) {
@@ -92,10 +95,18 @@ describe('Cover', function() {
     await dai.connect(userAAccount).approve(coverPool2.address, ETHER_UINT_10000);
 
     // revert cause deploy incomplete
-    await expectRevert(coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10, {gasLimit: 2112841}), 'CP: cover deploy incomplete');
+    await expectRevert(coverPool2.connect(userAAccount).addCover(
+      COLLATERAL, TIMESTAMP, ETHER_UINT_10,
+      ETHER_UINT_10, consts.ADDRESS_ZERO, '0x',
+      {gasLimit: 2112841}
+    ), 'CP: cover deploy incomplete');
     const coverIP = Cover.attach(await coverPool2.coverMap(COLLATERAL, TIMESTAMP));
     await expect(coverPool2.deployCover(COLLATERAL, TIMESTAMP)).to.emit(coverIP, 'CoverDeployCompleted');
-    await coverPool2.connect(userAAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_10)
+    await coverPool2.connect(userAAccount).addCover(
+      COLLATERAL, TIMESTAMP, ETHER_UINT_10,
+      ETHER_UINT_10, consts.ADDRESS_ZERO, '0x'
+    );
+    await cover.connect(userAAccount).collectFees();
   });
 
   // owner access tests
@@ -130,7 +141,11 @@ describe('Cover', function() {
     expect(await middleFutureToken.balanceOf(userAAddress)).to.equal(0);
     expect(await futureCovToken.balanceOf(userAAddress)).to.equal(ETHER_UINT_10);
     
-    await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
+    await coverPool.connect(userBAccount).addCover(
+      COLLATERAL, TIMESTAMP, ETHER_UINT_20,
+      ETHER_UINT_20, consts.ADDRESS_ZERO, '0x'
+    );
+    await cover.connect(userAAccount).collectFees();
     expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20);
     for (let i = 0; i < claimCovTokens.length; i++) {
       const claimCovToken = CoverERC20.attach(claimCovTokens[i]);
@@ -156,7 +171,11 @@ describe('Cover', function() {
     await coverPool.deleteRisk(consts.ASSET_2);
     await expectRevert(coverPool.addRisk(consts.ASSET_2), "CP: deleted risk not allowed");
 
-    await coverPool.connect(userBAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
+    await coverPool.connect(userBAccount).addCover(
+      COLLATERAL, TIMESTAMP, ETHER_UINT_20,
+      ETHER_UINT_20, consts.ADDRESS_ZERO, '0x'
+    );
+    await cover.connect(userAAccount).collectFees();
     const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.ASSET_1_BYTES32));
     const deletedClaimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.ASSET_2_BYTES32));
     const [,,,,,, noclaimCovTokenAddress] = await cover.getCoverDetails();
@@ -181,9 +200,13 @@ describe('Cover', function() {
     const coverPool2 = CoverPool.attach(await coverPoolFactory.coverPools(consts.POOL_3));
     await dai.connect(userBAccount).approve(coverPool2.address, ETHER_UINT_10000);
     
-    await coverPool2.connect(userBAccount).addCover(COLLATERAL, TIMESTAMP, ETHER_UINT_20);
+    await coverPool2.connect(userBAccount).addCover(
+      COLLATERAL, TIMESTAMP, ETHER_UINT_20,
+      ETHER_UINT_20, consts.ADDRESS_ZERO, '0x'
+    );
     const coverAddress = await coverPool2.coverMap(COLLATERAL, TIMESTAMP);
     const cover2 = Cover.attach(coverAddress);
+    await cover2.connect(userAAccount).collectFees();
 
     const claimCovToken = CoverERC20.attach(await cover2.claimCovTokenMap(consts.ASSET_1_BYTES32));
     const claimCovToken2 = CoverERC20.attach(await cover2.claimCovTokenMap(consts.ASSET_2_BYTES32));

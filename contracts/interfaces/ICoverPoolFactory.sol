@@ -8,10 +8,10 @@ pragma solidity ^0.8.0;
  */
 interface ICoverPoolFactory {
   event CoverPoolCreated(address _addr);
-  event ImplUpdated(string _type, address _old, address _new);
+  event IntUpdated(string _type, uint256 _old, uint256 _new);
   event AddressUpdated(string _type, address _old, address _new);
   event PausedStatusUpdated(bool _old, bool _new);
-  event DefaultRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
+  // event DefaultRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
 
   // state vars
   function defaultRedeemDelay() external view returns (uint256);
@@ -23,7 +23,6 @@ interface ICoverPoolFactory {
   function coverImpl() external view returns (address);
   function coverERC20Impl() external view returns (address);
   function treasury() external view returns (address);
-  function governance() external view returns (address);
   function claimManager() external view returns (address);
   /// @notice min gas left requirement before continue deployments (when creating new Cover or adding risks to CoverPool)
   function deployGasMin() external view returns (uint256);
@@ -51,7 +50,6 @@ interface ICoverPoolFactory {
   function setCoverERC20Impl(address _newImpl) external;
   function setTreasury(address _address) external;
   function setClaimManager(address _address) external;
-  function setGovernance(address _address) external;
   /**
    * @notice Create a new Cover Pool
    * @param _name name for pool, e.g. Yearn
