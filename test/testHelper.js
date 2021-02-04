@@ -55,7 +55,7 @@ module.exports = {
     const CoverERC20 = await ethers.getContractFactory('CoverERC20');
     const dai = await CoverERC20.deploy();
     await dai.deployed();
-    await dai.initialize(symbol, 8);
+    await dai.initialize("Cover Protocol covToken", symbol, 8);
     return dai;
   }
 }

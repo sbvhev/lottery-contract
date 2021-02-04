@@ -45,7 +45,7 @@ describe('CoverERC20', function() {
     // permit related check
     expect(await coverERC20.nonces(ownerAddress)).to.equal(0);
     const domainSeparatorInToken = await coverERC20.DOMAIN_SEPARATOR();
-    const computedDomainSeparator = await domainSeparator(COV_TOKEN_SYMBOL, '1', chainId, coverERC20.address);
+    const computedDomainSeparator = await domainSeparator("Cover Protocol covToken", '1', chainId, coverERC20.address);
     expect(computedDomainSeparator).to.equal(domainSeparatorInToken);
   });
 
@@ -123,7 +123,7 @@ describe('CoverERC20', function() {
       { name: 'deadline', type: 'uint256' },
     ];
     const value = 42000000000;
-    const name = COV_TOKEN_SYMBOL;
+    const name = "Cover Protocol covToken";
     const nonce = 0;
     const version = '1';
 

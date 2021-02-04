@@ -320,7 +320,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     address coverERC20Impl = _factory().coverERC20Impl();
     bytes32 salt = keccak256(abi.encodePacked(_coverPool().name(), expiry, collateral, claimNonce, _prefix));
     address proxyAddr = Clones.cloneDeterministic(coverERC20Impl, salt);
-    ICovTokenProxy(proxyAddr).initialize(string(abi.encodePacked(_prefix, name)), decimals);
+    ICovTokenProxy(proxyAddr).initialize("Cover Protocol covToken", string(abi.encodePacked(_prefix, name)), decimals);
 
     emit CovTokenCreated(proxyAddr);
     return ICoverERC20(proxyAddr);

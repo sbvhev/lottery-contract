@@ -38,11 +38,12 @@ contract ERC20 is IERC20 {
 
   uint256 private _totalSupply;
 
-  string public constant override name = "Cover Protocol covToken";
+  string public override name;
   uint8 public override decimals;
   string public override symbol;
 
-  function initializeERC20(string calldata symbol_, uint8 decimals_) internal {
+  function initializeERC20(string memory name_, string calldata symbol_, uint8 decimals_) internal {
+    name = name_;
     symbol = symbol_;
     decimals = decimals_;
   }

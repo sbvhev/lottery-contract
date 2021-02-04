@@ -25,10 +25,10 @@ import "./interfaces/ICoverERC20.sol";
 contract CoverERC20 is ICoverERC20, ERC20Permit, Ownable {
 
   /// @notice Initialize, called once
-  function initialize (string calldata _symbol, uint8 _decimals) external initializer {
+  function initialize (string calldata _name, string calldata _symbol, uint8 _decimals) external initializer {
     initializeOwner();
-    initializeERC20(_symbol, _decimals);
-    initializeERC20Permit(_symbol);
+    initializeERC20(_name, _symbol, _decimals);
+    initializeERC20Permit(_name);
   }
 
   /// @notice COVER specific function

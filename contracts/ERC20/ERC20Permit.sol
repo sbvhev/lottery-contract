@@ -29,8 +29,8 @@ abstract contract ERC20Permit is ERC20, IERC20Permit, EIP712 {
      *
      * It's a good idea to use the same `name` that is defined as the ERC20 token name.
      */
-    function initializeERC20Permit(string calldata _symbol) internal {
-      initializeEIP712(_symbol, "1");
+    function initializeERC20Permit(string calldata _name) internal {
+      initializeEIP712(_name, "1");
     }
 
     /**
