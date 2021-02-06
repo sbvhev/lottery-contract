@@ -178,26 +178,26 @@ describe("ClaimManagement", function () {
   // decideClaim
   it("Should NOT decideClaim if condition is wrong", async function () {
     // default CVC cannot call
-    await expect(management.connect(ownerAccount).decideClaim(coverPool.address, 0, 1, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')])).to.be.reverted;
+    await expect(management.connect(ownerAccount).decideClaim(coverPool.address, 0, 1, timestamp, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')])).to.be.reverted;
     // non-CVC cannot call
-    await expect(management.connect(treasuryAccount).decideClaim(coverPool.address, 0, 1, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')])).to.be.reverted;
+    await expect(management.connect(treasuryAccount).decideClaim(coverPool.address, 0, 1, timestamp, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')])).to.be.reverted;
     // if deciding a claim for zero address
-    await expect(management.connect(auditorAccount).decideClaim(consts.ADDRESS_ZERO, 0, 1, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')])).to.be.reverted;
+    await expect(management.connect(auditorAccount).decideClaim(consts.ADDRESS_ZERO, 0, 1, timestamp, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')])).to.be.reverted;
     // if input nonce != coverPool nonce
-    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 1, 1, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')])).to.be.reverted;
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 1, 1, timestamp, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')])).to.be.reverted;
     // if index >= length
-    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 10, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')])).to.be.reverted;
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 10, timestamp, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')])).to.be.reverted;
     // Should throw if claim is not pending for decideClaim
-    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 0, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')])).to.be.reverted;
-    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1.05')])).to.be.reverted;
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 0, timestamp, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')])).to.be.reverted;
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, timestamp, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1.05')])).to.be.reverted;
     // if payoutNumerator <= 0 when accepting
-    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, true, EXPLOIT_ASSETS, [0])).to.be.reverted;
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, timestamp, true, EXPLOIT_ASSETS, [0])).to.be.reverted;
   });
 
   // claim accepted
   it("Should accept claim", async function () {
     const ownerBal = await dai.balanceOf(ownerAddress);
-    await management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')]);
+    await management.connect(auditorAccount).decideClaim(coverPool.address, 0, 1, timestamp, true, EXPLOIT_ASSETS, [ethers.utils.parseEther('1')]);
     const claim = await management.getCoverPoolClaims(coverPool.address, 0, 1);
     expect(claim.state).to.equal(state.accepted);
     expect(claim.payoutRates[0]).to.equal(ethers.utils.parseEther('1'));
@@ -211,13 +211,13 @@ describe("ClaimManagement", function () {
   });
 
   it("Should NOT decideClaim throw if payoutNumerator != 0 when denying claim", async function () {
-    await expect(management.connect(ownerAccount).decideClaim(coverPool.address, 1, 0, false, EXPLOIT_ASSETS, [1], 100)).to.be.reverted;
+    await expect(management.connect(ownerAccount).decideClaim(coverPool.address, 1, 0, timestamp, false, EXPLOIT_ASSETS, [1], 100)).to.be.reverted;
   });
 
   // claim denied
   it("Should deny claim", async function () {
     await management.connect(ownerAccount).validateClaim(coverPool.address, 1, 0, true);
-    await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 0, false, EXPLOIT_ASSETS, [0]);
+    await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 0, timestamp, false, EXPLOIT_ASSETS, [0]);
     const claim = await management.getCoverPoolClaims(coverPool.address, 1, 0);
     expect(claim.state).to.equal(state.denied);
     expect(claim.payoutRates[0].toNumber()).to.equal(0);
@@ -238,20 +238,20 @@ describe("ClaimManagement", function () {
   it("Should revert if try to validate claim with payoutNumerator > 0 after window passed", async function () {
     await time.increaseTo(consts.CM_TIMESTAMPS[1]);
     await time.advanceBlock();
-    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 1, 1, true, EXPLOIT_ASSETS, [1], 1)).to.be.reverted;
+    await expect(management.connect(auditorAccount).decideClaim(coverPool.address, 1, 1, timestamp, true, EXPLOIT_ASSETS, [1], 1)).to.be.reverted;
   });
 
   it("Should deny claim if window passed", async function () {
     await management.connect(ownerAccount).validateClaim(coverPool.address, 1, 1, true);
     const noclaimDelay1 = await coverPool.noclaimRedeemDelay();
     expect(noclaimDelay1.toNumber()).to.deep.equal(10 * DAY);
-    await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 1, false, EXPLOIT_ASSETS, [0]);
+    await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 1, timestamp, false, EXPLOIT_ASSETS, [0]);
     const claim = await management.getCoverPoolClaims(coverPool.address, 1, 1);
     expect(claim.state).to.equal(state.denied);
     expect(claim.decidedTimestamp).to.greaterThan(0);
     expect(claim.payoutRates[0]).to.equal(0);
     await management.connect(ownerAccount).validateClaim(coverPool.address, 1, 2, true);
-    await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 2, true, EXPLOIT_ASSETS, [0]);
+    await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 2, timestamp, true, EXPLOIT_ASSETS, [0]);
     const noclaimDelay = await coverPool.noclaimRedeemDelay();
     expect(noclaimDelay.toNumber()).to.deep.equal(3 * DAY);
   });
