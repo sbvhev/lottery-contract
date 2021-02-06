@@ -237,8 +237,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     } else {
       uint256 totalCoverageInCol = totalCoverage * 1e18 / mintRatio;
       uint256 feesInTheory = totalCoverageInCol * feeRate / 1e18;
-      uint256 feesToCollect = feesInTheory + collateralBal - totalCoverageInCol;
-      if (feesToCollect > 0) {
+      if (collateralBal > totalCoverageInCol - feesInTheory) {
+        uint256 feesToCollect = feesInTheory + collateralBal - totalCoverageInCol;
         colToken.safeTransfer(_factory().treasury(), feesToCollect);
       }
     }
@@ -247,6 +247,21 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   // get the claim details for the corresponding nonce from coverPool contract
   function _claimDetails() private view returns (ICoverPool.ClaimDetails memory) {
     return _coverPool().getClaimDetails(claimNonce);
+  }
+
+  // transfer collateral (amount - fee) from this contract to recevier
+  function _payCollateral(address _receiver, uint256 _covarageAmt) private {
+    collectFees();
+    IERC20 colToken = IERC20(collateral);
+    uint256 colBal = colToken.balanceOf(address(this));
+    uint256 payoutColAmt = _covarageAmt * 1e18 / mintRatio;
+    uint256 payoutColAmtAfterFees = payoutColAmt - payoutColAmt * feeRate / 1e18;
+    totalCoverage = totalCoverage - _covarageAmt;
+    if (colBal > payoutColAmtAfterFees) {
+      colToken.safeTransfer(_receiver, payoutColAmtAfterFees);
+    } else {
+      colToken.safeTransfer(_receiver, colBal);
+    }
   }
 
   // must convert all future tokens to claim tokens to be able to redeem with all covTokens
@@ -267,20 +282,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     _isMint
       ? latestFutureCovToken.mint(_receiver, _amount)
       : latestFutureCovToken.burnByCover(_receiver, _amount);
-  }
-
-  // transfer collateral (amount - fee) from this contract to recevier
-  function _payCollateral(address _receiver, uint256 _covarageAmt) private {
-    collectFees();
-    IERC20 colToken = IERC20(collateral);
-    uint256 colBal = colToken.balanceOf(address(this));
-    uint256 payoutColAmount = _covarageAmt * colBal / totalCoverage;
-    totalCoverage = totalCoverage - _covarageAmt;
-    if (colBal > payoutColAmount) {
-      colToken.safeTransfer(_receiver, payoutColAmount);
-    } else {
-      colToken.safeTransfer(_receiver, colBal);
-    }
   }
 
   // burn noclaim covToken and pay sender
