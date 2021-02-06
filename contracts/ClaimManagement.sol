@@ -105,7 +105,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     });
   }
 
-  /// @notice Decide whether claim for a coverPool should be accepted(will payout) or denied
+  /// @notice Decide whether claim for a coverPool should be accepted(will payout) or denied, ignored _incidentTimestamp == 0
   function decideClaim(
     address _coverPool,
     uint256 _nonce,
@@ -120,8 +120,10 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     require(_nonce == _getCoverPoolNonce(_coverPool), "CM: wrong nonce");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
     require(claim.state == ClaimState.Validated || claim.state == ClaimState.ForceFiled, "CM: ! validated or forceFiled");
-    require(_incidentTimestamp < claim.filedTimestamp, "CM: incident must < fileTime");
-    claim.incidentTimestamp = _incidentTimestamp;
+    if (_incidentTimestamp != 0) {
+      require(claim.filedTimestamp - _incidentTimestamp <= coverPoolFactory.defaultRedeemDelay() - TIME_BUFFER, "CM: time passed window");
+      claim.incidentTimestamp = _incidentTimestamp;
+    }
 
     uint256 totalRates = _getTotalNum(_payoutRates);
     if (_claimIsAccepted && !_isDecisionWindowPassed(claim)) {

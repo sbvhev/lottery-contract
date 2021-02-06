@@ -217,7 +217,7 @@ describe("ClaimManagement", function () {
   // claim denied
   it("Should deny claim", async function () {
     await management.connect(ownerAccount).validateClaim(coverPool.address, 1, 0, true);
-    await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 0, timestamp, false, EXPLOIT_ASSETS, [0]);
+    await management.connect(auditorAccount).decideClaim(coverPool.address, 1, 0, 0, false, EXPLOIT_ASSETS, [0]);
     const claim = await management.getCoverPoolClaims(coverPool.address, 1, 0);
     expect(claim.state).to.equal(state.denied);
     expect(claim.payoutRates[0].toNumber()).to.equal(0);

@@ -244,11 +244,6 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
   }
 
-  // get the claim details for the corresponding nonce from coverPool contract
-  function _claimDetails() private view returns (ICoverPool.ClaimDetails memory) {
-    return _coverPool().getClaimDetails(claimNonce);
-  }
-
   // transfer collateral (amount - fee) from this contract to recevier
   function _payCollateral(address _receiver, uint256 _covarageAmt) private {
     collectFees();
@@ -334,5 +329,10 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   // the owner of this contract is CoverPool, the owner of CoverPool is CoverPoolFactory contract
   function _factory() private view returns (ICoverPoolFactory) {
     return ICoverPoolFactory(IOwnable(owner()).owner());
+  }
+
+  // get the claim details for the corresponding nonce from coverPool contract
+  function _claimDetails() private view returns (ICoverPool.ClaimDetails memory) {
+    return _coverPool().getClaimDetails(claimNonce);
   }
 }
