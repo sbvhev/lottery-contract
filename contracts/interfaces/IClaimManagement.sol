@@ -44,6 +44,7 @@ interface IClaimManagement {
     address _coverPool,
     uint256 _nonce,
     uint256 _index,
+    uint48 _incidentTimestamp,
     bool _claimIsAccepted,
     bytes32[] calldata _exploitRisks,
     uint256[] calldata _payoutRates

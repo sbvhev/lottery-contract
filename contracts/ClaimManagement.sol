@@ -110,6 +110,7 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     address _coverPool,
     uint256 _nonce,
     uint256 _index,
+    uint48 _incidentTimestamp,
     bool _claimIsAccepted,
     bytes32[] calldata _exploitRisks,
     uint256[] calldata _payoutRates
@@ -119,6 +120,8 @@ contract ClaimManagement is IClaimManagement, ClaimConfig {
     require(_nonce == _getCoverPoolNonce(_coverPool), "CM: wrong nonce");
     Claim storage claim = coverPoolClaims[_coverPool][_nonce][_index];
     require(claim.state == ClaimState.Validated || claim.state == ClaimState.ForceFiled, "CM: ! validated or forceFiled");
+    require(_incidentTimestamp < claim.filedTimestamp, "CM: incident must < fileTime");
+    claim.incidentTimestamp = _incidentTimestamp;
 
     uint256 totalRates = _getTotalNum(_payoutRates);
     if (_claimIsAccepted && !_isDecisionWindowPassed(claim)) {
