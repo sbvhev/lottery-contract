@@ -7,5 +7,5 @@ pragma solidity ^0.8.0;
  * @author crypto-pumpkin
  */
 interface ICoverPoolCallee {
-    function coverPoolCall(address sender, uint amountIn, uint amountOut, bytes calldata data) external;
+    function onFlashMint(address sender, uint amountIn, uint amountOut, bytes calldata data) external;
 }
