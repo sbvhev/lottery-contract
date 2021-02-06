@@ -42,7 +42,6 @@ async function main() {
     coverPoolImpl.address,
     coverImpl.address,
     coverERC20Impl.address,
-    envVars.gov,
     envVars.treasury,
     { gasPrice }
   );
@@ -52,7 +51,6 @@ async function main() {
   // deploy claimManagement
   const claimManagement = await ClaimManagement.deploy(
     envVars.dai,
-    envVars.gov,
     envVars.treasury,
     coverPoolFactory.address,
     envVars.auditor,
