@@ -94,17 +94,15 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
    * @notice add coverage (with expiry) for sender, collateral is transferred here to optimize collateral approve tx for users
    * @param _collateral, collateral for cover, must be supported and active
    * @param _expiry, expiry for cover, must be supported and active
-   * @param _colAmountIn, the amount of collateral to transfer from _callee
-   * @param _amountOut, the amount of collateral to use to mint covTokens
-   * @param _callee, the covToken receiver, must held the required collateral amount
-   * @param _data, the data to use to call _callee, set to '0x' if normal mint
+   * @param _colAmountIn, the amount of collateral to transfer from msg.sender, should be > _amountOut for inflationary tokens
+   * @param _amountOut, the amount of collateral to use to mint covTokens, equals to _colAmountIn if collateral is standard ERC20
+   * @param _data, the data to use to call msg.sender, set to '0x' if normal mint
    */
   function addCover(
     address _collateral,
     uint48 _expiry,
     uint256 _colAmountIn,
     uint256 _amountOut, // amount of collateral to used to mint covTokens
-    address _callee,
     bytes calldata _data
   ) external override nonReentrant onlyNotAddingRiskWIP
   {
@@ -119,18 +117,18 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     require(cover.deployComplete(), "CP: cover deploy incomplete");
 
     // support flash mint
-    cover.mint(_amountOut, _callee);
+    cover.mint(_amountOut, msg.sender);
     if (_data.length > 0) {
-      ICoverPoolCallee(_callee).onFlashMint(msg.sender, _colAmountIn, _amountOut, _data);
+      ICoverPoolCallee(msg.sender).onFlashMint(msg.sender, _colAmountIn, _amountOut, _data);
     }
 
     IERC20 collateral = IERC20(_collateral);
     uint256 coverBalanceBefore = collateral.balanceOf(coverAddr);
-    collateral.safeTransferFrom(_callee, coverAddr, _colAmountIn);
+    collateral.safeTransferFrom(msg.sender, coverAddr, _colAmountIn);
     uint256 received = collateral.balanceOf(coverAddr) - coverBalanceBefore;
     require(received >= _amountOut, "CP: collateral transfer failed");
 
-    emit CoverAdded(coverAddr, _callee, _amountOut);
+    emit CoverAdded(coverAddr, msg.sender, _amountOut);
   }
 
   /// @notice add risk to pool, previously deleted risk not allowed. Can be called as much as needed till addingRiskWIP is false

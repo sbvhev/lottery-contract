@@ -68,7 +68,6 @@ interface ICoverPool {
     uint48 _expiry,
     uint256 _amountIn,
     uint256 _amountOut,
-    address _caller,
     bytes calldata data
   ) external;
   function deployCover(address _collateral, uint48 _expiry) external returns (address _coverAddress);

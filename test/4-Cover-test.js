@@ -52,7 +52,7 @@ describe('Cover', function() {
     // add cover through coverPool
     await coverPool.connect(userAAccount).addCover(
       COLLATERAL, TIMESTAMP, ETHER_UINT_10,
-      ETHER_UINT_10, userAAddress, '0x'
+      ETHER_UINT_10, '0x'
     );
     const coverAddress = await coverPool.coverMap(COLLATERAL, TIMESTAMP);
     cover = Cover.attach(coverAddress);
@@ -97,14 +97,14 @@ describe('Cover', function() {
     // revert cause deploy incomplete
     await expectRevert(coverPool2.connect(userAAccount).addCover(
       COLLATERAL, TIMESTAMP, ETHER_UINT_10,
-      ETHER_UINT_10, userAAddress, '0x',
+      ETHER_UINT_10, '0x',
       {gasLimit: 2112841}
     ), 'CP: cover deploy incomplete');
     const coverIP = Cover.attach(await coverPool2.coverMap(COLLATERAL, TIMESTAMP));
     await expect(coverPool2.deployCover(COLLATERAL, TIMESTAMP)).to.emit(coverIP, 'CoverDeployCompleted');
     await coverPool2.connect(userAAccount).addCover(
       COLLATERAL, TIMESTAMP, ETHER_UINT_10,
-      ETHER_UINT_10, userAAddress, '0x'
+      ETHER_UINT_10, '0x'
     );
     await cover.connect(userAAccount).collectFees();
   });
@@ -143,7 +143,7 @@ describe('Cover', function() {
     
     await coverPool.connect(userBAccount).addCover(
       COLLATERAL, TIMESTAMP, ETHER_UINT_20,
-      ETHER_UINT_20, userBAddress, '0x'
+      ETHER_UINT_20, '0x'
     );
     await cover.connect(userAAccount).collectFees();
     expect(await noclaimCovToken.balanceOf(userBAddress)).to.equal(ETHER_UINT_20);
@@ -173,7 +173,7 @@ describe('Cover', function() {
 
     await coverPool.connect(userBAccount).addCover(
       COLLATERAL, TIMESTAMP, ETHER_UINT_20,
-      ETHER_UINT_20, userBAddress, '0x'
+      ETHER_UINT_20, '0x'
     );
     await cover.connect(userAAccount).collectFees();
     const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.ASSET_1_BYTES32));
@@ -202,7 +202,7 @@ describe('Cover', function() {
     
     await coverPool2.connect(userBAccount).addCover(
       COLLATERAL, TIMESTAMP, ETHER_UINT_20,
-      ETHER_UINT_20, userBAddress, '0x'
+      ETHER_UINT_20, '0x'
     );
     const coverAddress = await coverPool2.coverMap(COLLATERAL, TIMESTAMP);
     const cover2 = Cover.attach(coverAddress);
