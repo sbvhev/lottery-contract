@@ -28,6 +28,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
 
   bytes4 private constant COVER_INIT_SIGNITURE = bytes4(keccak256("initialize(string,uint48,address,uint256,uint256)"));
+  bytes32 public constant CALLBACK_SUCCESS = keccak256("ICoverPoolCallee.onFlashMint");
 
   string public override name;
   bool private extendablePool;
@@ -94,15 +95,17 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
    * @notice add coverage (with expiry) for sender, collateral is transferred here to optimize collateral approve tx for users
    * @param _collateral, collateral for cover, must be supported and active
    * @param _expiry, expiry for cover, must be supported and active
-   * @param _colAmountIn, the amount of collateral to transfer from msg.sender, should be > _amountOut for inflationary tokens
+   * @param _receiver, receiver of the covTokens, must have _colAmountIn
+   * @param _colAmountIn, the amount of collateral to transfer from msg.sender (must approve pool to transfer), should be > _amountOut for inflationary tokens
    * @param _amountOut, the amount of collateral to use to mint covTokens, equals to _colAmountIn if collateral is standard ERC20
    * @param _data, the data to use to call msg.sender, set to '0x' if normal mint
    */
   function addCover(
     address _collateral,
     uint48 _expiry,
+    address _receiver,
     uint256 _colAmountIn,
-    uint256 _amountOut, // amount of collateral to used to mint covTokens
+    uint256 _amountOut,
     bytes calldata _data
   ) external override nonReentrant onlyNotAddingRiskWIP
   {
@@ -117,18 +120,21 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     require(cover.deployComplete(), "CP: cover deploy incomplete");
 
     // support flash mint
-    cover.mint(_amountOut, msg.sender);
+    cover.mint(_amountOut, _receiver);
     if (_data.length > 0) {
-      ICoverPoolCallee(msg.sender).onFlashMint(msg.sender, _colAmountIn, _amountOut, _data);
+      require(
+        ICoverPoolCallee(_receiver).onFlashMint(msg.sender, _collateral, _colAmountIn, _amountOut, _data) == CALLBACK_SUCCESS,
+        "CP: Callback failed"
+      );
     }
 
     IERC20 collateral = IERC20(_collateral);
     uint256 coverBalanceBefore = collateral.balanceOf(coverAddr);
-    collateral.safeTransferFrom(msg.sender, coverAddr, _colAmountIn);
+    collateral.safeTransferFrom(_receiver, coverAddr, _colAmountIn);
     uint256 received = collateral.balanceOf(coverAddr) - coverBalanceBefore;
     require(received >= _amountOut, "CP: collateral transfer failed");
 
-    emit CoverAdded(coverAddr, msg.sender, _amountOut);
+    emit CoverAdded(coverAddr, _receiver, _amountOut);
   }
 
   /// @notice add risk to pool, previously deleted risk not allowed. Can be called as much as needed till addingRiskWIP is false

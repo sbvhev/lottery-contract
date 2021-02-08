@@ -66,9 +66,10 @@ interface ICoverPool {
   function addCover(
     address _collateral,
     uint48 _expiry,
-    uint256 _amountIn,
+    address _receiver,
+    uint256 _colAmountIn,
     uint256 _amountOut,
-    bytes calldata data
+    bytes calldata _data
   ) external;
   function deployCover(address _collateral, uint48 _expiry) external returns (address _coverAddress);
 
