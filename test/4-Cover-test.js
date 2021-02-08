@@ -88,13 +88,6 @@ describe('Cover', function() {
     expect(await dai.balanceOf(treasuryAddress)).to.equal(fees);
   });
 
-  async function verify(cover=cover, user, amount) {
-    const [name, expiry, collateral, mintRatio, feeRate, claimNonce, noclaimCovToken, claimCovTokens, futureCovTokens] = await cover.getCoverDetails();
-    expect(await CoverERC20.attach(claimCovTokens[0]).balanceOf(userAAddress)).to.equal(amount);
-    expect(await CoverERC20.attach(claimCovTokens[1]).balanceOf(userAAddress)).to.equal(amount);
-    expect(await CoverERC20.attach(noclaimCovToken).balanceOf(userAAddress)).to.equal(amount);
-  }
-
   it('Should addCover flashMint by contract', async function() {
     const FlashCover = await ethers.getContractFactory('FlashCover');
     const flashCover = await FlashCover.deploy();
