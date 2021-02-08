@@ -12,14 +12,14 @@ contract FlashCover is ICoverPoolCallee {
   function onFlashMint(
     address _sender,
     address _paymentToken,
-    uint256 _paymendAmount,
+    uint256 _paymentAmount,
     uint256 _amountOut,
     bytes calldata _data
   ) external override returns (bytes32) {
     require(_sender != address(0), "sender is 0");
     require(_data.length >= 0, "data < 0");
     require(_amountOut >= 0, "_amountOut < 0");
-    IERC20(_paymentToken).approve(msg.sender, _paymendAmount);
+    IERC20(_paymentToken).approve(msg.sender, _paymentAmount);
     return keccak256("ICoverPoolCallee.onFlashMint");
   }
 

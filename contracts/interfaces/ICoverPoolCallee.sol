@@ -11,7 +11,7 @@ interface ICoverPoolCallee {
   function onFlashMint(
     address _sender,
     address _paymentToken,
-    uint256 _paymendAmount,
+    uint256 _paymentAmount,
     uint256 _amountOut,
     bytes calldata _data
   ) external returns (bytes32);
