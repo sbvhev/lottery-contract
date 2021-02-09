@@ -143,15 +143,15 @@ describe('CoverPool', () => {
 
   it('Should add cover for userA and emit event', async () => {
     await expect(coverPool.connect(userAAccount).addCover(
-      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
-      ETHER_UINT_10, '0x'
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], userAAddress,
+      ETHER_UINT_10, ETHER_UINT_10, '0x'
     )).to.emit(coverPool, 'CoverAdded');
   });
 
   it('Should match cover with computed cover address', async () => {
     const txA = await coverPool.connect(userAAccount).addCover(
-      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
-      ETHER_UINT_10, '0x'
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], userAAddress,
+      ETHER_UINT_10, ETHER_UINT_10, '0x'
     );
     await txA.wait();
     const coverAddress = await coverPool.coverMap(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
@@ -163,8 +163,8 @@ describe('CoverPool', () => {
 
   it('Should add cover for userB on existing contract', async () => {
     const txA = await coverPool.connect(userAAccount).addCover(
-      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
-      ETHER_UINT_10, '0x'
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], userAAddress,
+      ETHER_UINT_10, ETHER_UINT_10, '0x'
     );
     await txA.wait();
 
@@ -173,8 +173,8 @@ describe('CoverPool', () => {
     await expect(coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1])).to.emit(coverPool, 'CoverCreated');
     
     const txB = await coverPool.connect(userBAccount).addCover(
-      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
-      ETHER_UINT_10, '0x'
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], userBAddress,
+      ETHER_UINT_10, ETHER_UINT_10, '0x'
     );
     await txB.wait();
 
@@ -189,8 +189,8 @@ describe('CoverPool', () => {
 
   it('Should create new cover for userB on existing contract when accepted claim', async () => {
     const txA = await coverPool.connect(userAAccount).addCover(
-      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
-      ETHER_UINT_10, '0x'
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], userAAddress,
+      ETHER_UINT_10, ETHER_UINT_10, '0x'
     );
     await txA.wait();
 
@@ -199,8 +199,8 @@ describe('CoverPool', () => {
     await coverPool.deployCover(COLLATERAL, consts.ALLOWED_EXPIRYS[1]);
 
     const txB = await coverPool.connect(userBAccount).addCover(
-      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
-      ETHER_UINT_10, '0x'
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], userBAddress,
+      ETHER_UINT_10, ETHER_UINT_10, '0x'
     );
     await txB.wait();
 
@@ -250,8 +250,8 @@ describe('CoverPool', () => {
     await time.advanceBlock();
 
     await expect(coverPool.connect(userAAccount).addCover(
-      COLLATERAL, consts.ALLOWED_EXPIRYS[1], ETHER_UINT_10,
-      ETHER_UINT_10, '0x'
+      COLLATERAL, consts.ALLOWED_EXPIRYS[1], userAAddress,
+      ETHER_UINT_10, ETHER_UINT_10, '0x'
     )).to.be.reverted;
   });
 });

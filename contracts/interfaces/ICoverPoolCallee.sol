@@ -7,5 +7,12 @@ pragma solidity ^0.8.0;
  * @author crypto-pumpkin
  */
 interface ICoverPoolCallee {
-    function onFlashMint(address sender, uint amountIn, uint amountOut, bytes calldata data) external;
+  /// @notice must return keccak256("ICoverPoolCallee.onFlashMint")
+  function onFlashMint(
+    address _sender,
+    address _paymentToken,
+    uint256 _paymentAmount,
+    uint256 _amountOut,
+    bytes calldata _data
+  ) external returns (bytes32);
 }
