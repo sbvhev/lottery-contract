@@ -28,13 +28,13 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
 
   bool public override deployComplete; // once true, never false
-  uint48 public expiry;
-  address private collateral;
-  ICoverERC20 private noclaimCovToken;
-  string private name; // Yearn_0_DAI_210131
+  uint48 public override expiry;
+  address public override collateral;
+  ICoverERC20 public override noclaimCovToken;
+  string public override name; // Yearn_0_DAI_210131
   uint256 public override feeRate; // 1e18, cannot be changed
-  uint256 private mintRatio; // 1e18, cannot be changed, 1 collateral mint mintRatio * 1 covTokens
-  uint256 private totalCoverage; // in covTokens
+  uint256 public override mintRatio; // 1e18, cannot be changed, 1 collateral mint mintRatio * 1 covTokens
+  uint256 public override totalCoverage; // in covTokens
   uint256 public override claimNonce;
 
   ICoverERC20[] private futureCovTokens;
@@ -208,15 +208,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
   }
 
-  function getCoverDetails()
-    external view override
+  function getCovTokens() external view override
     returns (
-      string memory _name,
-      uint48 _expiry,
-      address _collateral,
-      uint256 _mintRatio,
-      uint256 _feeRate,
-      uint256 _claimNonce,
       ICoverERC20 _noclaimCovToken,
       ICoverERC20[] memory _claimCovTokens,
       ICoverERC20[] memory _futureCovTokens)
@@ -226,7 +219,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     for (uint256 i = 0; i < _riskList.length; i++) {
       claimCovTokens[i] = ICoverERC20(claimCovTokenMap[_riskList[i]]);
     }
-    return (name, expiry, collateral, mintRatio, feeRate, claimNonce, noclaimCovToken, claimCovTokens, futureCovTokens);
+    return (noclaimCovToken, claimCovTokens, futureCovTokens);
   }
 
   /// @notice collectFees send fees to treasury, anyone can call
