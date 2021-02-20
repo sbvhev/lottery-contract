@@ -34,7 +34,7 @@ async function main() {
   console.log('coverPoolYearn details: ', details);
   
   const coverYearn = Cover.attach('0xD316790fE78B6b9106ae8C7a524aBbB46a430b33');
-  const coverDetails = await coverYearn.getCoverDetails();
+  const coverDetails = await coverYearn.getCovTokens();
   console.log('coverDetails: ', coverDetails);
 }
 

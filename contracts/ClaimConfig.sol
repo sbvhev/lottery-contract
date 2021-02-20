@@ -34,7 +34,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
     treasury = _treasury;
   }
 
-  /// @notice Set max time window allowed to decide a claim after filed, requires at least 3 days for voting
+  /// @notice Set max time window allowed to decide a claim after filed
   function setMaxClaimDecisionWindow(uint256 _newTimeWindow) external override onlyOwner {
     require(_newTimeWindow > 0, "CC: window too short");
     maxClaimDecisionWindow = _newTimeWindow;
