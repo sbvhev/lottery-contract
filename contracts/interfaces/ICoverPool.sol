@@ -36,6 +36,7 @@ interface ICoverPool {
 
   // state vars
   function name() external view returns (string memory);
+  function extendablePool() external view returns (bool);
   function noclaimRedeemDelay() external view returns (uint256);
   function addingRiskWIP() external view returns (bool);
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)

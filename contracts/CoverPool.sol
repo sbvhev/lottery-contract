@@ -31,7 +31,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   bytes32 public constant CALLBACK_SUCCESS = keccak256("ICoverPoolCallee.onFlashMint");
 
   string public override name;
-  bool private extendablePool;
+  bool public override extendablePool;
   Status private poolStatus; // only Active coverPool status can addCover (aka. minting more covTokens)
   bool public override addingRiskWIP;
   uint256 private addingRiskInd; // index of the active cover array to continue adding risk

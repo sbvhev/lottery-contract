@@ -1,6 +1,6 @@
 module.exports = {
   consts: {
-    FEE_RATE: ethers.utils.parseEther('0.012'),
+    FEE_RATE: ethers.utils.parseEther('0.006'),
     ASSET_1: 'Binance',
     ASSET_2: 'Curve',
     ASSET_3: 'AAVEAAVE',

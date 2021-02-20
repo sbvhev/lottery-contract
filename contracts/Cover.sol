@@ -65,7 +65,9 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     feeRate = yearlyFeeRate * (uint256(_expiry) - block.timestamp) / 365 days;
 
     noclaimCovToken = _createCovToken("NC_");
-    futureCovTokens.push(_createCovToken("C_FUT0_"));
+    if (_coverPool().extendablePool()) {
+      futureCovTokens.push(_createCovToken("C_FUT0_"));
+    }
     deploy();
   }
 
@@ -273,7 +275,9 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
   function _handleLatestFutureToken(address _receiver, uint256 _amount, bool _isMint) private {
     ICoverERC20[] memory futureCovTokensCopy = futureCovTokens;
-    ICoverERC20 latestFutureCovToken = futureCovTokensCopy[futureCovTokensCopy.length - 1];
+    uint256 len = futureCovTokensCopy.length;
+    if (len == 0) return;
+    ICoverERC20 latestFutureCovToken = futureCovTokensCopy[len - 1];
     _isMint
       ? latestFutureCovToken.mint(_receiver, _amount)
       : latestFutureCovToken.burnByCover(_receiver, _amount);
