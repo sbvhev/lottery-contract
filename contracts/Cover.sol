@@ -208,6 +208,18 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     }
   }
 
+  function viewRedeemable(uint256 _covarageAmt) external view override returns (uint256) {
+    IERC20 colToken = IERC20(collateral);
+    uint256 colBal = colToken.balanceOf(address(this));
+    uint256 payoutColAmt = _covarageAmt * 1e18 / mintRatio;
+    uint256 payoutColAmtAfterFees = payoutColAmt - payoutColAmt * feeRate / 1e18;
+    if (colBal > payoutColAmtAfterFees) {
+      return payoutColAmtAfterFees;
+    } else {
+      return colBal;
+    }
+  }
+
   function getCovTokens() external view override
     returns (
       ICoverERC20 _noclaimCovToken,

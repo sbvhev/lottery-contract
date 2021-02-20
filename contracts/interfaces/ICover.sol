@@ -30,6 +30,7 @@ interface ICover {
 
   // extra view
   function viewClaimable(address _account) external view returns (uint256 _eligibleCovTokenAmount);
+  function viewRedeemable(uint256 _covarageAmt) external view returns (uint256);
   function getCovTokens() external view
     returns (
       ICoverERC20 _noclaimCovToken,
