@@ -273,6 +273,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     _payCollateral(msg.sender, _amount);
   }
 
+  // note: futureCovTokens can be [] if the pool is not expendable. In that case, nothing to do.
   function _handleLatestFutureToken(address _receiver, uint256 _amount, bool _isMint) private {
     ICoverERC20[] memory futureCovTokensCopy = futureCovTokens;
     uint256 len = futureCovTokensCopy.length;
