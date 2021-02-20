@@ -28,7 +28,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
 
   bool public override deployComplete; // once true, never false
-  uint48 private expiry;
+  uint48 public expiry;
   address private collateral;
   ICoverERC20 private noclaimCovToken;
   string private name; // Yearn_0_DAI_210131
