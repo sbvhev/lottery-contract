@@ -32,9 +32,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   string public override name;
   bool public override extendablePool;
-  Status private poolStatus; // only Active coverPool status can addCover (aka. minting more covTokens)
+  Status public override poolStatus; // only Active coverPool status can addCover (aka. minting more covTokens)
   bool public override addingRiskWIP;
-  uint256 private addingRiskInd; // index of the active cover array to continue adding risk
+  uint256 public override addingRiskInd; // index of the active cover array to continue adding risk
   uint256 public override claimNonce; // nonce of for the coverPool's accepted claims
   uint256 public override noclaimRedeemDelay; // delay for redeem with only noclaim tokens for expired cover with no accpeted claim
 
@@ -267,18 +267,13 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
   function getCoverPoolDetails() external view override
     returns (
-      string memory _name,
-      bool _extendablePool,
-      Status _poolStatus,
-      uint256 _claimNonce,
-      uint256 _noclaimRedeemDelay,
       address[] memory _collaterals,
       uint48[] memory _expiries,
       bytes32[] memory _riskList,
       bytes32[] memory _deletedRiskList,
       address[] memory _allCovers)
   {
-    return (name, extendablePool, poolStatus, claimNonce, noclaimRedeemDelay, collaterals, expiries, riskList, deletedRiskList, allCovers);
+    return (collaterals, expiries, riskList, deletedRiskList, allCovers);
   }
 
   function getRiskList() external view override returns (bytes32[] memory) {

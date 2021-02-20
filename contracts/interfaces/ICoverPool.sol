@@ -37,10 +37,12 @@ interface ICoverPool {
   // state vars
   function name() external view returns (string memory);
   function extendablePool() external view returns (bool);
-  function noclaimRedeemDelay() external view returns (uint256);
-  function addingRiskWIP() external view returns (bool);
+  function poolStatus() external view returns (Status _status);
   /// @notice only active (true) coverPool allows adding more covers (aka. minting more CLAIM and NOCLAIM tokens)
   function claimNonce() external view returns (uint256);
+  function noclaimRedeemDelay() external view returns (uint256);
+  function addingRiskWIP() external view returns (bool);
+  function addingRiskInd() external view returns (uint256);
   function collateralStatusMap(address _collateral) external view returns (uint256 _mintRatio, Status _status);
   function expiryInfoMap(uint48 _expiry) external view returns (string memory _name, Status _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);
@@ -50,11 +52,6 @@ interface ICoverPool {
   function getClaimDetails(uint256 _claimNonce) external view returns (ClaimDetails memory);
   function getCoverPoolDetails()
     external view returns (
-      string memory _name,
-      bool _extendablePool,
-      Status _poolStatus,
-      uint256 _claimNonce,
-      uint256 _noclaimRedeemDelay,
       address[] memory _collaterals,
       uint48[] memory _expiries,
       bytes32[] memory _riskList,
