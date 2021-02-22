@@ -351,7 +351,7 @@ describe('Cover', function() {
     const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.ASSET_1_BYTES32));
     const claimCovToken2 = CoverERC20.attach(await cover.claimCovTokenMap(consts.ASSET_2_BYTES32));
     const aDaiBalance = await dai.balanceOf(userAAddress);
-    const userAClaimable = await cover.viewClaimable(userAAddress);
+    const userAClaimable = await cover.viewRedeemable(userAAddress, 0);
     expect(userAClaimable).to.equal(userARedeemable);
     await cover.connect(userAAccount).redeemClaim();
     const aDaiBalanceAfter = await dai.balanceOf(userAAddress);
@@ -363,7 +363,7 @@ describe('Cover', function() {
 
     const fees = (await calFees(ownerRedeemable)).add(1);
     expect(await dai.balanceOf(cover.address)).to.equal(ownerRedeemable.sub(fees));
-    const ownerClaimable = await cover.viewClaimable(ownerAddress);
+    const ownerClaimable = await cover.viewRedeemable(ownerAddress, 0);
     expect(ownerClaimable).to.equal(ownerRedeemable);
     const ownerDaiBalance = await dai.balanceOf(ownerAddress);
     await cover.connect(ownerAccount).redeemClaim();
