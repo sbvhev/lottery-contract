@@ -26,6 +26,7 @@ interface ICoverPoolFactory {
   function claimManager() external view returns (address);
   /// @notice min gas left requirement before continue deployments (when creating new Cover or adding risks to CoverPool)
   function deployGasMin() external view returns (uint256);
+  function coverPoolNames(uint256 _index) external view returns (string memory);
   function coverPools(string calldata _coverPoolName) external view returns (address);
 
   // extra view
