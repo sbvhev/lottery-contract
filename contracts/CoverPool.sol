@@ -256,11 +256,11 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     claimNonce = claimNonce + 1;
     delete activeCovers;
     claimDetails.push(ClaimDetails(
-      _payoutRiskList,
-      _payoutRates,
-      totalPayoutRate,
       _incidentTimestamp,
-      uint48(block.timestamp)
+      uint48(block.timestamp),
+      totalPayoutRate,
+      _payoutRiskList,
+      _payoutRates
     ));
     emit ClaimEnacted(_coverPoolNonce);
   }

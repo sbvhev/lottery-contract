@@ -27,11 +27,11 @@ interface ICoverPool {
     Status status;
   }
   struct ClaimDetails {
-    bytes32[] payoutRiskList;
-    uint256[] payoutRates;
-    uint256 totalPayoutRate;
     uint48 incidentTimestamp;
     uint48 claimEnactedTimestamp;
+    uint256 totalPayoutRate;
+    bytes32[] payoutRiskList;
+    uint256[] payoutRates;
   }
 
   // state vars

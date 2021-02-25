@@ -343,7 +343,7 @@ describe('Cover', function() {
     const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_2_BYTES32], [ethers.utils.parseEther('0.4'), ethers.utils.parseEther('0.2')], startTimestamp, 0);
     await txA.wait();
 
-    const [,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
+    const [, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
     const delay = await coverPool.noclaimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber());
     await time.advanceBlock();
@@ -385,7 +385,7 @@ describe('Cover', function() {
     const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32], [ethers.utils.parseEther('0.4')], expiry + 1, 0);
     await txA.wait();
 
-    const [,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
+    const [, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
     const delay = await coverPool.noclaimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber() * 24 * 60 * 60);
     await time.advanceBlock();
