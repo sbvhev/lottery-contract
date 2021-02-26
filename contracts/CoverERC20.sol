@@ -49,12 +49,6 @@ contract CoverERC20 is ICoverERC20, ERC20Permit, Ownable {
     return true;
   }
 
-  /// @notice COVER specific function
-  function burn(uint256 _amount) external override returns (bool) {
-    _burn(msg.sender, _amount);
-    return true;
-  }
-
   // to support permit
   function getChainId() external view returns (uint256 chainId) {
     this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
