@@ -194,17 +194,27 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     emit CoverDeployCompleted();
   }
 
-  function viewClaimable(address _account) external view override returns (uint256 eligibleAmount) {
-    ICoverPool.ClaimDetails memory claim = _claimDetails();
-    for (uint256 i = 0; i < claim.payoutRiskList.length; i++) {
-      ICoverERC20 covToken = claimCovTokenMap[claim.payoutRiskList[i]];
-      uint256 amount = covToken.balanceOf(_account);
-      eligibleAmount = eligibleAmount + amount * claim.payoutRates[i] / 1e18;
-    }
-    if (claim.totalPayoutRate < 1e18) {
-      uint256 amount = noclaimCovToken.balanceOf(_account);
-      uint256 payoutAmount = amount * (1e18 - claim.totalPayoutRate) / 1e18;
-      eligibleAmount = eligibleAmount + payoutAmount;
+  /// @notice coverageAmt is not respected if there is a claim
+  function viewRedeemable(address _account, uint256 _covarageAmt) external view override returns (uint256 redeemableAmt) {
+    ICoverPool coverPool = _coverPool();
+    if (coverPool.claimNonce() == claimNonce) {
+      IERC20 colToken = IERC20(collateral);
+      uint256 colBal = colToken.balanceOf(address(this));
+      uint256 payoutColAmt = _covarageAmt * 1e18 / mintRatio;
+      uint256 payoutColAmtAfterFees = payoutColAmt - payoutColAmt * feeRate / 1e18;
+      redeemableAmt = colBal > payoutColAmtAfterFees ? payoutColAmtAfterFees : colBal;
+    } else {
+      ICoverPool.ClaimDetails memory claim = _claimDetails();
+      for (uint256 i = 0; i < claim.payoutRiskList.length; i++) {
+        ICoverERC20 covToken = claimCovTokenMap[claim.payoutRiskList[i]];
+        uint256 amount = covToken.balanceOf(_account);
+        redeemableAmt = redeemableAmt + amount * claim.payoutRates[i] / 1e18;
+      }
+      if (claim.totalPayoutRate < 1e18) {
+        uint256 amount = noclaimCovToken.balanceOf(_account);
+        uint256 payoutAmount = amount * (1e18 - claim.totalPayoutRate) / 1e18;
+        redeemableAmt = redeemableAmt + payoutAmount;
+      }
     }
   }
 

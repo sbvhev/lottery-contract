@@ -104,13 +104,6 @@ describe('CoverERC20', function() {
     expect(await coverERC20.totalSupply()).to.equal(A_BALANCE);
   });
 
-  it('Should burn', async function() {
-    await expect(coverERC20.connect(userAAccount).burn(TRANSFER_AMOUNT))
-      .to.emit(coverERC20, 'Transfer')
-      .withArgs(userAAddress, ZERO_ADDRESS, TRANSFER_AMOUNT);
-    expect(await coverERC20.balanceOf(userAAddress)).to.equal(A_BALANCE.sub(TRANSFER_AMOUNT));
-  });  
-
   describe('permit', function () {
     const wallet = Wallet.generate();
     const walletAddress = wallet.getAddressString();

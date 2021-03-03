@@ -31,7 +31,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   uint256 public override yearlyFeeRate = 0.006 ether; // 0.6% yearly rate
   /// @notice min gas left requirement before continue deployments (when creating new Cover or adding risks to CoverPool)
   uint256 public override deployGasMin = 1000000;
-  string[] private coverPoolNames;
+  string[] public override coverPoolNames;
   mapping(string => address) public override coverPools;
 
   constructor (

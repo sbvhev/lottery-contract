@@ -343,7 +343,7 @@ describe('Cover', function() {
     const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32, consts.ASSET_2_BYTES32], [ethers.utils.parseEther('0.4'), ethers.utils.parseEther('0.2')], startTimestamp, 0);
     await txA.wait();
 
-    const [,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
+    const [, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
     const delay = await coverPool.noclaimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber());
     await time.advanceBlock();
@@ -351,7 +351,7 @@ describe('Cover', function() {
     const claimCovToken = CoverERC20.attach(await cover.claimCovTokenMap(consts.ASSET_1_BYTES32));
     const claimCovToken2 = CoverERC20.attach(await cover.claimCovTokenMap(consts.ASSET_2_BYTES32));
     const aDaiBalance = await dai.balanceOf(userAAddress);
-    const userAClaimable = await cover.viewClaimable(userAAddress);
+    const userAClaimable = await cover.viewRedeemable(userAAddress, 0);
     expect(userAClaimable).to.equal(userARedeemable);
     await cover.connect(userAAccount).redeemClaim();
     const aDaiBalanceAfter = await dai.balanceOf(userAAddress);
@@ -363,7 +363,7 @@ describe('Cover', function() {
 
     const fees = (await calFees(ownerRedeemable)).add(1);
     expect(await dai.balanceOf(cover.address)).to.equal(ownerRedeemable.sub(fees));
-    const ownerClaimable = await cover.viewClaimable(ownerAddress);
+    const ownerClaimable = await cover.viewRedeemable(ownerAddress, 0);
     expect(ownerClaimable).to.equal(ownerRedeemable);
     const ownerDaiBalance = await dai.balanceOf(ownerAddress);
     await cover.connect(ownerAccount).redeemClaim();
@@ -385,7 +385,7 @@ describe('Cover', function() {
     const txA = await coverPool.connect(claimManager).enactClaim([consts.ASSET_1_BYTES32], [ethers.utils.parseEther('0.4')], expiry + 1, 0);
     await txA.wait();
 
-    const [,,,, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
+    const [, claimEnactedTimestamp] = await coverPool.getClaimDetails(0);
     const delay = await coverPool.noclaimRedeemDelay();
     await time.increaseTo(ethers.BigNumber.from(claimEnactedTimestamp).toNumber() + delay.toNumber() * 24 * 60 * 60);
     await time.advanceBlock();
