@@ -42,7 +42,7 @@ interface ICoverPool {
   function claimNonce() external view returns (uint256);
   function noclaimRedeemDelay() external view returns (uint256);
   function addingRiskWIP() external view returns (bool);
-  function addingRiskInd() external view returns (uint256);
+  function addingRiskIndex() external view returns (uint256);
   function collateralStatusMap(address _collateral) external view returns (uint256 _mintRatio, Status _status);
   function expiryInfoMap(uint48 _expiry) external view returns (string memory _name, Status _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);

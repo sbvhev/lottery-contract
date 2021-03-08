@@ -77,6 +77,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     ICoverPool coverPool = _coverPool();
     require(coverPool.claimNonce() == claimNonce, "Cover: nonces dont match");
 
+    // mintAmount has same decimals of covTokens == collateral decimals
     uint256 mintAmount = _receivedColAmt * mintRatio / 1e18;
     totalCoverage = totalCoverage + mintAmount;
 
@@ -85,10 +86,10 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       claimCovTokenMap[_riskList[i]].mint(_receiver, mintAmount);
     }
     noclaimCovToken.mint(_receiver, mintAmount);
-    _handleLatestFutureToken(_receiver, mintAmount, true); // mint
+    _handleLatestFutureToken(_receiver, mintAmount, true /* mint */);
   }
 
-  /// @notice normal redeem (no claim accepted), but always allow redeem back collateral with all covTokens
+  /// @notice normal redeem (no claim accepted), but always allow redeem back collateral with all covTokens (must converted all eligible future token to claim tokens)
   function redeem(uint256 _amount) external override nonReentrant onlyNotPaused {
     ICoverPool coverPool = _coverPool();
 
@@ -97,13 +98,13 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       uint256 defaultRedeemDelay = _factory().defaultRedeemDelay();
       if (claim.incidentTimestamp > expiry && block.timestamp >= uint256(expiry) + defaultRedeemDelay) {
         // not affected cover, default delay passed, redeem with noclaim tokens only
-        _burnNoclaimAndPay(noclaimCovToken, 1e18, _amount);
+        _burnNoclaimAndPay(_amount);
       } else { // redeem with all covTokens is always allowed
         _redeemWithAllCovTokens(coverPool, _amount);
       }
     } else if (block.timestamp >= uint256(expiry) + coverPool.noclaimRedeemDelay()) {
       // no accepted claim, expired and noclaim delay passed, redeem with noclaim tokens only. Use noclaimRedeemDelay (>= default delay) in case there are pending claims
-      _burnNoclaimAndPay(noclaimCovToken, 1e18, _amount);
+      _burnNoclaimAndPay(_amount);
     } else { // redeem with all covTokens is always allowed
       _redeemWithAllCovTokens(coverPool, _amount);
     }
@@ -113,6 +114,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   /**
    * @notice convert future tokens to associated CLAIM tokens and next future tokens
    * Once a new risk is added into the CoverPool, the latest futureToken can be converted to the related CLAIM Token and next futureToken (both are created while adding risk to the pool).
+   * @dev Never covert the lastest future tokens, it will revert
    */
   function convert(ICoverERC20[] calldata _futureTokens) external override onlyNotPaused {
     for (uint256 i = 0; i < _futureTokens.length; i++) {
@@ -158,16 +160,20 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     for (uint256 i = 0; i < claim.payoutRiskList.length; i++) {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutRiskList[i]];
       uint256 amount = covToken.balanceOf(msg.sender);
-      eligibleAmount = eligibleAmount + amount * claim.payoutRates[i] / 1e18;
-      covToken.burnByCover(msg.sender, amount);
+      if (amount > 0) {
+        eligibleAmount = eligibleAmount + amount * claim.payoutRates[i] / 1e18;
+        covToken.burnByCover(msg.sender, amount);
+      }
     }
 
     // if total claim payout rate < 1, get noclaim token eligible amount to payout
     if (claim.totalPayoutRate < 1e18) {
       uint256 amount = noclaimCovToken.balanceOf(msg.sender);
-      uint256 payoutAmount = amount * (1e18 - claim.totalPayoutRate) / 1e18;
-      eligibleAmount = eligibleAmount + payoutAmount;
-      noclaimCovToken.burnByCover(msg.sender, amount);
+      if (amount > 0) {
+        uint256 payoutAmount = amount * (1e18 - claim.totalPayoutRate) / 1e18;
+        eligibleAmount = eligibleAmount + payoutAmount;
+        noclaimCovToken.burnByCover(msg.sender, amount);
+      }
     }
 
     require(eligibleAmount > 0, "Cover: low covToken balance");
@@ -252,11 +258,12 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   // transfer collateral (amount - fee) from this contract to recevier
   function _payCollateral(address _receiver, uint256 _covarageAmt) private {
     collectFees();
+    totalCoverage = totalCoverage - _covarageAmt;
+
     IERC20 colToken = IERC20(collateral);
     uint256 colBal = colToken.balanceOf(address(this));
     uint256 payoutColAmt = _covarageAmt * 1e18 / mintRatio;
     uint256 payoutColAmtAfterFees = payoutColAmt - payoutColAmt * feeRate / 1e18;
-    totalCoverage = totalCoverage - _covarageAmt;
     if (colBal > payoutColAmtAfterFees) {
       colToken.safeTransfer(_receiver, payoutColAmtAfterFees);
     } else {
@@ -267,7 +274,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   // must convert all future tokens to claim tokens to be able to redeem with all covTokens
   function _redeemWithAllCovTokens(ICoverPool coverPool, uint256 _amount) private {
     noclaimCovToken.burnByCover(msg.sender, _amount);
-    _handleLatestFutureToken(msg.sender, _amount, false); // burn
+    _handleLatestFutureToken(msg.sender, _amount, false /* burn */);
 
     (bytes32[] memory riskList) = coverPool.getRiskList();
     for (uint i = 0; i < riskList.length; i++) {
@@ -288,10 +295,9 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   // burn noclaim covToken and pay sender
-  function _burnNoclaimAndPay(ICoverERC20 _covToken, uint256 _payoutRate, uint256 _amount) private {
-    _covToken.burnByCover(msg.sender, _amount);
-    uint256 payoutAmount = _amount * _payoutRate / 1e18;
-    _payCollateral(msg.sender, payoutAmount);
+  function _burnNoclaimAndPay(uint256 _amount) private {
+    noclaimCovToken.burnByCover(msg.sender, _amount);
+    _payCollateral(msg.sender, _amount);
   }
 
   // convert the future token to claim token and mint next future token
@@ -304,7 +310,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     claimCovToken.mint(msg.sender, amount);
     emit FutureTokenConverted(address(_futureToken), address(claimCovToken), amount);
 
-    // mint next future covTokens
+    // mint next future covTokens (the last future token points to no tokens)
     ICoverERC20[] memory futureCovTokensCopy = futureCovTokens;
     for (uint256 i = 0; i < futureCovTokensCopy.length; i++) {
       if (futureCovTokensCopy[i] == _futureToken) {
@@ -318,9 +324,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   /// @dev Emits CovTokenCreated
   function _createCovToken(string memory _prefix) private returns (ICoverERC20) {
     uint8 decimals = uint8(IERC20(collateral).decimals());
-    if (decimals == 0) {
-      decimals = 18;
-    }
+    require(decimals > 0, "Cover: col decimals is 0");
+
     address coverERC20Impl = _factory().coverERC20Impl();
     bytes32 salt = keccak256(abi.encodePacked(_coverPool().name(), expiry, collateral, claimNonce, _prefix));
     address proxyAddr = Clones.cloneDeterministic(coverERC20Impl, salt);

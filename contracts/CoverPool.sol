@@ -34,7 +34,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   bool public override extendablePool;
   Status public override poolStatus; // only Active coverPool status can addCover (aka. minting more covTokens)
   bool public override addingRiskWIP;
-  uint256 public override addingRiskInd; // index of the active cover array to continue adding risk
+  uint256 public override addingRiskIndex; // index of the active cover array to continue adding risk
   uint256 public override claimNonce; // nonce of for the coverPool's accepted claims
   uint256 public override noclaimRedeemDelay; // delay for redeem with only noclaim tokens for expired cover with no accpeted claim
 
@@ -45,6 +45,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   address[] private collaterals; // all collaterals ever added
   bytes32[] private riskList; // list of active risks in cover pool
   bytes32[] private deletedRiskList;
+  // riskMap is only used to check is a risk is already added or deleted
   mapping(bytes32 => Status) private riskMap;
   mapping(address => CollateralInfo) public override collateralStatusMap;
   mapping(uint48 => ExpiryInfo) public override expiryInfoMap;
@@ -117,7 +118,6 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     address coverAddr = coverMap[_collateral][_expiry];
     require(coverAddr != address(0), "CP: cover not deployed yet");
     ICover cover = ICover(coverAddr);
-    require(cover.deployComplete(), "CP: cover deploy incomplete");
 
     // support flash mint
     cover.mint(_amountOut, _receiver);
@@ -153,18 +153,19 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
 
     // update all active covers with new risk by deploying claim and new future covTokens for each cover contract
     address[] memory activeCoversCopy = activeCovers;
-    if (activeCoversCopy.length == 0) return;
+
     uint256 startGas = gasleft();
-    for (uint256 i = addingRiskInd; i < activeCoversCopy.length; i++) {
-      addingRiskInd = i;
+    for (uint256 i = addingRiskIndex; i < activeCoversCopy.length; i++) {
+      addingRiskIndex = i;
       // ensure enough gas left to avoid revert all the previous work
       if (startGas < _factory().deployGasMin()) return;
       // below call deploys two covToken contracts, if cover already added, call will do nothing
       ICover(activeCoversCopy[i]).addRisk(risk);
       startGas = gasleft();
     }
+
     addingRiskWIP = false;
-    addingRiskInd = 0;
+    addingRiskIndex = 0;
     emit RiskUpdated(risk, true);
   }
 
@@ -214,7 +215,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     emit CollateralUpdated(_collateral, _mintRatio,  _status);
   }
 
-  // update status of coverPool, if false, will pause new cover creation
+  // update status of coverPool, if disabled, will pause new cover creation
   function setPoolStatus(Status _poolStatus) external override onlyDev {
     emit PoolStatusUpdated(poolStatus, _poolStatus);
     poolStatus = _poolStatus;
