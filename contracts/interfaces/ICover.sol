@@ -25,7 +25,8 @@ interface ICover {
   function mintRatio() external view returns (uint256);
   /// @notice created as initialization, cannot be changed
   function claimNonce() external view returns (uint256);
-  function claimCovTokenMap(bytes32 _risk) external view returns (ICoverERC20 _claimCovToken);
+  function futureCovTokens(uint256 _index) external view returns (ICoverERC20);
+  function claimCovTokenMap(bytes32 _risk) external view returns (ICoverERC20);
   function futureCovTokenMap(ICoverERC20 _futureCovToken) external view returns (ICoverERC20 _claimCovToken);
 
   // extra view

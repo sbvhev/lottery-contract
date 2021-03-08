@@ -11,3 +11,5 @@ Close
 *.DS_Store
 
 deployment
+
+package-lock.json

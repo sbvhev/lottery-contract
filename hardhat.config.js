@@ -2,6 +2,7 @@ require("@nomiclabs/hardhat-waffle");
 // require("@nomiclabs/buidler-web3"); // necessary for time to work
 require('hardhat-contract-sizer');
 require('@nomiclabs/hardhat-etherscan');
+require("solidity-coverage");
 
 require('dotenv').config();
 
