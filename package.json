@@ -29,6 +29,7 @@
     "ethereumjs-wallet": "^1.0.1",
     "ethers": "^5.0.23",
     "hardhat": "^2.0.4",
-    "hardhat-contract-sizer": "^2.0.2"
+    "hardhat-contract-sizer": "^2.0.2",
+    "solidity-coverage": "^0.7.16"
   }
 }

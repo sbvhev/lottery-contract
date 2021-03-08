@@ -22,7 +22,10 @@ The following are the elements of the V2.
 * `npx hardhat test --network localhost` run tests in a new terminal.
  **`npx hardhat node` restart required after full test run.** As the blockchain timestamp has changed.
 
- ## Deploy to Kovan Testnet
+## Coverage
+* run `npx hardhat coverage --solcoverjs ./.solcover.js --network localhost`, note one test (`Should deploy Cover in two txs with CoverPool`) will fail. Follow the steps above, it should pass.
+
+## Deploy to Kovan Testnet
 * Run `npx hardhat run scripts/deploy.js --network kovan`
 * Verify CoverPoolFactory: args - (coverPoolImpl, coverImpl, coverERC20Impl, treasury)
   * npx hardhat verify --network kovan 0xa237aBE9EF0dA5B39730171571E6752b2D66851a "0x235cfc4E58f6Cb8046185CE96e9fb36014e91cE1" "0x9442E7F630ecbCd730015279d47cAEAB62b050ce" "0x6FE027ce26bA469f01c9d155279E66E1385a7957" "0xe50fb5e4f608d96beb8b4364522e189fb98d821d"

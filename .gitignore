@@ -13,3 +13,7 @@ Close
 deployment
 
 package-lock.json
+
+# coverage
+coverage
+coverage.json
