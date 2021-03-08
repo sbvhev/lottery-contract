@@ -114,7 +114,7 @@ describe('Cover', function() {
       COLLATERAL, TIMESTAMP, userAAddress,
       ETHER_UINT_10, ETHER_UINT_10, '0x',
       {gasLimit: 2112841}
-    ), 'CP: cover deploy incomplete');
+    ), 'Cover: deploy incomplete');
     const coverIP = Cover.attach(await coverPool2.coverMap(COLLATERAL, TIMESTAMP));
     await expect(coverPool2.deployCover(COLLATERAL, TIMESTAMP)).to.emit(coverIP, 'CoverDeployCompleted');
     await coverPool2.connect(userAAccount).addCover(
