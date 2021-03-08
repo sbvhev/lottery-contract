@@ -39,14 +39,14 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   uint256 public override noclaimRedeemDelay; // delay for redeem with only noclaim tokens for expired cover with no accpeted claim
 
   ClaimDetails[] private claimDetails; // [claimNonce] => accepted ClaimDetails
-  address[] private activeCovers; // reset once claim accepted, may contain expired covers, used mostly for adding new risk to pool for faster deployment
-  address[] private allCovers; // all covers ever created
-  uint48[] private expiries; // all expiries ever added
-  address[] private collaterals; // all collaterals ever added
-  bytes32[] private riskList; // list of active risks in cover pool
-  bytes32[] private deletedRiskList;
+  address[] public override activeCovers; // reset once claim accepted, may contain expired covers, used mostly for adding new risk to pool for faster deployment
+  address[] public override allCovers; // all covers ever created
+  uint48[] public override expiries; // all expiries ever added
+  address[] public override collaterals; // all collaterals ever added
+  bytes32[] public override riskList; // list of active risks in cover pool
+  bytes32[] public override deletedRiskList;
   // riskMap is only used to check is a risk is already added or deleted
-  mapping(bytes32 => Status) private riskMap;
+  mapping(bytes32 => Status) public override riskMap;
   mapping(address => CollateralInfo) public override collateralStatusMap;
   mapping(uint48 => ExpiryInfo) public override expiryInfoMap;
   // collateral => timestamp => coverAddress, most recent (might be expired) cover created for the collateral and timestamp combination

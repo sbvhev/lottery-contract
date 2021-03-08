@@ -43,6 +43,13 @@ interface ICoverPool {
   function noclaimRedeemDelay() external view returns (uint256);
   function addingRiskWIP() external view returns (bool);
   function addingRiskIndex() external view returns (uint256);
+  function activeCovers(uint256 _index) external view returns (address);
+  function allCovers(uint256 _index) external view returns (address);
+  function expiries(uint256 _index) external view returns (uint48);
+  function collaterals(uint256 _index) external view returns (address);
+  function riskList(uint256 _index) external view returns (bytes32);
+  function deletedRiskList(uint256 _index) external view returns (bytes32);
+  function riskMap(bytes32 _risk) external view returns (Status);
   function collateralStatusMap(address _collateral) external view returns (uint256 _mintRatio, Status _status);
   function expiryInfoMap(uint48 _expiry) external view returns (string memory _name, Status _status);
   function coverMap(address _collateral, uint48 _expiry) external view returns (address);

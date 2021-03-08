@@ -37,7 +37,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   uint256 public override totalCoverage; // in covTokens
   uint256 public override claimNonce;
 
-  ICoverERC20[] private futureCovTokens;
+  ICoverERC20[] public override futureCovTokens;
   mapping(bytes32 => ICoverERC20) public override claimCovTokenMap;
   // future token => CLAIM Token
   mapping(ICoverERC20 => ICoverERC20) public override futureCovTokenMap;
