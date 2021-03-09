@@ -71,7 +71,7 @@ contract ClaimConfig is IClaimConfig, Ownable {
   }
 
   function setFeeMultiplier(uint256 _multiplier) external override onlyOwner {
-    require(_multiplier > 0, "CC: multiplier < 1");
+    require(_multiplier >= 1, "CC: multiplier must be >= 1");
     feeMultiplier = _multiplier;
   }
 
