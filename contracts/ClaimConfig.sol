@@ -106,16 +106,15 @@ contract ClaimConfig is IClaimConfig, Ownable {
 
   function _removeCVCForPool(address _coverPool, address _cvc) private {
     address[] memory cvcCopy = cvcMap[_coverPool];
-    if (cvcCopy.length < 1) return; // nothing to remove, no need to revert
-    address[] memory newCVC = new address[](cvcCopy.length - 1);
-    uint256 newListInd = 0;
-    for (uint256 i = 0; i < cvcCopy.length; i++) {
-      if (_cvc != cvcCopy[i]) {
-        newCVC[newListInd] = cvcCopy[i];
-        newListInd++;
+    uint256 len = cvcCopy.length;
+    if (len < 1) return; // nothing to remove, no need to revert
+    for (uint256 i = 0; i < len; i++) {
+      if (_cvc == cvcCopy[i]) {
+        cvcMap[_coverPool][i] = cvcCopy[len - 1];
+        cvcMap[_coverPool].pop();
+        break;
       }
     }
-    cvcMap[_coverPool] = newCVC;
   }
 
   // Updates fee for coverPool `_coverPool` by multiplying current fee by `feeMultiplier`, capped at `forceClaimFee`

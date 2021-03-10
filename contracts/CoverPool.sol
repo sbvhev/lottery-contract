@@ -174,21 +174,19 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     bytes32 risk = StringHelper.stringToBytes32(_risk);
     require(riskMap[risk] == Status.Active, "CP: not active risk");
     bytes32[] memory riskListCopy = riskList; // save gas
-    require(riskListCopy.length > 1, "CP: only 1 risk left");
+    uint256 len = riskListCopy.length;
+    require(len > 1, "CP: only 1 risk left");
 
-    bytes32[] memory newRiskList = new bytes32[](riskListCopy.length - 1);
-    uint256 newListInd = 0;
-    for (uint256 i = 0; i < riskListCopy.length; i++) {
-      if (risk != riskListCopy[i]) {
-        newRiskList[newListInd] = riskListCopy[i];
-        newListInd++;
-      } else {
+    for (uint256 i = 0; i < len; i++) {
+      if (risk == riskListCopy[i]) {
         riskMap[risk] = Status.Disabled;
         deletedRiskList.push(risk);
+        riskList[i] = riskListCopy[len - 1];
+        riskList.pop();
         emit RiskUpdated(risk, false);
+        break;
       }
     }
-    riskList = newRiskList;
   }
 
   /// @notice update status or add new expiry
