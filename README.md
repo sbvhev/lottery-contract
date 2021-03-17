@@ -28,9 +28,9 @@ The following are the elements of the V2.
 ## Deploy to Kovan Testnet
 * Run `npx hardhat run scripts/deploy.js --network kovan`
 * Verify CoverPoolFactory: args - (coverPoolImpl, coverImpl, coverERC20Impl, treasury)
-  * npx hardhat verify --network kovan 0xa237aBE9EF0dA5B39730171571E6752b2D66851a "0x235cfc4E58f6Cb8046185CE96e9fb36014e91cE1" "0x9442E7F630ecbCd730015279d47cAEAB62b050ce" "0x6FE027ce26bA469f01c9d155279E66E1385a7957" "0xe50fb5e4f608d96beb8b4364522e189fb98d821d"
+  * npx hardhat verify --network kovan 0xF975ED6E2296Ec6953Dd77450Fb23389053d188F "0x907c2eDC9A31E0d6230FaC98B2e6E441bE61E7cB" "0xa7515d4eB1eA8a57B879D4A4c267647f080B44f8" "0x3Ff814F5D104Ee696F721A600A8def5D8346858D" "0xe50fb5e4f608d96beb8b4364522e189fb98d821d"
 * Verify Claim Management: args - (fee, treasury, coverPoolFactory, defaultCVC/auditor)
-  * npx hardhat verify --network kovan 0xBac927E70E97dd859fAF3B46698e98F82cAD6122 "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa" "0xe50fb5e4f608d96beb8b4364522e189fb98d821d" "0xa237aBE9EF0dA5B39730171571E6752b2D66851a" "0x92E812467Df28763814f465048ae4c2AFfAd7631"
+  * npx hardhat verify --network kovan 0x584288Fa61D899066aCad1deF556ca0f3DB0e469 "0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa" "0xe50fb5e4f608d96beb8b4364522e189fb98d821d" "0xF975ED6E2296Ec6953Dd77450Fb23389053d188F" "0x92E812467Df28763814f465048ae4c2AFfAd7631"
 * Verify Implementations:
   * npx hardhat verify --network kovan {address}
 
