@@ -16,11 +16,11 @@ async function main() {
   const Cover = await ethers.getContractFactory('Cover');
   const CoverERC20 = await ethers.getContractFactory('CoverERC20');
   const ClaimManagement = await ethers.getContractFactory('ClaimManagement');
-  const coverPool = CoverPool.attach(envVars.coverPool);
-  const cover = Cover.attach(envVars.cover);
-  const coverERC20 = CoverERC20.attach(envVars.coverERC20);
-  const coverPoolFactory = CoverPoolFactory.attach(envVars.factory);
-  const claimManagement = ClaimManagement.attach(envVars.claimManagement);
+  // const coverPool = CoverPool.attach(envVars.coverPool);
+  // const cover = Cover.attach(envVars.cover);
+  // const coverERC20 = CoverERC20.attach(envVars.coverERC20);
+  // const coverPoolFactory = CoverPoolFactory.attach(envVars.factory);
+  // const claimManagement = ClaimManagement.attach(envVars.claimManagement);
 
   // check owners
   // const factoryOwner = await coverPoolFactory.owner();
@@ -29,9 +29,11 @@ async function main() {
   // console.log(`claimManagement owner: ${claimManagementOwner}`);
 
   // check CoverPool 0x686f472d46b3c7bd58d2d0df22e9adbf0a4f2083 
-  const coverPoolYearn = CoverPool.attach('0x686f472d46b3c7bd58d2d0df22e9adbf0a4f2083');
-  const details = await coverPoolYearn.getCoverPoolDetails();
-  console.log('coverPoolYearn details: ', details);
+  const coverPool = CoverPool.attach('0x4d42c8D4eb91Bb204A1832759ec2ae454dEA0453');
+  const name = await coverPool.name();
+  console.log('coverPool name: ', name);
+  const details = await coverPool.getCoverPoolDetails();
+  console.log('coverPool details: ', details);
   
   const coverYearn = Cover.attach('0xD316790fE78B6b9106ae8C7a524aBbB46a430b33');
   const coverDetails = await coverYearn.getCovTokens();
