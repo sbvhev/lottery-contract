@@ -75,10 +75,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     initializeOwner();
     name = _coverPoolName;
     extendablePool = _extendablePool;
-    collaterals.push(_collateral);
-    collateralStatusMap[_collateral] = CollateralInfo(_mintRatio, Status.Active);
-    expiries.push(_expiry);
-    expiryInfoMap[_expiry] = ExpiryInfo(_expiryString, Status.Active);
+    _setCollateral(_collateral, _mintRatio, Status.Active);
+    _setExpiry(_expiry, _expiryString, Status.Active);
 
     for (uint256 j = 0; j < _riskList.length; j++) {
       bytes32 risk = StringHelper.stringToBytes32(_riskList[j]);
@@ -190,27 +188,13 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice update status or add new expiry
-  function setExpiry(uint48 _expiry, string calldata _expiryStr, Status _status) external override onlyDev {
-    require(block.timestamp < _expiry, "CP: expiry in the past");
-    require(_status != Status.Null, "CP: status is null");
-
-    if (expiryInfoMap[_expiry].status == Status.Null) {
-      expiries.push(_expiry);
-    }
-    expiryInfoMap[_expiry] = ExpiryInfo(_expiryStr, _status);
-    emit ExpiryUpdated(_expiry, _expiryStr, _status);
+  function setExpiry(uint48 _expiry, string calldata _expiryStr, Status _status) public override onlyDev {
+    _setExpiry(_expiry, _expiryStr, _status);
   }
 
   /// @notice update status or add new collateral
-  function setCollateral(address _collateral, uint256 _mintRatio, Status _status) external override onlyDev {
-    require(_collateral != address(0), "CP: address cannot be 0");
-    require(_status != Status.Null, "CP: status is null");
-
-    if (collateralStatusMap[_collateral].status == Status.Null) {
-      collaterals.push(_collateral);
-    }
-    collateralStatusMap[_collateral] = CollateralInfo(_mintRatio, _status);
-    emit CollateralUpdated(_collateral, _mintRatio,  _status);
+  function setCollateral(address _collateral, uint256 _mintRatio, Status _status) public override onlyDev {
+    _setCollateral(_collateral, _mintRatio, _status);
   }
 
   // update status of coverPool, if disabled, will pause new cover creation
@@ -325,6 +309,28 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   // the owner of this contract is CoverPoolFactory, whose owner is dev
   function _dev() private view returns (address) {
     return IOwnable(owner()).owner();
+  }
+
+  function _setExpiry(uint48 _expiry, string calldata _expiryStr, Status _status) private {
+    require(block.timestamp < _expiry, "CP: expiry in the past");
+    require(_status != Status.Null, "CP: status is null");
+
+    if (expiryInfoMap[_expiry].status == Status.Null) {
+      expiries.push(_expiry);
+    }
+    expiryInfoMap[_expiry] = ExpiryInfo(_expiryStr, _status);
+    emit ExpiryUpdated(_expiry, _expiryStr, _status);
+  }
+
+  function _setCollateral(address _collateral, uint256 _mintRatio, Status _status) private {
+    require(_collateral != address(0), "CP: address cannot be 0");
+    require(_status != Status.Null, "CP: status is null");
+
+    if (collateralStatusMap[_collateral].status == Status.Null) {
+      collaterals.push(_collateral);
+    }
+    collateralStatusMap[_collateral] = CollateralInfo(_mintRatio, _status);
+    emit CollateralUpdated(_collateral, _mintRatio,  _status);
   }
 
   // generate the cover name. Example: 3POOL_0_DAI_210131
