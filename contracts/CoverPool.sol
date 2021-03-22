@@ -83,9 +83,11 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       require(riskMap[risk] == Status.Null, "CP: duplicated risks");
       riskList.push(risk);
       riskMap[risk] = Status.Active;
+      emit RiskUpdated(risk, true);
     }
 
     noclaimRedeemDelay = _factory().defaultRedeemDelay(); // Claim manager can set it 10 days when claim filed
+    emit NoclaimRedeemDelayUpdated(0, noclaimRedeemDelay);
     poolStatus = Status.Active;
     deployCover(_collateral, _expiry);
   }

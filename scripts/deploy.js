@@ -75,6 +75,24 @@ async function main() {
         1640908800,
         '2012_12_31'
       );
+      await coverPoolFactory.createCoverPool(
+        'RulerCDS1',
+        true,
+        ['wBTC', 'wETH', 'xCOVER', 'COVER', 'INV', 'vETH2'],
+        '0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa',
+        ethers.utils.parseEther("1"),
+        1640908800,
+        '2012_12_31'
+      );
+      await coverPoolFactory.createCoverPool(
+        'Rari',
+        true,
+        ['pool1', 'pool3', 'pool4'],
+        '0x4F96Fe3b7A6Cf9725f59d353F723c1bDb64CA6Aa',
+        ethers.utils.parseEther("1"),
+        1640908800,
+        '2012_12_31'
+      );
     } catch (e) {
       console.log('Error create cover pool', e);
     }
