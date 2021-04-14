@@ -302,9 +302,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       allCovers.push(addr);
       coverMap[_collateral][_expiry] = addr;
       emit CoverCreated(addr);
-    }
-
-    if (!ICover(addr).deployComplete()) {
+    } else if (!ICover(addr).deployComplete()) {
       ICover(addr).deploy();
     }
   }
