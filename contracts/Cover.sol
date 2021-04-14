@@ -312,7 +312,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
     // mint next future covTokens (the last future token points to no tokens)
     ICoverERC20[] memory futureCovTokensCopy = futureCovTokens;
-    for (uint256 i = 0; i < futureCovTokensCopy.length; i++) {
+    for (uint256 i = 0; i < futureCovTokensCopy.length - 1; i++) {
       if (futureCovTokensCopy[i] == _futureToken) {
         ICoverERC20 futureCovToken = futureCovTokensCopy[i + 1];
         futureCovToken.mint(msg.sender, amount);
