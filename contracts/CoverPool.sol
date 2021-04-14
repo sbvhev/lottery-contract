@@ -347,6 +347,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   function _getCoverName(uint48 _expiry, string memory _collateralSymbol)
    private view returns (string memory)
   {
+    require(bytes(_collateralSymbol).length > 0, "CP: empty collateral symbol");
     return string(abi.encodePacked(
       name, "_",
       StringHelper.uintToString(claimNonce), "_",
