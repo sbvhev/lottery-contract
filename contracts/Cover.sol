@@ -31,7 +31,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   uint48 public override expiry;
   address public override collateral;
   ICoverERC20 public override noclaimCovToken;
-  string public override name; // Yearn_0_DAI_210131
+  string public override name; // Yearn_0_DAI_12_31_21
   uint256 public override feeRate; // 1e18, cannot be changed
   uint256 public override mintRatio; // 1e18, cannot be changed, 1 collateral mint mintRatio * 1 covTokens
   uint256 public override totalCoverage; // in covTokens

@@ -139,8 +139,8 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
   }
 
   /**
-   * @notice add risk to pool, true if add complete; false if incomplete. 
-   * - previously deleted risk not allowed. 
+   * @notice add risk to pool, true if add complete; false if incomplete.
+   * - previously deleted risk not allowed.
    * - Can be called as much as needed till addingRiskWIP is false
    */
   function addRisk(string calldata _risk) external override onlyDev returns (bool) {
