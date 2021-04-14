@@ -213,6 +213,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     ICoverPoolFactory factory = _factory();
     require(msg.sender == _dev() || msg.sender == factory.claimManager(), "CP: caller not gov/claimManager");
     require(_noclaimRedeemDelay >= factory.defaultRedeemDelay(), "CP: < default delay");
+    require(_noclaimRedeemDelay <= 30 days, "CP: > 30 days"); // absolute max, should never be above 30 days.
     if (_noclaimRedeemDelay != noclaimRedeemDelay) {
       emit NoclaimRedeemDelayUpdated(noclaimRedeemDelay, _noclaimRedeemDelay);
       noclaimRedeemDelay = _noclaimRedeemDelay;
