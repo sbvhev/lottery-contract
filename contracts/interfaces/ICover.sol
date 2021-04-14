@@ -15,6 +15,7 @@ interface ICover {
   event FutureTokenConverted(address indexed _futureToken, address indexed claimCovToken, uint256 _amount);
 
   // state vars
+  function BASE_SCALE() external view returns (uint256);
   function deployComplete() external view returns (bool);
   function expiry() external view returns (uint48);
   function collateral() external view returns (address);

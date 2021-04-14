@@ -218,7 +218,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     ICoverPoolFactory factory = _factory();
     require(msg.sender == _dev() || msg.sender == factory.claimManager(), "CP: caller not gov/claimManager");
     require(_noclaimRedeemDelay >= factory.defaultRedeemDelay(), "CP: < default delay");
-    require(_noclaimRedeemDelay <= 30 days, "CP: > 30 days"); // absolute max, should never be above 30 days.
+    require(_noclaimRedeemDelay <= factory.MAX_REDEEM_DELAY(), "CP: > max delay");
     if (_noclaimRedeemDelay != noclaimRedeemDelay) {
       emit NoclaimRedeemDelayUpdated(noclaimRedeemDelay, _noclaimRedeemDelay);
       noclaimRedeemDelay = _noclaimRedeemDelay;
@@ -343,7 +343,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     emit CollateralUpdated(_collateral, _mintRatio,  _status);
   }
 
-  // generate the cover name. Example: 3POOL_0_DAI_210131
+  // generate the cover name. Example: 3POOL_0_DAI_12_31_21
   function _getCoverName(uint48 _expiry, string memory _collateralSymbol)
    private view returns (string memory)
   {

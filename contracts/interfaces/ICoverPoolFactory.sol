@@ -11,11 +11,11 @@ interface ICoverPoolFactory {
   event IntUpdated(string _type, uint256 _old, uint256 _new);
   event AddressUpdated(string _type, address indexed _old, address indexed _new);
   event PausedStatusUpdated(bool _old, bool _new);
-  // event DefaultRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
 
   // state vars
+  function MAX_REDEEM_DELAY() external view returns (uint256);
   function defaultRedeemDelay() external view returns (uint256);
-  // yearlyFeeRate is 1e18
+  // yearlyFeeRate is scaled 1e18
   function yearlyFeeRate() external view returns (uint256);
   function paused() external view returns (bool);
   function responder() external view returns (address);
