@@ -13,8 +13,9 @@ The following are the elements of the V2.
 ..* `setNoclaimRedeemDelay` when a claim is filed or all claims are decided
 
 ### Privileged roles and consequences
-* Responder (multi-sig) can pause the protocol, it will
+* Responder (multi-sig) can pause the protocol, it will pause all user interactions but not owner access (below).
   * Pause adding new cover
+  * Pause future token conversion
   * Pause redeem back collateral
   * Pause redeem with claims
 * Owner of Factory (Dev multi-sig): normal operations of the protocol including
