@@ -75,6 +75,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     require(coverPools[_name] == address(0), "Factory: coverPool exists");
     require(_riskList.length > 0, "Factory: riskList is empty");
     require(_expiry > block.timestamp, "Factory: expiry in the past");
+    require(_collateral != address(0), "Factory: collateral cannot be 0");
 
     coverPoolNames.push(_name);
     bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _extendablePool, _riskList, _collateral, _mintRatio, _expiry, _expiryString);

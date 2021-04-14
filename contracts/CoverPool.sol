@@ -72,6 +72,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint48 _expiry,
     string calldata _expiryString
   ) external initializer {
+    require(_collateral != address(0), "CP: collateral cannot be 0");
     initializeOwner();
     name = _coverPoolName;
     extendablePool = _extendablePool;
