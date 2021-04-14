@@ -176,6 +176,9 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     bytes32[] memory riskListCopy = riskList; // save gas
     uint256 len = riskListCopy.length;
     require(len > 1, "CP: only 1 risk left");
+    IClaimManagement claimManager = IClaimManagement(_factory().claimManager());
+    require(!claimManager.hasPendingClaim(address(this), claimNonce), "CP: pending claim");
+
 
     for (uint256 i = 0; i < len; i++) {
       if (risk == riskListCopy[i]) {

@@ -12,6 +12,22 @@ The following are the elements of the V2.
 ..* `enactClaim` when a claim is accepted
 ..* `setNoclaimRedeemDelay` when a claim is filed or all claims are decided
 
+### Privileged roles and consequences
+* Responder (multi-sig) can pause the protocol, it will
+  * Pause adding new cover
+  * Pause redeem back collateral
+  * Pause redeem with claims
+* Owner of Factory (Dev multi-sig): normal operations of the protocol including
+  * Onboard new cover pools, expiries, collaterals, etc
+  * Add and delete risks in the Cover pools
+  * Update cover pool status
+  * Update parameters like feeRate and currency, CVC groups
+  * Pause the protocol
+* ClaimManager (contract): can enact a claim on Cover Pools, which will trigger a nonce increment and payout.
+* Treasury (multi-sig / contracts / EOA): it receives fees. By deployment it will be a multi-sig, but it can be any account.
+
+## Limitations
+> **⚠ Warning: Rebasing and deflationary tokens are not supported as collateral**!
 
 ## Development
 * run `npm install` to install all node dependencies
