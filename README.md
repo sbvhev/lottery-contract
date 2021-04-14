@@ -25,6 +25,7 @@ The following are the elements of the V2.
   * Pause the protocol
 * ClaimManager (contract): can enact a claim on Cover Pools, which will trigger a nonce increment and payout.
 * Treasury (multi-sig / contracts / EOA): it receives fees. By deployment it will be a multi-sig, but it can be any account.
+* CVC (multi-sig): can decide a claim with triggers the ClaimManager calls the cover pool. A majority of the CVC group have to agree on the validity of the claim and its payout distrobution.
 
 ## Limitations
 > **⚠ Warning: Rebasing and deflationary tokens are not supported as collateral**!
