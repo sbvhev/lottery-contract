@@ -138,8 +138,12 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     emit CoverAdded(coverAddr, _receiver, _amountOut);
   }
 
-  /// @notice add risk to pool, previously deleted risk not allowed. Can be called as much as needed till addingRiskWIP is false
-  function addRisk(string calldata _risk) external override onlyDev {
+  /**
+   * @notice add risk to pool, true if add complete; false if incomplete. 
+   * - previously deleted risk not allowed. 
+   * - Can be called as much as needed till addingRiskWIP is false
+   */
+  function addRisk(string calldata _risk) external override onlyDev returns (bool) {
     require(extendablePool, "CP: not extendable pool");
     bytes32 risk = StringHelper.stringToBytes32(_risk);
     require(riskMap[risk] != Status.Disabled, "CP: deleted risk not allowed");
@@ -159,7 +163,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     for (uint256 i = addingRiskIndex; i < activeCoversCopy.length; i++) {
       addingRiskIndex = i;
       // ensure enough gas left to avoid revert all the previous work
-      if (startGas < _factory().deployGasMin()) return;
+      if (startGas < _factory().deployGasMin()) return false;
       // below call deploys two covToken contracts, if cover already added, call will do nothing
       ICover(activeCoversCopy[i]).addRisk(risk);
       startGas = gasleft();
@@ -168,6 +172,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     addingRiskWIP = false;
     addingRiskIndex = 0;
     emit RiskUpdated(risk, true);
+    return true;
   }
 
   /// @notice delete risk from pool

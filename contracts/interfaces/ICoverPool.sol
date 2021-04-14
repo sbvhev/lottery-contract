@@ -90,7 +90,7 @@ interface ICoverPool {
   function setNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external;
 
   // access restriction - dev
-  function addRisk(string calldata _risk) external;
+  function addRisk(string calldata _risk) external returns (bool);
   function deleteRisk(string calldata _risk) external;
   function setExpiry(uint48 _expiry, string calldata _expiryName, Status _status) external;
   function setCollateral(address _collateral, uint256 _mintRatio, Status _status) external;
