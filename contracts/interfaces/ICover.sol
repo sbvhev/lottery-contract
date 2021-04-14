@@ -12,7 +12,7 @@ interface ICover {
   event CovTokenCreated(address);
   event CoverDeployCompleted();
   event Redeemed(string _type, address indexed _account, uint256 _amount);
-  event FutureTokenConverted(address _futureToken, address claimCovToken, uint256 _amount);
+  event FutureTokenConverted(address indexed _futureToken, address indexed claimCovToken, uint256 _amount);
 
   // state vars
   function deployComplete() external view returns (bool);

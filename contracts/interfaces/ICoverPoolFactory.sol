@@ -7,9 +7,9 @@ pragma solidity ^0.8.0;
  * @author crypto-pumpkin
  */
 interface ICoverPoolFactory {
-  event CoverPoolCreated(address _addr);
+  event CoverPoolCreated(address indexed _addr);
   event IntUpdated(string _type, uint256 _old, uint256 _new);
-  event AddressUpdated(string _type, address _old, address _new);
+  event AddressUpdated(string _type, address indexed _old, address indexed _new);
   event PausedStatusUpdated(bool _old, bool _new);
   // event DefaultRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
 
