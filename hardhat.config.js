@@ -48,6 +48,12 @@ module.exports = {
       gas: 8000000,
       gasLimit: 8000000,
     },
+    ropsten: {
+      url: process.env.ROPSTEN_INFURA_URL ? process.env.ROPSTEN_INFURA_URL : '',
+      accounts: process.env.ROPSTEN_DEV_PRIVATE_KEY ? [`0x${process.env.ROPSTEN_DEV_PRIVATE_KEY}`] : [],
+      gas: 8000000,
+      gasLimit: 8000000,
+    },
     mainnet: {
       url: process.env.MAINNET_INFURA_URL ? process.env.MAINNET_INFURA_URL : '',
       accounts: process.env.MAINNET_DEV_PRIVATE_KEY ? [`0x${process.env.MAINNET_DEV_PRIVATE_KEY}`] : [],

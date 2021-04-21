@@ -1,7 +1,8 @@
 require('dotenv').config();
 
 module.exports = {
-  kovan: {
+  42: {
+    network: 'Kovan',
     dev: process.env.KOVAN_MULTI_DEV,
     gov: process.env.KOVAN_MULTI_GOV,
     treasury: process.env.KOVAN_MULTI_TREASURY,
@@ -12,8 +13,22 @@ module.exports = {
     coverERC20: process.env.KOVAN_COVERERC20_IMPL,
     factory: process.env.KOVAN_FACTORY,
     claimManagement: process.env.KOVAN_CLAIMMANAGEMENT,
-  },  
-  mainnet: {
+  },
+  3: {
+    network: 'Ropsten',
+    dev: process.env.ROPSTEN_MULTI_DEV,
+    gov: process.env.ROPSTEN_MULTI_GOV,
+    treasury: process.env.ROPSTEN_MULTI_TREASURY,
+    auditor: process.env.ROPSTEN_AUDITOR,
+    dai: process.env.ROPSTEN_DAI,
+    coverPool: process.env.ROPSTEN_COVERPOOL_IMPL,
+    cover: process.env.ROPSTEN_COVER_IMPL,
+    coverERC20: process.env.ROPSTEN_COVERERC20_IMPL,
+    factory: process.env.ROPSTEN_FACTORY,
+    claimManagement: process.env.ROPSTEN_CLAIMMANAGEMENT,
+  },
+  1: {
+    network: 'Mainnet',
     dev: process.env.MAINNET_MULTI_DEV,
     gov: process.env.MAINNET_MULTI_GOV,
     treasury: process.env.MAINNET_MULTI_TREASURY,

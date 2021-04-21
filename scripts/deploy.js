@@ -8,11 +8,11 @@ async function main() {
 
   const provider = deployer.provider;
   const network = await provider.getNetwork();
-  console.log(`Network: ${network.name} is koven ${network.name === 'kovan'}`);
-  const envVars = network.name === 'kovan' ? configs.kovan : configs.mainnet;
+  console.log(`Network: ${network.name} with chainId ${network.chainId}`);
+  const envVars = configs[network.chainId];
 
   const networkGasPrice = (await provider.getGasPrice()).toNumber();
-  const gasPrice = networkGasPrice * 1.05;
+  const gasPrice = Math.ceil(networkGasPrice * 1.2);
   console.log(`Gas Price balance: ${gasPrice}`);
   
   // get the contract to deploy
@@ -53,18 +53,23 @@ async function main() {
   console.log(`coverERC20Impl address: ${coverERC20Impl.address}`);
 
   // deploy coverPoolFactory
-  const coverPoolFactory = await CoverPoolFactory.deploy(
-    coverPoolImpl.address,
-    coverImpl.address,
-    coverERC20Impl.address,
-    envVars.treasury,
-    { gasPrice }
-  );
-  await coverPoolFactory.deployed();
+  let coverPoolFactory = envVars.factory;
+  if (coverPoolFactory) {
+    coverPoolFactory = CoverPoolFactory.attach(coverPoolFactory);
+  } else {
+    coverPoolFactory = await CoverPoolFactory.deploy(
+      coverPoolImpl.address,
+      coverImpl.address,
+      coverERC20Impl.address,
+      envVars.treasury,
+      { gasPrice }
+    );
+    await coverPoolFactory.deployed();
+  }
   console.log(`CoverPoolFactory address: ${coverPoolFactory.address}`);
 
   // add one cover Pool
-  if (network.name === 'kovan') {
+  if (network.name !== 'Mainnet') {
     try {
       await coverPoolFactory.createCoverPool(
         'Badger',

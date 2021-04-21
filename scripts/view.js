@@ -8,8 +8,8 @@ async function main() {
 
   const provider = deployer.provider;
   const network = await provider.getNetwork();
-  console.log(`Network: ${network.name} is kovan ${network.name === 'kovan'}`);
-  const envVars = network.name === 'kovan' ? configs.kovan : configs.mainnet;
+  console.log(`Network: ${network.name} with chainId ${network.chainId}`);
+  const envVars = configs[network.chainId];
 
   const CoverPoolFactory = await ethers.getContractFactory('CoverPoolFactory');
   const CoverPool = await ethers.getContractFactory('CoverPool');
@@ -29,15 +29,25 @@ async function main() {
   // console.log(`claimManagement owner: ${claimManagementOwner}`);
 
   // check CoverPool 0x686f472d46b3c7bd58d2d0df22e9adbf0a4f2083 
-  const coverPool = CoverPool.attach('0x4d42c8D4eb91Bb204A1832759ec2ae454dEA0453');
+  const coverPool = CoverPool.attach('0x3F116385699d5A93cbEE8460A521F37c6458574C');
   const name = await coverPool.name();
   console.log('coverPool name: ', name);
   const details = await coverPool.getCoverPoolDetails();
   console.log('coverPool details: ', details);
+  await checkCoverDeploy('0x7A5613B2eA4fE58F4b4849769E00622CB1E6c4e5');
   
-  const coverYearn = Cover.attach('0xD316790fE78B6b9106ae8C7a524aBbB46a430b33');
-  const coverDetails = await coverYearn.getCovTokens();
-  console.log('coverDetails: ', coverDetails);
+  // await coverPool.deployCover('0xcB02820d168D0C05f5c539abE0b9014E8B375C8F', 1640908800);
+  
+  // const coverYearn = Cover.attach('0xD316790fE78B6b9106ae8C7a524aBbB46a430b33');
+  // const coverDetails = await coverYearn.getCovTokens();
+  // console.log('coverDetails: ', coverDetails);
+}
+
+async function checkCoverDeploy(addr) {
+  const Cover = await ethers.getContractFactory('Cover');
+  const isComplete = await Cover.attach(addr).deployComplete();
+  console.log(`Cover deploymenton ${addr} is ${isComplete} complete.`)
+  return isComplete;
 }
 
 // We recommend this pattern to be able to use async/await everywhere
