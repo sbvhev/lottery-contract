@@ -203,12 +203,12 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice coverageAmt is not respected if there is a claim
-  function viewRedeemable(address _account, uint256 _covarageAmt) external view override returns (uint256 redeemableAmt) {
+  function viewRedeemable(address _account, uint256 _coverageAmt) external view override returns (uint256 redeemableAmt) {
     ICoverPool coverPool = _coverPool();
     if (coverPool.claimNonce() == claimNonce) {
       IERC20 colToken = IERC20(collateral);
       uint256 colBal = colToken.balanceOf(address(this));
-      uint256 payoutColAmt = _covarageAmt * BASE_SCALE / mintRatio;
+      uint256 payoutColAmt = _coverageAmt * BASE_SCALE / mintRatio;
       uint256 payoutColAmtAfterFees = payoutColAmt - payoutColAmt * feeRate / BASE_SCALE;
       redeemableAmt = colBal > payoutColAmtAfterFees ? payoutColAmtAfterFees : colBal;
     } else {
@@ -258,13 +258,13 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   // transfer collateral (amount - fee) from this contract to recevier
-  function _payCollateral(address _receiver, uint256 _covarageAmt) private {
+  function _payCollateral(address _receiver, uint256 _coverageAmt) private {
     collectFees();
-    totalCoverage = totalCoverage - _covarageAmt;
+    totalCoverage = totalCoverage - _coverageAmt;
 
     IERC20 colToken = IERC20(collateral);
     uint256 colBal = colToken.balanceOf(address(this));
-    uint256 payoutColAmt = _covarageAmt * BASE_SCALE / mintRatio;
+    uint256 payoutColAmt = _coverageAmt * BASE_SCALE / mintRatio;
     uint256 payoutColAmtAfterFees = payoutColAmt - payoutColAmt * feeRate / BASE_SCALE;
     if (colBal > payoutColAmtAfterFees) {
       colToken.safeTransfer(_receiver, payoutColAmtAfterFees);
