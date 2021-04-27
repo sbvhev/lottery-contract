@@ -31,7 +31,7 @@ interface ICover {
   function futureCovTokenMap(ICoverERC20 _futureCovToken) external view returns (ICoverERC20 _claimCovToken);
 
   // extra view
-  function viewRedeemable(address _account, uint256 _covarageAmt) external view returns (uint256);
+  function viewRedeemable(address _account, uint256 _coverageAmt) external view returns (uint256);
   function getCovTokens() external view
     returns (
       ICoverERC20 _noclaimCovToken,
