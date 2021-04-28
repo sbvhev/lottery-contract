@@ -183,6 +183,16 @@ describe('Cover', function() {
   });
 
   it('Should delete risk, mint, and redeem with active tokens only', async function() {
+    const ClaimManagement = await ethers.getContractFactory("ClaimManagement");
+    const claimManager = await ClaimManagement.deploy(
+      dai.address,
+      treasuryAddress,
+      coverPoolFactory.address,
+      ownerAddress
+    );
+
+    await claimManager.deployed();
+    await coverPoolFactory.setClaimManager(claimManager.address);
     await coverPool.deleteRisk(consts.ASSET_2);
     await expectRevert(coverPool.addRisk(consts.ASSET_2), "CP: deleted risk not allowed");
 

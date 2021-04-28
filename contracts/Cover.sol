@@ -27,13 +27,15 @@ import "./interfaces/ICovTokenProxy.sol";
 contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   using SafeERC20 for IERC20;
 
+  uint256 public override constant BASE_SCALE = 1e18;
+
   bool public override deployComplete; // once true, never false
   uint48 public override expiry;
   address public override collateral;
   ICoverERC20 public override noclaimCovToken;
-  string public override name; // Yearn_0_DAI_210131
-  uint256 public override feeRate; // 1e18, cannot be changed
-  uint256 public override mintRatio; // 1e18, cannot be changed, 1 collateral mint mintRatio * 1 covTokens
+  string public override name; // Yearn_0_DAI_12_31_21
+  uint256 public override feeRate; // BASE_SCALE, cannot be changed
+  uint256 public override mintRatio; // BASE_SCALE, cannot be changed, 1 collateral mint mintRatio * 1 covTokens
   uint256 public override totalCoverage; // in covTokens
   uint256 public override claimNonce;
 
@@ -78,7 +80,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     require(coverPool.claimNonce() == claimNonce, "Cover: nonces dont match");
 
     // mintAmount has same decimals of covTokens == collateral decimals
-    uint256 mintAmount = _receivedColAmt * mintRatio / 1e18;
+    uint256 mintAmount = _receivedColAmt * mintRatio / BASE_SCALE;
     totalCoverage = totalCoverage + mintAmount;
 
     (bytes32[] memory _riskList) = coverPool.getRiskList();
@@ -161,16 +163,16 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
       ICoverERC20 covToken = claimCovTokenMap[claim.payoutRiskList[i]];
       uint256 amount = covToken.balanceOf(msg.sender);
       if (amount > 0) {
-        eligibleAmount = eligibleAmount + amount * claim.payoutRates[i] / 1e18;
+        eligibleAmount = eligibleAmount + amount * claim.payoutRates[i] / BASE_SCALE;
         covToken.burnByCover(msg.sender, amount);
       }
     }
 
     // if total claim payout rate < 1, get noclaim token eligible amount to payout
-    if (claim.totalPayoutRate < 1e18) {
+    if (claim.totalPayoutRate < BASE_SCALE) {
       uint256 amount = noclaimCovToken.balanceOf(msg.sender);
       if (amount > 0) {
-        uint256 payoutAmount = amount * (1e18 - claim.totalPayoutRate) / 1e18;
+        uint256 payoutAmount = amount * (BASE_SCALE - claim.totalPayoutRate) / BASE_SCALE;
         eligibleAmount = eligibleAmount + payoutAmount;
         noclaimCovToken.burnByCover(msg.sender, amount);
       }
@@ -201,24 +203,24 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   /// @notice coverageAmt is not respected if there is a claim
-  function viewRedeemable(address _account, uint256 _covarageAmt) external view override returns (uint256 redeemableAmt) {
+  function viewRedeemable(address _account, uint256 _coverageAmt) external view override returns (uint256 redeemableAmt) {
     ICoverPool coverPool = _coverPool();
     if (coverPool.claimNonce() == claimNonce) {
       IERC20 colToken = IERC20(collateral);
       uint256 colBal = colToken.balanceOf(address(this));
-      uint256 payoutColAmt = _covarageAmt * 1e18 / mintRatio;
-      uint256 payoutColAmtAfterFees = payoutColAmt - payoutColAmt * feeRate / 1e18;
+      uint256 payoutColAmt = _coverageAmt * BASE_SCALE / mintRatio;
+      uint256 payoutColAmtAfterFees = payoutColAmt - payoutColAmt * feeRate / BASE_SCALE;
       redeemableAmt = colBal > payoutColAmtAfterFees ? payoutColAmtAfterFees : colBal;
     } else {
       ICoverPool.ClaimDetails memory claim = _claimDetails();
       for (uint256 i = 0; i < claim.payoutRiskList.length; i++) {
         ICoverERC20 covToken = claimCovTokenMap[claim.payoutRiskList[i]];
         uint256 amount = covToken.balanceOf(_account);
-        redeemableAmt = redeemableAmt + amount * claim.payoutRates[i] / 1e18;
+        redeemableAmt = redeemableAmt + amount * claim.payoutRates[i] / BASE_SCALE;
       }
-      if (claim.totalPayoutRate < 1e18) {
+      if (claim.totalPayoutRate < BASE_SCALE) {
         uint256 amount = noclaimCovToken.balanceOf(_account);
-        uint256 payoutAmount = amount * (1e18 - claim.totalPayoutRate) / 1e18;
+        uint256 payoutAmount = amount * (BASE_SCALE - claim.totalPayoutRate) / BASE_SCALE;
         redeemableAmt = redeemableAmt + payoutAmount;
       }
     }
@@ -246,8 +248,8 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
     if (totalCoverage == 0) {
       colToken.safeTransfer(_factory().treasury(), collateralBal);
     } else {
-      uint256 totalCoverageInCol = totalCoverage * 1e18 / mintRatio;
-      uint256 feesInTheory = totalCoverageInCol * feeRate / 1e18;
+      uint256 totalCoverageInCol = totalCoverage * BASE_SCALE / mintRatio;
+      uint256 feesInTheory = totalCoverageInCol * feeRate / BASE_SCALE;
       if (collateralBal > totalCoverageInCol - feesInTheory) {
         uint256 feesToCollect = feesInTheory + collateralBal - totalCoverageInCol;
         colToken.safeTransfer(_factory().treasury(), feesToCollect);
@@ -256,14 +258,14 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
   }
 
   // transfer collateral (amount - fee) from this contract to recevier
-  function _payCollateral(address _receiver, uint256 _covarageAmt) private {
+  function _payCollateral(address _receiver, uint256 _coverageAmt) private {
     collectFees();
-    totalCoverage = totalCoverage - _covarageAmt;
+    totalCoverage = totalCoverage - _coverageAmt;
 
     IERC20 colToken = IERC20(collateral);
     uint256 colBal = colToken.balanceOf(address(this));
-    uint256 payoutColAmt = _covarageAmt * 1e18 / mintRatio;
-    uint256 payoutColAmtAfterFees = payoutColAmt - payoutColAmt * feeRate / 1e18;
+    uint256 payoutColAmt = _coverageAmt * BASE_SCALE / mintRatio;
+    uint256 payoutColAmtAfterFees = payoutColAmt - payoutColAmt * feeRate / BASE_SCALE;
     if (colBal > payoutColAmtAfterFees) {
       colToken.safeTransfer(_receiver, payoutColAmtAfterFees);
     } else {
@@ -312,7 +314,7 @@ contract Cover is ICover, Initializable, ReentrancyGuard, Ownable {
 
     // mint next future covTokens (the last future token points to no tokens)
     ICoverERC20[] memory futureCovTokensCopy = futureCovTokens;
-    for (uint256 i = 0; i < futureCovTokensCopy.length; i++) {
+    for (uint256 i = 0; i < futureCovTokensCopy.length - 1; i++) {
       if (futureCovTokensCopy[i] == _futureToken) {
         ICoverERC20 futureCovToken = futureCovTokensCopy[i + 1];
         futureCovToken.mint(msg.sender, amount);

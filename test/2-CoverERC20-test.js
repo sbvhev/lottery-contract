@@ -8,7 +8,7 @@ const testHelper = require('./testHelper');
 const { EIP712Domain, domainSeparator } = require('./eip712');
 
 describe('CoverERC20', function() {
-  const COV_TOKEN_SYMBOL = 'C_cDai_CURVE_0_DAI_210131';
+  const COV_TOKEN_SYMBOL = 'C_cDai_CURVE_0_DAI_12_31_21';
   const TRANSFER_AMOUNT = ethers.utils.parseEther("42");
   const A_BALANCE = ethers.utils.parseEther("100");
   const B_BALANCE = ethers.utils.parseEther("190001");

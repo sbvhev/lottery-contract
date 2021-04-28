@@ -72,22 +72,23 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     uint48 _expiry,
     string calldata _expiryString
   ) external initializer {
+    require(_collateral != address(0), "CP: collateral cannot be 0");
     initializeOwner();
     name = _coverPoolName;
     extendablePool = _extendablePool;
-    collaterals.push(_collateral);
-    collateralStatusMap[_collateral] = CollateralInfo(_mintRatio, Status.Active);
-    expiries.push(_expiry);
-    expiryInfoMap[_expiry] = ExpiryInfo(_expiryString, Status.Active);
+    _setCollateral(_collateral, _mintRatio, Status.Active);
+    _setExpiry(_expiry, _expiryString, Status.Active);
 
     for (uint256 j = 0; j < _riskList.length; j++) {
       bytes32 risk = StringHelper.stringToBytes32(_riskList[j]);
       require(riskMap[risk] == Status.Null, "CP: duplicated risks");
       riskList.push(risk);
       riskMap[risk] = Status.Active;
+      emit RiskUpdated(risk, true);
     }
 
     noclaimRedeemDelay = _factory().defaultRedeemDelay(); // Claim manager can set it 10 days when claim filed
+    emit NoclaimRedeemDelayUpdated(0, noclaimRedeemDelay);
     poolStatus = Status.Active;
     deployCover(_collateral, _expiry);
   }
@@ -137,8 +138,12 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     emit CoverAdded(coverAddr, _receiver, _amountOut);
   }
 
-  /// @notice add risk to pool, previously deleted risk not allowed. Can be called as much as needed till addingRiskWIP is false
-  function addRisk(string calldata _risk) external override onlyDev {
+  /**
+   * @notice add risk to pool, true if add complete; false if incomplete.
+   * - previously deleted risk not allowed.
+   * - Can be called as much as needed till addingRiskWIP is false
+   */
+  function addRisk(string calldata _risk) external override onlyDev returns (bool) {
     require(extendablePool, "CP: not extendable pool");
     bytes32 risk = StringHelper.stringToBytes32(_risk);
     require(riskMap[risk] != Status.Disabled, "CP: deleted risk not allowed");
@@ -158,7 +163,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     for (uint256 i = addingRiskIndex; i < activeCoversCopy.length; i++) {
       addingRiskIndex = i;
       // ensure enough gas left to avoid revert all the previous work
-      if (startGas < _factory().deployGasMin()) return;
+      if (startGas < _factory().deployGasMin()) return false;
       // below call deploys two covToken contracts, if cover already added, call will do nothing
       ICover(activeCoversCopy[i]).addRisk(risk);
       startGas = gasleft();
@@ -167,6 +172,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     addingRiskWIP = false;
     addingRiskIndex = 0;
     emit RiskUpdated(risk, true);
+    return true;
   }
 
   /// @notice delete risk from pool
@@ -174,45 +180,32 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     bytes32 risk = StringHelper.stringToBytes32(_risk);
     require(riskMap[risk] == Status.Active, "CP: not active risk");
     bytes32[] memory riskListCopy = riskList; // save gas
-    require(riskListCopy.length > 1, "CP: only 1 risk left");
+    uint256 len = riskListCopy.length;
+    require(len > 1, "CP: only 1 risk left");
+    IClaimManagement claimManager = IClaimManagement(_factory().claimManager());
+    require(!claimManager.hasPendingClaim(address(this), claimNonce), "CP: pending claim");
 
-    bytes32[] memory newRiskList = new bytes32[](riskListCopy.length - 1);
-    uint256 newListInd = 0;
-    for (uint256 i = 0; i < riskListCopy.length; i++) {
-      if (risk != riskListCopy[i]) {
-        newRiskList[newListInd] = riskListCopy[i];
-        newListInd++;
-      } else {
+
+    for (uint256 i = 0; i < len; i++) {
+      if (risk == riskListCopy[i]) {
         riskMap[risk] = Status.Disabled;
         deletedRiskList.push(risk);
+        riskList[i] = riskListCopy[len - 1];
+        riskList.pop();
         emit RiskUpdated(risk, false);
+        break;
       }
     }
-    riskList = newRiskList;
   }
 
   /// @notice update status or add new expiry
-  function setExpiry(uint48 _expiry, string calldata _expiryStr, Status _status) external override onlyDev {
-    require(block.timestamp < _expiry, "CP: expiry in the past");
-    require(_status != Status.Null, "CP: status is null");
-
-    if (expiryInfoMap[_expiry].status == Status.Null) {
-      expiries.push(_expiry);
-    }
-    expiryInfoMap[_expiry] = ExpiryInfo(_expiryStr, _status);
-    emit ExpiryUpdated(_expiry, _expiryStr, _status);
+  function setExpiry(uint48 _expiry, string calldata _expiryStr, Status _status) public override onlyDev {
+    _setExpiry(_expiry, _expiryStr, _status);
   }
 
   /// @notice update status or add new collateral
-  function setCollateral(address _collateral, uint256 _mintRatio, Status _status) external override onlyDev {
-    require(_collateral != address(0), "CP: address cannot be 0");
-    require(_status != Status.Null, "CP: status is null");
-
-    if (collateralStatusMap[_collateral].status == Status.Null) {
-      collaterals.push(_collateral);
-    }
-    collateralStatusMap[_collateral] = CollateralInfo(_mintRatio, _status);
-    emit CollateralUpdated(_collateral, _mintRatio,  _status);
+  function setCollateral(address _collateral, uint256 _mintRatio, Status _status) public override onlyDev {
+    _setCollateral(_collateral, _mintRatio, _status);
   }
 
   // update status of coverPool, if disabled, will pause new cover creation
@@ -225,6 +218,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     ICoverPoolFactory factory = _factory();
     require(msg.sender == _dev() || msg.sender == factory.claimManager(), "CP: caller not gov/claimManager");
     require(_noclaimRedeemDelay >= factory.defaultRedeemDelay(), "CP: < default delay");
+    require(_noclaimRedeemDelay <= factory.MAX_REDEEM_DELAY(), "CP: > max delay");
     if (_noclaimRedeemDelay != noclaimRedeemDelay) {
       emit NoclaimRedeemDelayUpdated(noclaimRedeemDelay, _noclaimRedeemDelay);
       noclaimRedeemDelay = _noclaimRedeemDelay;
@@ -313,9 +307,7 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
       allCovers.push(addr);
       coverMap[_collateral][_expiry] = addr;
       emit CoverCreated(addr);
-    }
-
-    if (!ICover(addr).deployComplete()) {
+    } else if (!ICover(addr).deployComplete()) {
       ICover(addr).deploy();
     }
   }
@@ -329,10 +321,33 @@ contract CoverPool is ICoverPool, Initializable, ReentrancyGuard, Ownable {
     return IOwnable(owner()).owner();
   }
 
-  // generate the cover name. Example: 3POOL_0_DAI_210131
+  function _setExpiry(uint48 _expiry, string calldata _expiryStr, Status _status) private {
+    require(block.timestamp < _expiry, "CP: expiry in the past");
+    require(_status != Status.Null, "CP: status is null");
+
+    if (expiryInfoMap[_expiry].status == Status.Null) {
+      expiries.push(_expiry);
+    }
+    expiryInfoMap[_expiry] = ExpiryInfo(_expiryStr, _status);
+    emit ExpiryUpdated(_expiry, _expiryStr, _status);
+  }
+
+  function _setCollateral(address _collateral, uint256 _mintRatio, Status _status) private {
+    require(_collateral != address(0), "CP: address cannot be 0");
+    require(_status != Status.Null, "CP: status is null");
+
+    if (collateralStatusMap[_collateral].status == Status.Null) {
+      collaterals.push(_collateral);
+    }
+    collateralStatusMap[_collateral] = CollateralInfo(_mintRatio, _status);
+    emit CollateralUpdated(_collateral, _mintRatio,  _status);
+  }
+
+  // generate the cover name. Example: 3POOL_0_DAI_12_31_21
   function _getCoverName(uint48 _expiry, string memory _collateralSymbol)
    private view returns (string memory)
   {
+    require(bytes(_collateralSymbol).length > 0, "CP: empty collateral symbol");
     return string(abi.encodePacked(
       name, "_",
       StringHelper.uintToString(claimNonce), "_",

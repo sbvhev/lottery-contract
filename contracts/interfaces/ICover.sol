@@ -12,9 +12,10 @@ interface ICover {
   event CovTokenCreated(address);
   event CoverDeployCompleted();
   event Redeemed(string _type, address indexed _account, uint256 _amount);
-  event FutureTokenConverted(address _futureToken, address claimCovToken, uint256 _amount);
+  event FutureTokenConverted(address indexed _futureToken, address indexed claimCovToken, uint256 _amount);
 
   // state vars
+  function BASE_SCALE() external view returns (uint256);
   function deployComplete() external view returns (bool);
   function expiry() external view returns (uint48);
   function collateral() external view returns (address);
@@ -30,7 +31,7 @@ interface ICover {
   function futureCovTokenMap(ICoverERC20 _futureCovToken) external view returns (ICoverERC20 _claimCovToken);
 
   // extra view
-  function viewRedeemable(address _account, uint256 _covarageAmt) external view returns (uint256);
+  function viewRedeemable(address _account, uint256 _coverageAmt) external view returns (uint256);
   function getCovTokens() external view
     returns (
       ICoverERC20 _noclaimCovToken,

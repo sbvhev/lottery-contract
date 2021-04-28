@@ -11,7 +11,7 @@ describe('CoverPool', () => {
 
   let ownerAddress, ownerAccount, userAAccount, userAAddress, userBAccount, userBAddress, treasuryAccount, treasuryAddress;
   let CoverPoolFactory, CoverPool, coverPoolImpl, coverImpl, coverERC20Impl;
-  let COLLATERAL, NEW_COLLATERAL, coverPoolFactory, coverPool, dai, weth;
+  let COLLATERAL, NEW_COLLATERAL, coverPoolFactory, coverPool, dai, weth, claimManager;
 
   before(async () => {
     ({ownerAccount, ownerAddress, userAAccount, userAAddress, userBAccount, userBAddress, treasuryAccount, treasuryAddress} = await getAccounts());
@@ -31,6 +31,15 @@ describe('CoverPool', () => {
     coverPoolFactory = await CoverPoolFactory.deploy(coverPoolImpl.address, coverImpl.address, coverERC20Impl.address, treasuryAddress);
     await coverPoolFactory.deployed();
     await coverPoolFactory.setClaimManager(ownerAddress);
+
+    const ClaimManagement = await ethers.getContractFactory("ClaimManagement");
+    claimManager = await ClaimManagement.deploy(
+      dai.address,
+      treasuryAddress,
+      coverPoolFactory.address,
+      ownerAddress
+    );
+    await claimManager.deployed();
 
     // add coverPool through coverPool factory
     const tx = await coverPoolFactory.connect(ownerAccount).createCoverPool(consts.POOL_2, true, [consts.ASSET_1, consts.ASSET_2], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0]);
@@ -91,7 +100,8 @@ describe('CoverPool', () => {
   it('Should add and delete risk for open pool', async () => {
     expect(await coverPoolFactory
       .createCoverPool(consts.POOL_3, true, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
-      ).to.not.equal(consts.ADDRESS_ZERO);  
+      ).to.not.equal(consts.ADDRESS_ZERO);
+    await coverPoolFactory.setClaimManager(claimManager.address);
 
     const coverPoolAddr = await coverPoolFactory.coverPools(consts.POOL_3);
     const coverPool = CoverPool.attach(coverPoolAddr);
@@ -114,6 +124,7 @@ describe('CoverPool', () => {
     expect(await coverPoolFactory
       .createCoverPool(consts.POOL_3, false, [consts.ASSET_1, consts.ASSET_2, consts.ASSET_3], COLLATERAL, consts.DEPOSIT_RATIO, consts.ALLOWED_EXPIRYS[0], consts.ALLOWED_EXPIRY_NAMES[0])
       ).to.not.equal(consts.ADDRESS_ZERO);  
+    await coverPoolFactory.setClaimManager(claimManager.address);
 
     const coverPoolAddr = await coverPoolFactory.coverPools(consts.POOL_3);
     const coverPool = CoverPool.attach(coverPoolAddr);
@@ -131,6 +142,7 @@ describe('CoverPool', () => {
   });
 
   it('Should delete risk from pool correctly', async () => {
+    await coverPoolFactory.setClaimManager(claimManager.address);
     await expect(coverPool.deleteRisk(consts.ASSET_1)).to.emit(coverPool, 'RiskUpdated');
     const [,, riskList, deletedRiskList] = await coverPool.getCoverPoolDetails();
     expect(riskList).to.deep.equal([consts.ASSET_2_BYTES32]);

@@ -28,6 +28,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
   address public override claimManager;
   // delay # of seconds for redeem with/o. accepted claim, redeem with all covTokens is not affected
   uint256 public override defaultRedeemDelay = 3 days;
+  uint256 public constant override MAX_REDEEM_DELAY = 30 days;
   uint256 public override yearlyFeeRate = 0.006 ether; // 0.6% yearly rate
   /// @notice min gas left requirement before continue deployments (when creating new Cover or adding risks to CoverPool)
   uint256 public override deployGasMin = 1000000;
@@ -75,6 +76,7 @@ contract CoverPoolFactory is ICoverPoolFactory, Ownable {
     require(coverPools[_name] == address(0), "Factory: coverPool exists");
     require(_riskList.length > 0, "Factory: riskList is empty");
     require(_expiry > block.timestamp, "Factory: expiry in the past");
+    require(_collateral != address(0), "Factory: collateral cannot be 0");
 
     coverPoolNames.push(_name);
     bytes memory initData = abi.encodeWithSelector(COVER_POOL_INIT_SIGNITURE, _name, _extendablePool, _riskList, _collateral, _mintRatio, _expiry, _expiryString);

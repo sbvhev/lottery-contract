@@ -7,14 +7,14 @@ pragma solidity ^0.8.0;
  * @author crypto-pumpkin
  */
 interface ICoverPool {
-  event CoverCreated(address);
+  event CoverCreated(address indexed);
   event CoverAdded(address indexed _cover, address _acount, uint256 _amount);
   event NoclaimRedeemDelayUpdated(uint256 _oldDelay, uint256 _newDelay);
   event ClaimEnacted(uint256 _enactedClaimNonce);
   event RiskUpdated(bytes32 _risk, bool _isAddRisk);
   event PoolStatusUpdated(Status _old, Status _new);
   event ExpiryUpdated(uint48 _expiry, string _expiryStr,  Status _status);
-  event CollateralUpdated(address _collateral, uint256 _mintRatio,  Status _status);
+  event CollateralUpdated(address indexed _collateral, uint256 _mintRatio,  Status _status);
 
   enum Status { Null, Active, Disabled }
 
@@ -90,7 +90,7 @@ interface ICoverPool {
   function setNoclaimRedeemDelay(uint256 _noclaimRedeemDelay) external;
 
   // access restriction - dev
-  function addRisk(string calldata _risk) external;
+  function addRisk(string calldata _risk) external returns (bool);
   function deleteRisk(string calldata _risk) external;
   function setExpiry(uint48 _expiry, string calldata _expiryName, Status _status) external;
   function setCollateral(address _collateral, uint256 _mintRatio, Status _status) external;
