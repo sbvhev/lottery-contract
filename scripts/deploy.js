@@ -69,7 +69,7 @@ async function main() {
   console.log(`CoverPoolFactory address: ${coverPoolFactory.address}`);
 
   // add one cover Pool
-  if (network.name !== 'Mainnet') {
+  if (![1].includes(network.chainId)) {
     try {
       await coverPoolFactory.createCoverPool(
         'Badger',

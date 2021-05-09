@@ -4,7 +4,6 @@ module.exports = {
   42: {
     network: 'Kovan',
     dev: process.env.KOVAN_MULTI_DEV,
-    gov: process.env.KOVAN_MULTI_GOV,
     treasury: process.env.KOVAN_MULTI_TREASURY,
     auditor: process.env.KOVAN_AUDITOR,
     dai: process.env.KOVAN_DAI,
@@ -17,7 +16,6 @@ module.exports = {
   3: {
     network: 'Ropsten',
     dev: process.env.ROPSTEN_MULTI_DEV,
-    gov: process.env.ROPSTEN_MULTI_GOV,
     treasury: process.env.ROPSTEN_MULTI_TREASURY,
     auditor: process.env.ROPSTEN_AUDITOR,
     dai: process.env.ROPSTEN_DAI,
@@ -29,9 +27,8 @@ module.exports = {
   },
   1: {
     network: 'Mainnet',
-    dev: process.env.MAINNET_MULTI_DEV,
-    gov: process.env.MAINNET_MULTI_GOV,
-    treasury: process.env.MAINNET_MULTI_TREASURY,
+    dev: process.env.MAINNET_MULTI_DEV_COVER,
+    treasury: process.env.MAINNET_MULTI_TREASURY_COVER,
     auditor: process.env.MAINNET_AUDITOR,
     dai: process.env.MAINNET_DAI,
     coverPool: process.env.MAINNET_COVERPOOL_IMPL,
