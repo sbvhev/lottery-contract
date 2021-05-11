@@ -37,4 +37,18 @@ module.exports = {
     factory: process.env.MAINNET_FACTORY,
     claimManagement: process.env.MAINNET_CLAIMMANAGEMENT,
   },
+  56: {
+    network: 'Binance Smart Chain',
+    dev: process.env.BSC_MULTI_DEV,
+    treasury: process.env.BSC_MULTI_DEV,
+    // alan
+    auditor: process.env.BSC_RESPONDER,
+    dai: process.env.BSC_BUSD,
+    responder: process.env.BSC_RESPONDER,
+    coverPool: process.env.BSC_COVERPOOL_IMPL,
+    cover: process.env.BSC_COVER_IMPL,
+    coverERC20: process.env.BSC_COVERERC20_IMPL,
+    factory: process.env.BSC_FACTORY,
+    claimManagement: process.env.BSC_CLAIMMANAGEMENT,
+	},
 }

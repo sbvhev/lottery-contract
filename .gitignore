@@ -17,3 +17,4 @@ package-lock.json
 # coverage
 coverage
 coverage.json
+coverpoolVerifySingleFile.sol

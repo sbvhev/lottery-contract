@@ -54,6 +54,11 @@ module.exports = {
       gas: 8000000,
       gasLimit: 8000000,
     },
+    bsc: {
+      url: 'https://bsc-dataseed1.ninicoin.io/',
+      accounts: process.env.MAINNET_DEV_PRIVATE_KEY ? [`0x${process.env.MAINNET_DEV_PRIVATE_KEY}`] : [],
+      gasLimit: 8000000,
+    },
     mainnet: {
       url: process.env.MAINNET_INFURA_URL ? process.env.MAINNET_INFURA_URL : '',
       accounts: process.env.MAINNET_DEV_PRIVATE_KEY ? [`0x${process.env.MAINNET_DEV_PRIVATE_KEY}`] : [],
@@ -63,7 +68,8 @@ module.exports = {
     }
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY
+    // apiKey: process.env.ETHERSCAN_API_KEY
+    apiKey: process.env.BSCSCAN_API_KEY
   },
   // This is a sample solc configuration that specifies which version of solc to use
   solidity: {
